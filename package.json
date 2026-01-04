@@ -1,0 +1,14 @@
+{
+  "name": "pointy",
+  "version": "1.0.0",
+  "description": "modern POS software for small businesses",
+  "scripts": {
+    "start": "parcel index.html",
+    "build": "parcel build index.html"
+  },
+  "author": "John David Sarmiento",
+  "license": "ISC",
+  "devDependencies": {
+    "parcel": "^2.16.3"
+  }
+}

@@ -1,0 +1,182 @@
+<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Pointy — modern for small businesses">
+    <title>Pointy POS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/Pointy.b8f60916.css">
+  </head>
+
+  <body>
+    <!-- Ambient layers -->
+    <div class="backdrop" aria-hidden="true"></div>
+    <div class="grid-overlay" aria-hidden="true"></div>
+
+    <header>
+      <nav class="navbar fade-up" aria-label="Main Navigation">
+        <div class="logo">
+          <a href="#" aria-label="Pointy Home">
+            <img src="/Pointy.f0667a20.png" alt="Pointy logo" class="nav-logo">
+          </a>
+          <span class="brand">Pointy POS</span>
+        </div>
+        <div class="search" role="search">
+          <input type="search" placeholder="Search ( / )" aria-label="Search">
+          <span class="kbd">/</span>
+        </div>
+        <div class="nav-actions">
+          <button class="btn ghost" type="button">Home</button>
+          <div class="toggle" role="group" aria-label="Theme toggle">
+            <button id="lightBtn" aria-pressed="false" title="Light mode" aria-label="Light mode">
+              ☀︎
+            </button>
+            <button id="darkBtn" aria-pressed="false" title="Dark mode" aria-label="Dark mode" class="active">
+              ✦
+            </button>
+          </div>
+          <button class="btn primary" type="button">Log Out</button>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero fade-up" aria-labelledby="greet">
+        <h1 id="greet" class="greet">
+          Hello, <span class="company-name">Wowa</span> Team!
+        </h1>
+
+        <p class="sub">Ready to ring up sales and keep things moving.</p>
+      </section>
+
+      <section class="info-bar fade-up" aria-label="Today overview">
+        <div class="date-time">
+          <span class="pill" id="dateStr">07/20/2025</span>
+          <span class="pill" id="timeStr">5:45 AM</span>
+          <span class="pill" id="shiftStr">Shift: A</span>
+        </div>
+        <div class="sales-total">
+          <span class="badge">Today</span>
+          <span class="total" id="totalStr">₱5,790.00</span>
+        </div>
+      </section>
+
+      <div class="modal-parent">Modal Overlay</div>
+
+      <!-- Form Modal Overlay -->
+      <div class="modal-overlay-form hidden" id="addMenuModal">
+        <div class="modal-content form-only">
+          <button class="modal-close">×</button>
+
+          <!-- Form Panel -->
+          <div class="modal-right">
+            <form class="add-menu-form">
+              <h3 class="form-title">Add Menu Item</h3>
+
+              <label>
+                Menu Item Name
+                <input type="text" name="name" placeholder="e.g. Iced Matcha Latte" value="test" required="">
+              </label>
+
+              <label>
+                Price
+                <input type="number" name="price" placeholder="₱0.00" step="1" min="0" value="50" required="">
+              </label>
+
+              <label>
+                Category
+                <select name="category">
+                  <option value="" disabled="" selected="">Select category</option>
+                  <option value="coffee">Coffee</option>
+                  <option value="non-coffee">Non-Coffee</option>
+                  <option value="tea">Tea</option>
+                  <option value="dessert">Dessert</option>
+                </select>
+              </label>
+
+              <!-- File Upload -->
+              <label class="file-upload-label">
+                Upload Image
+                <input type="file" name="image" accept="image/*" required="" value="/Icons/POS Wowa.png">
+                <span class="file-upload-btn">Choose File</span>
+                <span class="file-upload-name">No file chosen</span>
+              </label>
+
+              <button type="submit">Add Item</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <section class="main-buttons fade-up" aria-label="Primary actions">
+        <!-- New Order -->
+        <article class="card" tabindex="0">
+          <span class="ring" aria-hidden="true"></span>
+          <button class="btn-main" data-action="new-order" aria-label="Create new order" id="#newOrderBtn">
+            <img src="/POS%20Wowa.af77d787.png" alt="New Order icon">
+            <div>
+              <div class="title new-order">New Order</div>
+              <div class="hint">Start a sale • (N)</div>
+            </div>
+            <div class="chev" aria-hidden="true">→</div>
+          </button>
+        </article>
+
+        <!-- Menu List -->
+        <article class="card" tabindex="0">
+          <span class="ring" aria-hidden="true"></span>
+          <button class="btn-main" data-action="menu-list" aria-label="Open menu list" id="menu-list">
+            <img src="/POS%20Wowa%20(1).e58c409e.png" alt="Menu List icon">
+            <div>
+              <div class="title">Menu List</div>
+              <div class="hint">Browse items • (M)</div>
+            </div>
+            <div class="chev" aria-hidden="true">→</div>
+          </button>
+        </article>
+
+        <!-- Discounts -->
+        <article class="card" tabindex="0">
+          <span class="ring" aria-hidden="true"></span>
+          <button class="btn-main" data-action="discounts" aria-label="Apply discounts">
+            <img src="/POS%20Wowa%20(2).9d7699d5.png" alt="Discounts icon">
+            <div>
+              <div class="title">Discounts</div>
+              <div class="hint">Promos &amp; codes • (D)</div>
+            </div>
+            <div class="chev" aria-hidden="true">→</div>
+          </button>
+        </article>
+
+        <!-- Summary -->
+        <article class="card" tabindex="0">
+          <span class="ring" aria-hidden="true"></span>
+          <button class="btn-main" data-action="summary" aria-label="View summary">
+            <img src="/POS%20Wowa%20(3).602c996e.png" alt="Summary icon">
+            <div>
+              <div class="title">Summary</div>
+              <div class="hint">Sales &amp; reports • (S)</div>
+            </div>
+            <div class="chev" aria-hidden="true">→</div>
+          </button>
+        </article>
+      </section>
+
+      <section class="quick-actions fade-up" aria-label="Quick actions">
+        <button class="chip" data-action="scan">Scan Item</button>
+        <button class="chip" data-action="drawer">Open Drawer</button>
+        <button class="chip" data-action="refund">Refund</button>
+        <button class="chip" data-action="zreport">Z Report</button>
+      </section>
+    </main>
+
+    <footer></footer>
+
+    <script type="module" src="/Pointy.227e3f3a.js" defer=""></script>
+    <script type="module" src="/Pointy.494665d6.js" defer=""></script>
+    <script type="module" src="/Pointy.ffce6faa.js" defer=""></script>
+    <script type="module" src="/Pointy.f9d6bf37.js" defer=""></script>
+    <script type="module" src="/Pointy.3b63cdc7.js" defer=""></script>
+    <script type="module" src="/Pointy.7cf3d575.js" defer=""></script>
+  
+
+</body></html>
