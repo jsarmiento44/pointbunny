@@ -3,7 +3,7 @@ import View from "./view.js";
 class NewOrderView extends View {
   _parentElement = document.querySelector(".modal-parent");
   _openBtn = document.getElementById("#newOrderBtn");
-  _itemCard = document.querySelector(".modal-parent").closest(".card");
+  _modalParent = document.querySelector(".new-order-parent");
 
   _generateMarkUp() {
     return `
@@ -19,7 +19,7 @@ class NewOrderView extends View {
             (menu) =>
               `<div class="menu-category-header">${menu.category}</div>
           <div class="menu-category">
-            <div class="item-card" id="${menu.id}">
+            <div class="item-card" data-id="${menu._id}">
               <div class="btn-main">
                 <img src="${menu.imageURL}" alt="Espresso" />
                 <div>
@@ -65,88 +65,6 @@ class NewOrderView extends View {
     });
   }
 
-  _addToCart(handler) {
-    this._parentElement.addEventListener("click", function (e) {
-      const item = e.target.closest(".item-card");
-      if (!item) return;
-      console.log(item);
-
-      handler();
-    });
-  }
-
-  _generateMenuItemModal(item) {
-    const markup = `<!-- ================= Item Modal ================= -->
-<div class="item-modal-overlay" id="itemModal">
-  <div class="modal-content">
-    <!-- Close Button -->
-    <button class="item-modal-close">&times;</button>
-
-    <!-- Left Panel: Item Info / Preview -->
-    <div class="modal-left">
-      <h2 class="menu-category-header">Item Details</h2>
-      
-      <div class="item-card">
-        <div class="btn-main">
-          <img src="" alt="Item Image" />
-          <div>
-            <div class="title">Sample Item</div>
-            <div class="hint">Category: Drinks</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="quick-actions">
-        <div class="chip">Small</div>
-        <div class="chip">Medium</div>
-        <div class="chip">Large</div>
-      </div>
-
-      <p class="hint" style="margin-top: 12px;">This is a sample description of the menu item. You can add more details here.</p>
-    </div>
-
-    <!-- Right Panel: Form / Actions -->
-    <div class="modal-right">
-      <form class="add-menu-form">
-        <div class="form-title">Edit Item</div>
-
-        <label>
-          Name
-          <input type="text" placeholder="Item Name" />
-        </label>
-
-        <label>
-          Price
-          <input type="number" placeholder="0.00" />
-        </label>
-
-        <label class="category-wrapper">
-          Category
-          <select>
-            <option>Drinks</option>
-            <option>Food</option>
-            <option>Dessert</option>
-          </select>
-        </label>
-
-        <label class="file-upload-label">
-          Upload Image
-          <input type="file" />
-          <span class="file-upload-btn">Choose File</span>
-          <span class="file-upload-name">No file chosen</span>
-        </label>
-
-        <button type="submit">Save Changes</button>
-      </form>
-    </div>
-  </div>
-</div>
-`;
-    document
-      .querySelector(".modal-parent")
-      .insertAdjacentHTML("beforeend", markup);
-  }
-
   _closeMenuModal() {
     this._parentElement.addEventListener("click", function (e) {
       const btn = e.target.closest(".modal-close");
@@ -160,11 +78,6 @@ class NewOrderView extends View {
     this._parentElement.addEventListener("click", function (e) {
       const btn = e.target.closest(".item-modal-close");
       if (!btn) return;
-
-      const allItemModals = document.querySelectorAll(".item-modal-overlay");
-      allItemModals.forEach((modal) => {
-        modal.classList.remove();
-      });
 
       btn.closest(".item-modal-overlay").remove();
     });

@@ -5,67 +5,6 @@ const generateId = function () {
   return `${Date.now()}-${counter}`;
 };
 
-export const state = {
-  username: "Wowa",
-  menuItems: [
-    {
-      itemName: "French Fries",
-      price: `100`,
-      category: `food`,
-      id: `#123123`,
-      imageURL: ``,
-    },
-    {
-      itemName: "Ice Cream",
-      price: `60`,
-      category: `dessert`,
-      id: `#321321`,
-      imageURL: ``,
-    },
-    {
-      itemName: "Milkshake",
-      price: `79`,
-      category: `drinks`,
-      id: `#01112`,
-      imageURL: ``,
-    },
-    {
-      itemName: "Frappe",
-      price: "150",
-      category: "drinks",
-      id: "#49531",
-      imageURL: ``,
-    },
-    {
-      itemName: "Habimbara",
-      price: "150",
-      category: "food",
-      id: "#49531",
-      imageURL: ``,
-    },
-  ],
-  menuCategories: [`food`, `beverage`, `snack`, `dessert`],
-  employees: [
-    {
-      id: `1`,
-      name: `Ben`,
-      role: `Cashier`,
-      systemRole: `admin`,
-    },
-  ],
-};
-
-class MenuItem {
-  constructor(itemName, price) {
-    this.itemName = itemName;
-    this.price = price;
-  }
-  _id;
-  _inventory = 0;
-  category;
-  isActive = true;
-}
-
 class Account {
   constructor(username, password) {
     this.username = username;
@@ -77,14 +16,48 @@ class Account {
   employees = [];
 }
 
-class Employee {
-  constructor(name, role) {
-    this.name = name;
-    this.role = role;
-  }
-
-  shift;
-}
+export const state = {
+  username: "Wowa",
+  menuItems: [
+    {
+      itemName: "Ice Cream",
+      price: `60`,
+      category: `dessert`,
+      _id: `#321321`,
+      imageURL: ``,
+    },
+    {
+      itemName: "Milkshake",
+      price: `79`,
+      category: `drinks`,
+      _id: `#01112`,
+      imageURL: ``,
+    },
+    {
+      itemName: "Frappe",
+      price: "150",
+      category: "drinks",
+      _id: "#49531",
+      imageURL: ``,
+    },
+    {
+      itemName: "Habimbara",
+      price: "150",
+      category: "food",
+      _id: "#4953174",
+      imageURL: ``,
+    },
+  ],
+  menuCategories: [`food`, `beverage`, `snack`, `dessert`],
+  employees: [
+    {
+      _id: `1`,
+      name: `Ben`,
+      role: `Cashier`,
+      systemRole: `admin`,
+    },
+  ],
+};
 
 const createNewAccount = function (username, password) {
   const newAccount = new Account(username, password);
@@ -100,12 +73,12 @@ export const uploadNewMenuItem = async function (newItem) {
     _id: generateId(),
     imageURL: newItem.image,
     _stock: `0`,
-    hasVariants: ``,
+    hasVariants: false,
     variants: {},
+    description: `  `,
   };
-  console.log(item);
   this.state.menuItems.push(item);
-  console.log(state);
+  console.log(state.menuItems);
 };
 
 export const allAccounts = [];
