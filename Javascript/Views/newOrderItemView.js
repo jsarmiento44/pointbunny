@@ -43,7 +43,7 @@ class NewOrderItemView extends View {
       </p>
 
       <div class="item-price" style="font-weight: 900; margin-top: 12px;">
-        $5.00
+        ₱${item.price}
       </div>
 
       <button class="btn primary" style="width: 100%; margin-top: 16px;">
