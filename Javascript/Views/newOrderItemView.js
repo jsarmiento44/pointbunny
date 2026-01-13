@@ -2,6 +2,9 @@ import View from "./view.js";
 
 class NewOrderItemView extends View {
   _parentElement = document.querySelector(".modal-parent");
+  _itemModal = document.querySelector(".item-modal-overlay");
+  _itemModalCloseBtn = document.querySelector(".item-modal-close");
+  _basket;
 
   _addHandlerShowItemModal(handler) {
     this._parentElement.addEventListener("click", (e) => {
@@ -9,53 +12,46 @@ class NewOrderItemView extends View {
       const item = e.target.closest(".item-card");
       if (!item) return;
       handler(item.dataset.id);
+      this._itemModal.classList.toggle("hidden");
     });
   }
 
-  _generateMenuItemModal(item) {
-    const markup = `<div class="item-modal-overlay" id=${item._id}>
-  <div class="modal-content">
-    <!-- Close Button -->
-    <button class="item-modal-close">&times;</button>
+  _itemModalContentUpdate(item) {
+    this._itemModal.querySelector(".title").textContent = item.itemName;
+    this._itemModal.querySelector(".hint").textContent = item.category;
+    this._itemModal.querySelector(".item-price").textContent = item.price;
 
-    <!-- Single Panel Item Info -->
-    <div class="modal-left">
-      <h2 class="menu-category-header">Item Details</h2>
+    if (this._basket === null || this._basket === "")
+      console.warn("no item in basket");
 
-      <div class="item-card">
-        <div class="btn-main">
-          <img src="${item.imageURL}" alt="Item Image" />
-          <div>
-            <div class="title">${item.itemName}</div>
-            <div class="hint">Category: ${item.category}s</div>
-          </div>
-        </div>
-      </div>
+    this._basket = {
+      itemName: item.itemName,
+      price: item.price,
+      category: item.category,
+      id: item._id,
+      date: Date.now(),
+    };
+  }
 
-      <div class="quick-actions">
-        <div class="chip">Small</div>
-        <div class="chip">Medium</div>
-        <div class="chip">Large</div>
-      </div>
+  _closeItemModal() {
+    this._itemModalCloseBtn.addEventListener("click", function (e) {
+      document.querySelector(".item-modal-overlay").classList.toggle("hidden");
+    });
+  }
 
-      <p class="hint" style="margin-top: 12px;">
-        This is a sample description of the menu item. You can add more details here.
-      </p>
-
-      <div class="item-price" style="font-weight: 900; margin-top: 12px;">
-        ₱${item.price}
-      </div>
-
-      <button class="btn primary" style="width: 100%; margin-top: 16px;">
-        Add to Cart
-      </button>
-    </div>
-  </div>
-</div>
-`;
-    document
-      .querySelector(".modal-parent")
-      .insertAdjacentHTML("beforeend", markup);
+  _pushToCart(handler) {
+    this._itemModal.addEventListener("click", function (e) {
+      e.preventDefault();
+      const btn = e.target.closest("#btn-add-to-cart");
+      if (btn) {
+        handler();
+        document
+          .querySelector(".item-modal-overlay")
+          .classList.toggle("hidden");
+      } else if (!btn) {
+        return;
+      }
+    });
   }
 }
 

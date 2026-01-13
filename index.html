@@ -144,6 +144,51 @@
         </div>
       </div>
 
+      <div class="item-modal-overlay hidden" id="${item._id}">
+        <div class="modal-content">
+          <!-- Close Button -->
+          <button class="item-modal-close">&times;</button>
+
+          <!-- Single Panel Item Info -->
+          <div class="modal-left">
+            <h2 class="menu-category-header">Item Details</h2>
+
+            <div class="item-card">
+              <div class="btn-main">
+                <img src="" alt="Item Image" />
+                <div>
+                  <div class="title">${item.itemName}</div>
+                  <div class="hint">Category: ${item.category}s</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="quick-actions">
+              <div class="chip">Small</div>
+              <div class="chip">Medium</div>
+              <div class="chip">Large</div>
+            </div>
+
+            <p class="hint" style="margin-top: 12px">
+              This is a sample description of the menu item. You can add more
+              details here.
+            </p>
+
+            <div class="item-price" style="font-weight: 900; margin-top: 12px">
+              ₱${item.price}
+            </div>
+
+            <button
+              class="btn primary"
+              id="btn-add-to-cart"
+              style="width: 100%; margin-top: 16px"
+            >
+              Add to Cart
+            </button>
+          </div>
+        </div>
+      </div>
+
       <section class="main-buttons fade-up" aria-label="Primary actions">
         <!-- New Order -->
         <article class="card" tabindex="0">

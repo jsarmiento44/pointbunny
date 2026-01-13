@@ -20,6 +20,13 @@ export const state = {
   username: "Wowa",
   menuItems: [
     {
+      itemName: "French Fries",
+      price: `100`,
+      category: `food`,
+      _id: `#123123`,
+      imageURL: ``,
+    },
+    {
       itemName: "Ice Cream",
       price: `60`,
       category: `dessert`,
@@ -57,6 +64,8 @@ export const state = {
       systemRole: `admin`,
     },
   ],
+  cart: [],
+  sales: [],
 };
 
 const createNewAccount = function (username, password) {
@@ -75,7 +84,7 @@ export const uploadNewMenuItem = async function (newItem) {
     _stock: `0`,
     hasVariants: false,
     variants: {},
-    description: `  `,
+    description: `This is a sample description of the menu item. You can add more details here.`,
   };
   this.state.menuItems.push(item);
   console.log(state.menuItems);

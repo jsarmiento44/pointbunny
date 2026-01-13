@@ -14,7 +14,7 @@ class NewOrderView extends View {
          <!-- Left Panel: Menu Items -->
         <div class="modal-left">
 
-        ${this._data
+        ${this._data.menuItems
           .map(
             (menu) =>
               `<div class="menu-category-header">${menu.category}</div>
@@ -38,18 +38,22 @@ class NewOrderView extends View {
         <div class="modal-right">
           <h3 class="form-title">Cart Summary</h3>
           <div id="cartItems" style="display:flex; flex-direction:column; gap:12px; max-height:60vh; overflow-y:auto;">
-            <div style="display:flex; justify-content:space-between;">
-              <span>Espresso x1</span>
-              <span>₱120</span>
-            </div>
-            <div style="display:flex; justify-content:space-between;">
-              <span>Latte x2</span>
-              <span>₱300</span>
-            </div>
+            ${this._data.cart
+              .map(
+                (
+                  item
+                ) => `<div style="display:flex; justify-content:space-between;">
+              <span>${item.itemName} x1</span>
+              <span>${item.price}</span>
+            </div>`
+              )
+              .join("")}
           </div>
           <div style="margin-top:auto; font-weight:900; font-size:1.1rem; display:flex; justify-content:space-between; padding-top:8px; border-top:1px solid var(--line);">
             <span>Total:</span>
-            <span>₱420</span>
+            <span>₱${this._data.cart
+              .map((item) => Number(item.price))
+              .reduce((acc, cur) => acc + cur, 0)}</span>
           </div>
           <button>Checkout</button>
         </div>
@@ -71,15 +75,6 @@ class NewOrderView extends View {
       if (!btn) return;
 
       document.querySelector(".modal-overlay").classList.toggle("hidden");
-    });
-  }
-
-  _closeItemModal() {
-    this._parentElement.addEventListener("click", function (e) {
-      const btn = e.target.closest(".item-modal-close");
-      if (!btn) return;
-
-      btn.closest(".item-modal-overlay").remove();
     });
   }
 }
