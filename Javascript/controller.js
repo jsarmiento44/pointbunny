@@ -36,7 +36,6 @@ const controlUploadItem = function (data) {
 //listens to new order button and renders the markup
 const controlNewOrder = async function () {
   try {
-    console.log(model.state);
     NewOrderView.render(modelState);
   } catch (err) {
     alert(err);

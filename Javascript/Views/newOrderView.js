@@ -51,9 +51,15 @@ class NewOrderView extends View {
           </div>
           <div style="margin-top:auto; font-weight:900; font-size:1.1rem; display:flex; justify-content:space-between; padding-top:8px; border-top:1px solid var(--line);">
             <span>Total:</span>
-            <span>₱${this._data.cart
-              .map((item) => Number(item.price))
-              .reduce((acc, cur) => acc + cur, 0)}</span>
+            <span>₱${
+              this._data.cart.length <= 0
+                ? ""
+                : this._data.cart
+                    .map((item) => Number(item.price))
+                    .reduce((acc, cur) => {
+                      acc + cur, 0;
+                    })
+            }</span>
           </div>
           <button>Checkout</button>
         </div>
