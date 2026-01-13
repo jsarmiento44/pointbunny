@@ -85,6 +85,7 @@ export const uploadNewMenuItem = async function (newItem) {
     hasVariants: false,
     variants: {},
     description: `This is a sample description of the menu item. You can add more details here.`,
+    isActive: true,
   };
   this.state.menuItems.push(item);
   console.log(state.menuItems);

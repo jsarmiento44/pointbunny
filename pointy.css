@@ -102,6 +102,51 @@ body[data-theme="dark"] {
   display: none !important;
 }
 
+/* ======================== Quantity Selector ======================== */
+.quantity-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.quantity-wrapper .hint {
+  flex-shrink: 0; /* label hindi lumiliit */
+  font-weight: 700;
+  color: var(--text);
+}
+
+.quantity-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qty-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 20px;
+  font-weight: 900;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.qty-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+  background: rgba(124, 58, 237, 0.06);
+}
+
+.qty-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
 /* Ambient layers */
 .bokeh-canvas {
   position: fixed;

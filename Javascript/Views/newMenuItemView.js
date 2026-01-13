@@ -5,10 +5,13 @@ class NewMenuItemView extends View {
   _closeBtn = this._parentElement.querySelector(".modal-close");
   _modalDiv = document.querySelector(".modal-parent");
   _formParent = this._parentElement.querySelector(".add-menu-form");
+  _selectOptionsElement = document.querySelector(".select-options");
 
   _toggleModalClose() {
     this._closeBtn.addEventListener("click", (e) => {
       this._parentElement.classList.toggle("hidden");
+      document.getElementById("newCategoryInput").classList.add("hidden");
+      document.querySelector(".new-category-button").classList.add("hidden");
     });
   }
 
@@ -19,8 +22,7 @@ class NewMenuItemView extends View {
       const btn = e.target.closest("#openAddModal");
       if (!btn) return;
 
-      const div = document.querySelector(".modal-overlay-form");
-      div.classList.toggle("hidden");
+      document.querySelector(".modal-overlay-form").classList.toggle("hidden");
     });
   }
 
@@ -37,7 +39,61 @@ class NewMenuItemView extends View {
       //4.) close form modal
       //5.) Show success
       document.querySelector("#addMenuModal").classList.toggle("hidden");
+      document.getElementById("newCategoryInput").classList.add("hidden");
     });
+  }
+
+  _newMenuCategory() {
+    document
+      .querySelector(".select-options")
+      .addEventListener("change", function (e) {
+        const value = this.value;
+
+        console.log(value);
+        if (value === `new-category`) {
+          document
+            .getElementById("newCategoryInput")
+            .classList.remove("hidden");
+
+          document
+            .querySelector(".new-category-button")
+            .classList.remove("hidden");
+        }
+      });
+  }
+
+  _addHandlerAddMenuCategory(handler) {
+    document
+      .querySelector(".new-category-button")
+      .addEventListener("click", function () {
+        const field = document.getElementById("newCategoryInput");
+        const newCateg = field.value.trim();
+
+        if (newCateg !== "") {
+          handler(newCateg);
+          document.getElementById("newCategoryInput").classList.add("hidden");
+
+          document
+            .querySelector(".new-category-button")
+            .classList.add("hidden");
+        } else {
+          alert("Please insert an input");
+        }
+      });
+  }
+
+  _mapMenuCategoriesMarkUp(data) {
+    this._selectOptionsElement.innerHTML = `
+    <option value="" disabled selected>Select category</option>
+    <option value="new-category">Add new category</option>
+  `;
+
+    const markup = data.map(
+      (i) => `<option value="${i}">${i[0].toUpperCase() + i.slice(1)}</option>
+`
+    );
+    console.log(markup);
+    this._selectOptionsElement.insertAdjacentHTML("beforeend", markup);
   }
 }
 

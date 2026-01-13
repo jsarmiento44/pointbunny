@@ -16,9 +16,17 @@ const controlMenuList = async function () {
     MenuListView.render(state);
     //3.) Listen for close event to hide modal
     MenuListView._addHandlerCloseModal();
+    NewMenuItemView._mapMenuCategoriesMarkUp(state.menuCategories);
   } catch (err) {
     alert(err);
   }
+};
+
+const controlAddNewCategory = function (data) {
+  modelState.menuCategories.push(data);
+  console.log(modelState.menuCategories);
+
+  NewMenuItemView._mapMenuCategoriesMarkUp(modelState.menuCategories);
 };
 
 const controlNewMenuButtonToggle = function () {
@@ -54,6 +62,10 @@ const controlPushToModelCart = function () {
     console.warn("No item selected yet");
     return;
   }
+  NewOrderItemView._basket.quantity = NewOrderItemView._qty;
+  NewOrderItemView._basket.totalPrice =
+    Number(NewOrderItemView._basket.price) *
+    Number(NewOrderItemView._basket.quantity);
   model.state.cart.push(NewOrderItemView._basket);
   NewOrderView.render(modelState);
   console.log(model.state.cart);
@@ -69,6 +81,8 @@ const init = function () {
   //MenuList
   MenuListView._addHandlerShowModal(controlMenuList);
   NewMenuItemView._uploadItem(controlUploadItem);
+  NewMenuItemView._newMenuCategory();
+  NewMenuItemView._addHandlerAddMenuCategory(controlAddNewCategory);
   controlNewMenuButtonToggle();
 
   //NewOrder
@@ -76,6 +90,7 @@ const init = function () {
   NewOrderItemView._addHandlerShowItemModal(controlDisplayMenuItem);
   controlNewOrderModals();
   NewOrderItemView._pushToCart(controlPushToModelCart);
+  NewOrderItemView._adjustQuantity();
 };
 
 init();

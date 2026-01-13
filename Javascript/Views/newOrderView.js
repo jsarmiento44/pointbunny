@@ -43,8 +43,10 @@ class NewOrderView extends View {
                 (
                   item
                 ) => `<div style="display:flex; justify-content:space-between;">
-              <span>${item.itemName} x1</span>
-              <span>${item.price}</span>
+              <span>${item.itemName} x${item.quantity}</span>
+              <span>${
+                item.quantity === 1 ? item.price : item.price * item.quantity
+              }</span>
             </div>`
               )
               .join("")}
@@ -55,10 +57,8 @@ class NewOrderView extends View {
               this._data.cart.length <= 0
                 ? ""
                 : this._data.cart
-                    .map((item) => Number(item.price))
-                    .reduce((acc, cur) => {
-                      acc + cur, 0;
-                    })
+                    .map((item) => Number(item.totalPrice))
+                    .reduce((acc, cur) => acc + cur, 0)
             }</span>
           </div>
           <button>Checkout</button>

@@ -115,13 +115,30 @@
 
               <label>
                 Category
-                <select name="category">
-                  <option value="" disabled selected>Select category</option>
-                  <option value="coffee">Coffee</option>
-                  <option value="non-coffee">Non-Coffee</option>
-                  <option value="tea">Tea</option>
-                  <option value="dessert">Dessert</option>
-                </select>
+                <div class="category-wrapper">
+                  <!-- Select dropdown -->
+                  <select
+                    class="select-options"
+                    name="category"
+                    id="categorySelect"
+                  >
+                    <option value="" disabled selected>Select category</option>
+                    <option value="new-category">Add new category</option>
+                  </select>
+
+                  <!-- Hidden input for new category -->
+                  <input
+                    type="text"
+                    name="newCategory"
+                    id="newCategoryInput"
+                    placeholder="Enter new category"
+                    class="new-category-field hidden"
+                  />
+
+                  <button class="new-category-button hidden" type="button">
+                    add new category
+                  </button>
+                </div>
               </label>
 
               <!-- File Upload -->
@@ -176,6 +193,15 @@
 
             <div class="item-price" style="font-weight: 900; margin-top: 12px">
               ₱${item.price}
+            </div>
+
+            <div class="quantity-wrapper">
+              <span class="hint">Quantity</span>
+              <div class="quantity-buttons">
+                <button class="qty-btn" data-action="decrease">−</button>
+                <span id="item-qty">1</span>
+                <button class="qty-btn" data-action="increase">+</button>
+              </div>
             </div>
 
             <button
