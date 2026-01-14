@@ -15,30 +15,35 @@ class MenuListView extends View {
           <button class="modal-close">&times;</button>
         </div>
         <div class="modal-left">
-          ${this._data.menuItems
+  ${this._data.menuCategories
+    .map((category) => {
+      const items = this._data.menuItems.filter((i) => i.category === category);
+
+      return `
+        <div class="menu-category-header">${category}</div>
+        <div class="menu-category">
+          ${items
             .map(
               (item) => `
-            <div class="menu-category-header">${item.category}</div>
-            <div class="menu-category">
-              <div class="card">
-                <div class="btn-main">
-                  <img src="${
-                    item.imageURL === ``
-                      ? ``
-                      : URL.createObjectURL(item.imageURL)
-                  }" alt="" />
-                  <div>
-                    <div class="title">${item.itemName}</div>
-                    <div class="hint">₱${item.price}</div>
+                <div class="card">
+                  <div class="btn-main">
+                    <img src="${item.imageURL}" alt="${item.itemName}" />
+                    <div>
+                      <div class="title">${item.itemName}</div>
+                      <div class="hint">₱${item.price}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          `
+              `
             )
             .join("")}
         </div>
-      </div>
+      `;
+    })
+    .join("")}
+</div>
+
+          
     </div>`;
   }
 

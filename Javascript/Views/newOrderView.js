@@ -8,64 +8,78 @@ class NewOrderView extends View {
   _generateMarkUp() {
     return `
     <div class="modal-overlay" id="newOrderModal">
-      <div class="modal-content">
-        <!-- Close Button -->
-        <button class="modal-close">&times;</button>
-         <!-- Left Panel: Menu Items -->
-        <div class="modal-left">
+  <div class="modal-content">
+    <!-- Close Button -->
+    <button class="modal-close">&times;</button>
 
-        ${this._data.menuItems
+    <!-- Left Panel: Menu Items -->
+    <div class="modal-left">
+      ${this._data.menuCategories
+        .map((category) => {
+          const items = this._data.menuItems.filter(
+            (item) => item.category === category
+          );
+          console.log(items);
+          return `
+            <div class="menu-category-header">${category}</div>
+            <div class="menu-category">
+              ${items
+                .map(
+                  (item) => `
+                    <div class="item-card" data-id="${item._id}">
+                      <div class="btn-main">
+                        <img src="${item.imageURL}" alt="${item.itemName}" />
+                        <div>
+                          <div class="title">${item.itemName}</div>
+                          <div class="hint">${item.price}</div>
+                        </div>
+                      </div>
+                    </div>
+                  `
+                )
+                .join("")}
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+
+    <!-- Right Panel: Cart Summary -->
+    <div class="modal-right">
+      <h3 class="form-title">Cart Summary</h3>
+
+      <div
+        id="cartItems"
+        style="display:flex; flex-direction:column; gap:12px; max-height:60vh; overflow-y:auto;"
+      >
+        ${this._data.cart
           .map(
-            (menu) =>
-              `<div class="menu-category-header">${menu.category}</div>
-          <div class="menu-category">
-            <div class="item-card" data-id="${menu._id}">
-              <div class="btn-main">
-                <img src="${menu.imageURL}" alt="Espresso" />
-                <div>
-                  <div class="title">${menu.itemName}</div>
-                  <div class="hint">${menu.price}</div>
-                </div>
+            (item) => `
+              <div style="display:flex; justify-content:space-between;">
+                <span>${item.itemName} x${item.quantity}</span>
+                <span>${item.price * item.quantity}</span>
               </div>
-            </div>`
+            `
           )
           .join("")}
-            <!-- end of left side div-->
-          </div>
-        </div>
-
-        <!-- Right Panel: Cart Summary -->
-        <div class="modal-right">
-          <h3 class="form-title">Cart Summary</h3>
-          <div id="cartItems" style="display:flex; flex-direction:column; gap:12px; max-height:60vh; overflow-y:auto;">
-            ${this._data.cart
-              .map(
-                (
-                  item
-                ) => `<div style="display:flex; justify-content:space-between;">
-              <span>${item.itemName} x${item.quantity}</span>
-              <span>${
-                item.quantity === 1 ? item.price : item.price * item.quantity
-              }</span>
-            </div>`
-              )
-              .join("")}
-          </div>
-          <div style="margin-top:auto; font-weight:900; font-size:1.1rem; display:flex; justify-content:space-between; padding-top:8px; border-top:1px solid var(--line);">
-            <span>Total:</span>
-            <span>₱${
-              this._data.cart.length <= 0
-                ? ""
-                : this._data.cart
-                    .map((item) => Number(item.totalPrice))
-                    .reduce((acc, cur) => acc + cur, 0)
-            }</span>
-          </div>
-          <button>Checkout</button>
-        </div>
       </div>
+
+      <div
+        style="margin-top:auto; font-weight:900; font-size:1.1rem;
+               display:flex; justify-content:space-between;
+               padding-top:8px; border-top:1px solid var(--line);"
+      >
+        <span>Total:</span>
+        <span>
+          ₱${this._data.cart.reduce((acc, item) => acc + item.totalPrice, 0)}
+        </span>
+      </div>
+
+      <button>Checkout</button>
     </div>
-  `;
+  </div>
+</div>
+`;
   }
 
   _addHandlerShowMenuModal(handler) {

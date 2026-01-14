@@ -6,6 +6,9 @@ import NewOrderItemView from "./Views/newOrderItemView.js";
 
 const modelState = model.state;
 
+//adding/displaying menu list
+
+//to add edit/delete option
 const controlMenuList = async function () {
   try {
     //1.)load menu list from backend/current account's menu list
@@ -22,6 +25,7 @@ const controlMenuList = async function () {
   }
 };
 
+//adding new menu category
 const controlAddNewCategory = function (data) {
   modelState.menuCategories.push(data);
   console.log(modelState.menuCategories);
@@ -29,6 +33,7 @@ const controlAddNewCategory = function (data) {
   NewMenuItemView._mapMenuCategoriesMarkUp(modelState.menuCategories);
 };
 
+//listening for buttons to close/open new menu item
 const controlNewMenuButtonToggle = function () {
   NewMenuItemView._toggleModalClose();
   NewMenuItemView._toggleModalOpen();
