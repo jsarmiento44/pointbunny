@@ -42,7 +42,6 @@ class NewOrderItemView extends View {
 
   _pushToCart(handler) {
     this._itemModal.addEventListener("click", (e) => {
-      console.log(this._basket);
       e.preventDefault();
       const btn = e.target.closest("#btn-add-to-cart");
       if (btn) {

@@ -3,6 +3,7 @@ import * as model from "./model.js";
 import MenuListView from "./Views/menuListView.js";
 import NewMenuItemView from "./Views/newMenuItemView.js";
 import NewOrderItemView from "./Views/newOrderItemView.js";
+import OrderCheckOutView from "./Views/orderCheckoutView.js";
 
 const modelState = model.state;
 
@@ -28,8 +29,6 @@ const controlMenuList = async function () {
 //adding new menu category
 const controlAddNewCategory = function (data) {
   modelState.menuCategories.push(data);
-  console.log(modelState.menuCategories);
-
   NewMenuItemView._mapMenuCategoriesMarkUp(modelState.menuCategories);
 };
 
@@ -73,8 +72,23 @@ const controlPushToModelCart = function () {
     Number(NewOrderItemView._basket.quantity);
   model.state.cart.push(NewOrderItemView._basket);
   NewOrderView.render(modelState);
-  console.log(model.state.cart);
 };
+
+//Listents to "checkout event" and wraps up transaction
+const controlOrderCheckout = function () {
+  try {
+    if (model.state.cart.length === 0) throw `You must add an item to the cart`;
+    OrderCheckOutView._totalPrice = modelState.cart.reduce(
+      (acc, item) => acc + item.totalPrice,
+      0
+    );
+    OrderCheckOutView.render(modelState);
+  } catch (err) {
+    alert(err);
+  }
+};
+
+const controlCheckoutSubtractChange = function () {};
 
 //listens to modal close button
 const controlNewOrderModals = async function () {
@@ -96,6 +110,10 @@ const init = function () {
   controlNewOrderModals();
   NewOrderItemView._pushToCart(controlPushToModelCart);
   NewOrderItemView._adjustQuantity();
+  //New Order Check Out
+  OrderCheckOutView._addHandlerShowCheckout(controlOrderCheckout);
+  OrderCheckOutView._printReceipt();
+  OrderCheckOutView._addHandlerSubtractChange();
 };
 
 init();

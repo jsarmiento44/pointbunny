@@ -19,7 +19,6 @@ class NewOrderView extends View {
           const items = this._data.menuItems.filter(
             (item) => item.category === category
           );
-          console.log(items);
           return `
             <div class="menu-category-header">${category}</div>
             <div class="menu-category">
@@ -57,7 +56,7 @@ class NewOrderView extends View {
             (item) => `
               <div style="display:flex; justify-content:space-between;">
                 <span>${item.itemName} x${item.quantity}</span>
-                <span>${item.price * item.quantity}</span>
+                <span>₱${item.price * item.quantity}</span>
               </div>
             `
           )
@@ -75,7 +74,7 @@ class NewOrderView extends View {
         </span>
       </div>
 
-      <button>Checkout</button>
+      <button class="btn-checkout">Checkout</button>
     </div>
   </div>
 </div>
