@@ -4,6 +4,7 @@ import MenuListView from "./Views/menuListView.js";
 import NewMenuItemView from "./Views/newMenuItemView.js";
 import NewOrderItemView from "./Views/newOrderItemView.js";
 import OrderCheckOutView from "./Views/orderCheckoutView.js";
+import orderCheckoutView from "./Views/orderCheckoutView.js";
 
 const modelState = model.state;
 
@@ -88,7 +89,29 @@ const controlOrderCheckout = function () {
   }
 };
 
-const controlCheckoutSubtractChange = function () {};
+const controlConcludeTransaction = function () {
+  try {
+    if (modelState.cart.length <= 0) throw `Cart is empty!`;
+
+    NewOrderItemView._basket.customerPayment =
+      OrderCheckOutView._customerPayment;
+    NewOrderItemView._basket.customerChange = OrderCheckOutView._customerChange;
+
+    modelState.salesBasket.push(modelState.cart);
+
+    modelState.cart = [];
+    console.log(modelState.cart);
+    console.log(modelState.salesBasket);
+
+    OrderCheckOutView._showSuccess();
+    setTimeout(() => {
+      OrderCheckOutView._hideModal();
+      orderCheckoutView._hideSuccess();
+    }, 2000);
+  } catch (err) {
+    alert(err);
+  }
+};
 
 //listens to modal close button
 const controlNewOrderModals = async function () {
@@ -112,8 +135,8 @@ const init = function () {
   NewOrderItemView._adjustQuantity();
   //New Order Check Out
   OrderCheckOutView._addHandlerShowCheckout(controlOrderCheckout);
-  OrderCheckOutView._printReceipt();
-  OrderCheckOutView._addHandlerSubtractChange();
+  OrderCheckOutView._subtractChange();
+  OrderCheckOutView._addHandlerPrintReceipt(controlConcludeTransaction);
 };
 
 init();

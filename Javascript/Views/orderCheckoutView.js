@@ -3,6 +3,9 @@ import View from "./view.js";
 class OrderCheckOutView extends View {
   _parentElement = document.querySelector(".modal-parent");
   _totalPrice;
+  _customerPayment;
+  _customerChange;
+
   _generateMarkUp() {
     return `
 <div class="modal-overlay" id="newOrderModal">
@@ -48,7 +51,7 @@ class OrderCheckOutView extends View {
 </label>
 
 
-  <button id="printReceiptBtn">Print Receipt</button>
+  <button class="print-receipt-btn hidden"  id="printReceiptBtn">Print Receipt</button>
 </div>
 
   </div>
@@ -65,7 +68,7 @@ class OrderCheckOutView extends View {
     });
   }
 
-  _addHandlerSubtractChange(handler) {
+  _subtractChange() {
     this._parentElement.addEventListener("click", (e) => {
       const btn = e.target.closest("#enterPaymentBtn");
       if (btn) {
@@ -73,18 +76,35 @@ class OrderCheckOutView extends View {
         const payment =
           +this._parentElement.querySelector("#customerPayment").value;
 
+        this._customerPayment = payment;
+
         if (payment < this._totalPrice) {
           changeBox.textContent = `Payment must be higher or equal to order total`;
         } else if (payment >= this._totalPrice) {
           const change = payment - this._totalPrice;
           changeBox.classList.add("ok");
           changeBox.textContent = change;
+          this._customerChange = change;
+          document
+            .querySelector(".print-receipt-btn")
+            .classList.toggle("hidden");
         }
       }
     });
   }
 
-  _printReceipt() {}
+  _addHandlerPrintReceipt(handler) {
+    this._parentElement.addEventListener("click", function (e) {
+      const btn = e.target.closest("#printReceiptBtn");
+      if (!btn) return;
+
+      handler();
+    });
+  }
+
+  _hideModal() {
+    document.querySelector(".modal-overlay").classList.add("hidden");
+  }
 }
 
 export default new OrderCheckOutView();

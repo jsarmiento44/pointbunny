@@ -25,4 +25,23 @@ export default class View {
   _clear() {
     this._parentElement.innerHTML = "";
   }
+
+  _showSuccess() {
+    const markup = `
+    <div class="modal-overlay success-overlay">
+  <div class="modal-content success-modal">
+    <div class="success-body">
+      <div class="success-icon">✓</div>
+      <h2 class="success-title">Success</h2>
+    </div>
+  </div>
+</div>
+    `;
+
+    this._parentElement.insertAdjacentHTML("beforeend", markup);
+  }
+
+  _hideSuccess() {
+    document.querySelector(".success-overlay").classList.toggle("hidden");
+  }
 }

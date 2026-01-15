@@ -85,7 +85,7 @@ export const state = {
     },
   ],
   cart: [],
-  sales: [],
+  salesBasket: [],
 };
 
 const createNewAccount = function (username, password) {

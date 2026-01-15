@@ -31,6 +31,8 @@ class NewOrderItemView extends View {
       date: Date.now(),
       quantity: "",
       totalPrice: "",
+      customerPayment: "",
+      customerChange: "",
     };
   }
 
