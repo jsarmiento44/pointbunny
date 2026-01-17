@@ -38,7 +38,7 @@ class NewOrderItemView extends View {
               ${optionsArr
                 .map(
                   (option) => `
-                    <div class="variant-chip data-value="${option.optionName.trim()}">
+                      <div class="variant-chip" data-value="${option.optionName.trim()}">
                       ${option.optionName}
                       <span>${
                         option.optionPrice === "0"
@@ -58,6 +58,8 @@ class NewOrderItemView extends View {
 
     variantsSection.innerHTML = "";
     variantsSection.insertAdjacentHTML("afterbegin", itemVariants);
+
+    this._selectVariantListener();
 
     this._basket = {
       itemName: item.itemName,
@@ -111,6 +113,25 @@ class NewOrderItemView extends View {
       }
       console.log(this._qty);
     });
+  }
+
+  _selectVariantListener() {
+    //1.) Listen for a click event when user clicks a variant
+    document.querySelectorAll(".variant-set").forEach((variantset) => {
+      variantset.addEventListener("click", (e) => {
+        e.preventDefault();
+        const chip = e.target.closest(".variant-chip");
+        if (!chip) return;
+
+        //2.) Check if any chip is highlighted and remove if so
+        const allChips = document.querySelectorAll(".variant-chip");
+        allChips.forEach((c) => c.classList.remove("selected"));
+        //3.) Highlight selected variant
+
+        chip.classList.add("selected");
+      });
+    });
+    //3.) Push all selected variants to basket
   }
 }
 

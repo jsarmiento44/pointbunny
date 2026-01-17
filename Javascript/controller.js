@@ -4,6 +4,7 @@ import MenuListView from "./Views/menuListView.js";
 import NewMenuItemView from "./Views/newMenuItemView.js";
 import NewOrderItemView from "./Views/newOrderItemView.js";
 import OrderCheckOutView from "./Views/orderCheckoutView.js";
+import newOrderItemView from "./Views/newOrderItemView.js";
 
 const modelState = model.state;
 
@@ -139,34 +140,3 @@ const init = function () {
 };
 
 init();
-
-const variantTest = [
-  {
-    variantName: "Size",
-    variantOptions: [
-      { optionName: `Medium`, optionPrice: `35` },
-      { optionName: `Large`, optionPrice: `45` },
-      { optionName: `Bestie`, optionPrice: `60` },
-    ],
-  },
-  {
-    variantName: "Flavor",
-    variantOptions: [
-      { optionName: `Cheese`, optionPrice: `0` },
-      { optionName: `Sour Cream`, optionPrice: `0` },
-      { optionName: `BBQ`, optionPrice: `0` },
-      { optionName: `Salted`, optionPrice: `0` },
-    ],
-  },
-];
-
-variantTest.map((item) => {
-  const markup = `${item.variantName}`;
-  const [...markup2] = item.variantOptions;
-  const kiffy = markup2.map((item) => {
-    return `${item.optionName}, ${item.optionPrice}`;
-  });
-
-  console.log(item);
-  console.log(markup2);
-});
