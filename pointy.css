@@ -1158,3 +1158,94 @@ footer {
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
+
+/* ======================== Variants Section ======================== */
+.variants-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px; /* space between each variant set */
+}
+
+/* Variant header */
+.menu-category-header {
+  font-weight: 900;
+  font-size: 1.05rem;
+  margin-bottom: 12px; /* space below header */
+  background: linear-gradient(90deg, var(--brand-2), var(--brand-1));
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* Horizontal scrollable chips */
+.variant-options {
+  display: flex; /* horizontal row */
+  gap: 12px;
+  overflow-x: auto; /* scroll if too many */
+  padding-bottom: 4px; /* space for scrollbar */
+  flex-shrink: 0; /* prevent wrapping */
+  scrollbar-width: thin; /* Firefox */
+}
+
+.variant-options::-webkit-scrollbar {
+  height: 6px;
+}
+
+.variant-options::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.35);
+  border-radius: 3px;
+}
+
+.variant-options::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+/* Chips styling */
+.variant-chip {
+  flex-shrink: 0;
+  min-width: 120px; /* ensures readable size */
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform var(--tr-fast), box-shadow var(--tr-fast),
+    background var(--tr-fast), border-color var(--tr-fast);
+}
+
+.variant-chip span {
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-left: 6px;
+}
+
+.variant-chip:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  background: rgba(124, 58, 237, 0.06);
+  border-color: rgba(124, 58, 237, 0.35);
+}
+
+.variant-chip:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* Selected state */
+.variant-chip.selected {
+  background: linear-gradient(135deg, var(--brand-2), var(--brand-1));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 10px 28px rgba(59, 130, 246, 0.35);
+}
+
+.variant-chip.selected span {
+  color: rgba(255, 255, 255, 0.85);
+}

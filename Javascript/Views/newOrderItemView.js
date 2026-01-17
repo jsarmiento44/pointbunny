@@ -19,13 +19,50 @@ class NewOrderItemView extends View {
   }
 
   _itemModalContentUpdate(item) {
+    const variantsSection = this._itemModal.querySelector(".quick-actions");
     this._itemModal.querySelector(".title").textContent = item.itemName;
     this._itemModal.querySelector(".hint").textContent = item.category;
     this._itemModal.querySelector(".item-price").textContent = `₱${item.price}`;
+    item.hasVariants
+      ? console.log("has variants", item.variants)
+      : console.log("no variants");
+    const itemVariants = item.hasVariants
+      ? item.variants
+          .map((variant) => {
+            const [...optionsArr] = variant.options;
+
+            return `
+          <div class="variant-set">
+            <div class="menu-category-header">${variant.optionLabel}</div>
+            <div class="variant-options">
+              ${optionsArr
+                .map(
+                  (option) => `
+                    <div class="variant-chip data-value="${option.optionName.trim()}">
+                      ${option.optionName}
+                      <span>${
+                        option.optionPrice === "0"
+                          ? ""
+                          : `₱${option.optionPrice}`
+                      }</span>
+                    </div>
+                  `
+                )
+                .join("")}
+            </div>
+          </div>
+        `;
+          })
+          .join("")
+      : ``;
+
+    variantsSection.innerHTML = "";
+    variantsSection.insertAdjacentHTML("afterbegin", itemVariants);
 
     this._basket = {
       itemName: item.itemName,
       price: item.price,
+      selectedVariants: [],
       category: item.category,
       id: item._id,
       date: Date.now(),

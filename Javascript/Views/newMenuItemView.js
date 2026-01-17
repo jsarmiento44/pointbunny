@@ -84,7 +84,7 @@ class NewMenuItemView extends View {
 
   _mapMenuCategoriesMarkUp(data) {
     this._selectOptionsElement.innerHTML = `
-    <option value="" disabled selected>Select category</option>
+    <option class="hidden" value="" disabled selected>Select category</option>
     <option value="new-category">Add new category</option>
   `;
 
@@ -93,7 +93,7 @@ class NewMenuItemView extends View {
 `
     );
     console.log(markup);
-    this._selectOptionsElement.insertAdjacentHTML("beforeend", markup);
+    this._selectOptionsElement.insertAdjacentHTML("afterbegin", markup);
   }
 }
 

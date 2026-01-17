@@ -39,7 +39,7 @@ class OrderCheckOutView extends View {
   <!-- I Receive with Enter Button -->
   <div class="receive-container" style="display: flex; gap: 8px; align-items: center;">
     <label for="customerPayment" style="margin: 0;">
-      I receive:
+      Payment:
     </label>
     <input type="number" id="customerPayment" placeholder="Enter amount received" />
     <button id="enterPaymentBtn">Enter</button>

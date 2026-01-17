@@ -28,8 +28,32 @@ export const state = {
       _stock: `0`,
       hasVariants: true,
       variants: [
-        { variantName: "Fries Medium", variantPrice: "35" },
-        { variantName: "Fries Large", variantPrice: "45" },
+        {
+          optionLabel: `Size`,
+          options: [
+            { optionName: "Fries Medium", optionPrice: "35" },
+            { optionName: "Fries Large", optionPrice: "45" },
+            { optionName: "Bestie", optionPrice: "60" },
+          ],
+        },
+        {
+          optionLabel: `Flavor`,
+          options: [
+            { optionName: "Cheese", optionPrice: "0" },
+            { optionName: "Sour Cream", optionPrice: "0" },
+            { optionName: "BBQ", optionPrice: "0" },
+            { optionName: "Salted", optionPrice: "0" },
+          ],
+        },
+        {
+          optionLabel: `Type`,
+          options: [
+            { optionName: "Toasted", optionPrice: "60" },
+            { optionName: "Undercooked", optionPrice: "0" },
+            { optionName: "Well Done", optionPrice: "0" },
+            { optionName: "Not cooked", optionPrice: "0" },
+          ],
+        },
       ],
       description: `This is a sample description of the menu item. You can add more details here.`,
       isActive: true,
@@ -55,9 +79,15 @@ export const state = {
       _stock: `0`,
       hasVariants: true,
       variants: [
-        { variantName: "Avocado", variantPrice: "99" },
-        { variantName: "Red Velvet", variantPrice: "99" },
-        { variantName: "Matcha", variantPrice: "89" },
+        {
+          optionLabel: `Flavors`,
+          options: [
+            { optionName: "Red Velvet", optionPrice: "89" },
+            { optionName: "Strawberry", optionPrice: "89" },
+            { optionName: "Matcha", optionPrice: "99" },
+          ],
+        },
+        ,
       ],
       description: `This is a sample description of the menu item. You can add more details here.`,
       isActive: true,
@@ -103,16 +133,10 @@ export const uploadNewMenuItem = async function (newItem) {
     imageURL: newItem.image,
     _stock: `0`,
     hasVariants: false,
-    variants: {},
+    variants: [],
     description: `This is a sample description of the menu item. You can add more details here.`,
     isActive: true,
   };
   this.state.menuItems.push(item);
   console.log(state.menuItems);
 };
-
-export const allAccounts = [];
-
-createNewAccount("Wowa123", "Abudabi");
-createNewAccount("Kelly", "Sarmiento1234");
-createNewAccount("Ben", "Manatadako@26");
