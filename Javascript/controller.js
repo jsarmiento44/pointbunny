@@ -4,7 +4,6 @@ import MenuListView from "./Views/menuListView.js";
 import NewMenuItemView from "./Views/newMenuItemView.js";
 import NewOrderItemView from "./Views/newOrderItemView.js";
 import OrderCheckOutView from "./Views/orderCheckoutView.js";
-import newOrderItemView from "./Views/newOrderItemView.js";
 
 const modelState = model.state;
 
@@ -71,6 +70,9 @@ const controlPushToModelCart = function () {
   NewOrderItemView._basket.totalPrice =
     Number(NewOrderItemView._basket.price) *
     Number(NewOrderItemView._basket.quantity);
+  NewOrderItemView._basket.selectedVariants = NewOrderItemView._variants;
+  console.log(NewOrderItemView._basket.selectedVariants);
+
   model.state.cart.push(NewOrderItemView._basket);
   NewOrderView.render(modelState);
 };
@@ -81,7 +83,7 @@ const controlOrderCheckout = function () {
     if (model.state.cart.length === 0) throw `You must add an item to the cart`;
     OrderCheckOutView._totalPrice = modelState.cart.reduce(
       (acc, item) => acc + item.totalPrice,
-      0
+      0,
     );
     OrderCheckOutView.render(modelState);
   } catch (err) {

@@ -7,6 +7,7 @@ class NewOrderItemView extends View {
   _quantityBtn = document.querySelector(".quantity-buttons");
   _basket;
   _qty = 1;
+  _variants;
 
   _addHandlerShowItemModal(handler) {
     this._parentElement.addEventListener("click", (e) => {
@@ -19,13 +20,10 @@ class NewOrderItemView extends View {
   }
 
   _itemModalContentUpdate(item) {
-    const variantsSection = this._itemModal.querySelector(".quick-actions");
+    const variantsSection = this._itemModal.querySelector(".variant-section");
     this._itemModal.querySelector(".title").textContent = item.itemName;
     this._itemModal.querySelector(".hint").textContent = item.category;
     this._itemModal.querySelector(".item-price").textContent = `₱${item.price}`;
-    item.hasVariants
-      ? console.log("has variants", item.variants)
-      : console.log("no variants");
     const itemVariants = item.hasVariants
       ? item.variants
           .map((variant) => {
@@ -38,7 +36,7 @@ class NewOrderItemView extends View {
               ${optionsArr
                 .map(
                   (option) => `
-                      <div class="variant-chip" data-value="${option.optionName.trim()}">
+                      <div class="variant-chip" data-value="${option.optionName.trim()}" data-price="${option.optionPrice}">
                       ${option.optionName}
                       <span>${
                         option.optionPrice === "0"
@@ -46,7 +44,7 @@ class NewOrderItemView extends View {
                           : `₱${option.optionPrice}`
                       }</span>
                     </div>
-                  `
+                  `,
                 )
                 .join("")}
             </div>
@@ -59,12 +57,12 @@ class NewOrderItemView extends View {
     variantsSection.innerHTML = "";
     variantsSection.insertAdjacentHTML("afterbegin", itemVariants);
 
-    this._selectVariantListener();
+    this._selectSingleVariantListener();
 
     this._basket = {
       itemName: item.itemName,
       price: item.price,
-      selectedVariants: [],
+      selectedVariants: "",
       category: item.category,
       id: item._id,
       date: Date.now(),
@@ -86,6 +84,7 @@ class NewOrderItemView extends View {
       e.preventDefault();
       const btn = e.target.closest("#btn-add-to-cart");
       if (btn) {
+        this._findSelectedVariants();
         handler();
         document
           .querySelector(".item-modal-overlay")
@@ -115,23 +114,45 @@ class NewOrderItemView extends View {
     });
   }
 
-  _selectVariantListener() {
+  _selectMultipleVariantListener() {
     //1.) Listen for a click event when user clicks a variant
-    document.querySelectorAll(".variant-set").forEach((variantset) => {
-      variantset.addEventListener("click", (e) => {
+    document
+      .querySelector(".variant-section")
+      .addEventListener("click", (e) => {
         e.preventDefault();
         const chip = e.target.closest(".variant-chip");
         if (!chip) return;
 
-        //2.) Check if any chip is highlighted and remove if so
-        const allChips = document.querySelectorAll(".variant-chip");
-        allChips.forEach((c) => c.classList.remove("selected"));
-        //3.) Highlight selected variant
+        chip.classList.toggle("selected");
+        e.stopImmediatePropagation();
+      });
 
-        chip.classList.add("selected");
+    //3.) Push all selected variants to basket
+  }
+
+  _selectSingleVariantListener() {
+    document.querySelectorAll(".variant-set").forEach((set) => {
+      set.addEventListener("click", function (e) {
+        const chip = e.target.closest(".variant-chip");
+        if (!chip) return;
+
+        const currentlySelected = set.querySelector(".variant-chip.selected");
+        if (currentlySelected && currentlySelected !== chip) {
+          currentlySelected.classList.remove("selected");
+        }
+
+        chip.classList.toggle("selected");
       });
     });
-    //3.) Push all selected variants to basket
+  }
+
+  _findSelectedVariants() {
+    this._variants = Array.from(
+      document
+        .querySelector(".variant-section")
+        .querySelectorAll(".variant-chip.selected"),
+    ).map((el) => el.dataset.value + el.dataset.price);
+    console.log(this._variants);
   }
 }
 
