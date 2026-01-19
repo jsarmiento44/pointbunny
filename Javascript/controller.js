@@ -62,15 +62,19 @@ const controlDisplayMenuItem = function (id) {
 };
 
 const controlPushToModelCart = function () {
-  if (!NewOrderItemView._basket) {
-    console.warn("No item selected yet");
-    return;
+  if (NewOrderItemView._basket.length <= 0) {
+    throw "No item selected yet";
   }
   NewOrderItemView._basket.quantity = NewOrderItemView._qty;
-  NewOrderItemView._basket.totalPrice =
-    Number(NewOrderItemView._basket.price) *
-    Number(NewOrderItemView._basket.quantity);
   NewOrderItemView._basket.selectedVariants = NewOrderItemView._variants;
+
+  const basePrice = Number(NewOrderItemView._basket.price);
+  const variantsTotal = NewOrderItemView._basket.selectedVariants.reduce(
+    (acc, variant) => acc + Number(variant.variantPrice),
+    0,
+  );
+  const quantity = Number(NewOrderItemView._basket.quantity);
+  NewOrderItemView._basket.totalPrice = (basePrice + variantsTotal) * quantity;
   console.log(NewOrderItemView._basket.selectedVariants);
 
   model.state.cart.push(NewOrderItemView._basket);
@@ -102,7 +106,6 @@ const controlConcludeTransaction = function () {
     modelState.salesBasket.push(modelState.cart);
 
     modelState.cart = [];
-    console.log(modelState.cart);
     console.log(modelState.salesBasket);
 
     OrderCheckOutView._showSuccess();

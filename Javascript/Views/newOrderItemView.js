@@ -62,7 +62,8 @@ class NewOrderItemView extends View {
     this._basket = {
       itemName: item.itemName,
       price: item.price,
-      selectedVariants: "",
+      selectedVariants: [],
+      variantsTotalPrice: "",
       category: item.category,
       id: item._id,
       date: Date.now(),
@@ -151,7 +152,9 @@ class NewOrderItemView extends View {
       document
         .querySelector(".variant-section")
         .querySelectorAll(".variant-chip.selected"),
-    ).map((el) => el.dataset.value + el.dataset.price);
+    ).map((el) => {
+      return { variantName: el.dataset.value, variantPrice: el.dataset.price };
+    });
     console.log(this._variants);
   }
 }

@@ -17,7 +17,7 @@ class NewOrderView extends View {
       ${this._data.menuCategories
         .map((category) => {
           const items = this._data.menuItems.filter(
-            (item) => item.category === category
+            (item) => item.category === category,
           );
           return `
             <div class="menu-category-header">${category}</div>
@@ -34,7 +34,7 @@ class NewOrderView extends View {
                         </div>
                       </div>
                     </div>
-                  `
+                  `,
                 )
                 .join("")}
             </div>
@@ -56,9 +56,9 @@ class NewOrderView extends View {
             (item) => `
               <div style="display:flex; justify-content:space-between;">
                 <span>${item.itemName} x${item.quantity}</span>
-                <span>₱${item.price * item.quantity}</span>
+                <span>₱${item.totalPrice}</span>
               </div>
-            `
+            `,
           )
           .join("")}
       </div>
