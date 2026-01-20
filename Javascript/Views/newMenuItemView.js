@@ -90,7 +90,7 @@ class NewMenuItemView extends View {
 
     const markup = data.map(
       (i) => `<option value="${i}">${i[0].toUpperCase() + i.slice(1)}</option>
-`
+`,
     );
     console.log(markup);
     this._selectOptionsElement.insertAdjacentHTML("afterbegin", markup);

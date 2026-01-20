@@ -50,7 +50,13 @@ body {
 
 body {
   margin: 0;
-  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial,
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Arial,
     sans-serif;
   color: var(--text);
 
@@ -70,8 +76,12 @@ body[data-theme="dark"] {
 /* Smooth global theme transition */
 .theme-switch,
 .theme-switch * {
-  transition: background-color 0.45s ease, background 0.45s ease,
-    color 0.45s ease, border-color 0.45s ease, box-shadow 0.45s ease,
+  transition:
+    background-color 0.45s ease,
+    background 0.45s ease,
+    color 0.45s ease,
+    border-color 0.45s ease,
+    box-shadow 0.45s ease,
     transform 0.45s ease !important;
 }
 @keyframes themeSweep {
@@ -133,7 +143,10 @@ body[data-theme="dark"] {
   background: var(--panel);
   color: var(--text);
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s,
+    background 0.2s;
 }
 
 .qty-btn:hover {
@@ -163,7 +176,8 @@ body[data-theme="dark"] {
   z-index: -3;
   pointer-events: none;
   opacity: var(--bg-opacity, 0.42);
-  background: radial-gradient(
+  background:
+    radial-gradient(
       35vmax 35vmax at 12% 8%,
       rgba(59, 130, 246, 0.22),
       transparent 60%
@@ -184,7 +198,8 @@ body[data-theme="dark"] {
 }
 body[data-theme="dark"] .backdrop {
   opacity: var(--bg-opacity-dark, 0.32);
-  background: radial-gradient(
+  background:
+    radial-gradient(
       35vmax 35vmax at 12% 8%,
       rgba(59, 130, 246, 0.18),
       transparent 60%
@@ -305,13 +320,14 @@ header {
   border-radius: 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.35s ease, color 0.35s ease,
-    box-shadow 0.35s ease, transform 0.35s ease, border-color 0.35s ease;
+  transition:
+    background-color 0.35s ease,
+    color 0.35s ease,
+    box-shadow 0.35s ease,
+    transform 0.35s ease,
+    border-color 0.35s ease;
 }
-.btn:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
-}
+
 .btn:active {
   transform: translateY(0);
   box-shadow: none;
@@ -323,8 +339,10 @@ header {
   box-shadow: 0 10px 30px rgba(59, 130, 246, 0.28);
 }
 .btn.ghost {
-  background: transparent;
-  color: var(--text);
+  gap: 10px;
+  padding: 10px;
+  border-radius: 300px;
+  background: #22c55e;
 }
 
 /* Theme toggle cluster */
@@ -345,8 +363,11 @@ header {
   background: transparent;
   cursor: pointer;
   color: var(--text);
-  transition: background-color 0.35s ease, color 0.35s ease,
-    transform 0.35s ease, box-shadow 0.35s ease;
+  transition:
+    background-color 0.35s ease,
+    color 0.35s ease,
+    transform 0.35s ease,
+    box-shadow 0.35s ease;
 }
 .toggle button:hover {
   transform: translateY(-1px);
@@ -451,7 +472,10 @@ main {
   padding: 18px;
   text-align: left;
   box-shadow: var(--shadow-sm);
-  transition: transform var(--tr), box-shadow var(--tr), border-color var(--tr);
+  transition:
+    transform var(--tr),
+    box-shadow var(--tr),
+    border-color var(--tr);
   cursor: pointer;
   color: var(--text);
 }
@@ -468,7 +492,8 @@ main {
   inset: -1px;
   border-radius: inherit;
   z-index: -1;
-  background: radial-gradient(
+  background:
+    radial-gradient(
       160px 100px at 20% -10%,
       rgba(124, 58, 237, 0.18),
       transparent 60%
@@ -547,7 +572,9 @@ main {
   font-weight: 800;
   cursor: pointer;
   color: var(--text);
-  transition: transform var(--tr-fast), box-shadow var(--tr-fast),
+  transition:
+    transform var(--tr-fast),
+    box-shadow var(--tr-fast),
     background var(--tr-fast);
 }
 .chip:hover {
@@ -583,7 +610,9 @@ footer {
 .fade-up {
   opacity: 1;
   transform: none;
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s ease;
 }
 .js .fade-up {
   opacity: 0;
@@ -733,7 +762,9 @@ footer {
   align-items: center;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
-  transition: transform 0.2s, background 0.2s;
+  transition:
+    transform 0.2s,
+    background 0.2s;
   z-index: 10;
 }
 
@@ -789,7 +820,9 @@ footer {
   align-items: center;
   gap: 12px;
   box-shadow: var(--shadow-sm);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   cursor: pointer;
 }
 
@@ -821,11 +854,6 @@ footer {
 .btn-main .title {
   font-weight: 900;
   font-size: 1rem;
-}
-
-.btn-main .hint {
-  font-size: 0.9rem;
-  color: var(--muted);
 }
 
 /* ======================== Add Menu Form ======================== */
@@ -900,8 +928,8 @@ footer {
 
 /* ======================== Add Menu Form ======================== */
 .add-menu-form {
-  display: flex;
-  flex-direction: column;
+  /* display: flex;
+  flex-direction: column; */
   gap: 14px;
   height: 100%;
 }
@@ -931,7 +959,9 @@ footer {
   background: var(--panel);
   color: var(--text);
   font-size: 0.95rem;
-  transition: border-color var(--tr-fast), box-shadow var(--tr-fast);
+  transition:
+    border-color var(--tr-fast),
+    box-shadow var(--tr-fast);
 }
 
 .add-menu-form input::placeholder {
@@ -956,7 +986,9 @@ footer {
   color: #fff;
   background: linear-gradient(135deg, var(--brand-2), var(--brand-1));
   box-shadow: 0 12px 32px rgba(59, 130, 246, 0.35);
-  transition: transform var(--tr-fast), box-shadow var(--tr-fast);
+  transition:
+    transform var(--tr-fast),
+    box-shadow var(--tr-fast);
 }
 
 .add-menu-form button:hover {
@@ -967,6 +999,124 @@ footer {
 .add-menu-form button:active {
   transform: translateY(0);
   box-shadow: var(--shadow-sm);
+}
+
+/* The switch - the box around the slider */
+/* Wrapper for toggle + label */
+.variants-toggle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+/* Tooltip icon (i) */
+.tooltip-icon {
+  display: inline-block;
+  position: relative;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--brand-1);
+  cursor: pointer;
+  margin-left: 6px;
+}
+
+/* Tooltip bubble */
+.tooltip-text {
+  visibility: hidden;
+  width: 220px;
+  background-color: var(--panel);
+  color: var(--text);
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  position: absolute;
+  z-index: 10;
+  bottom: 125%; /* above the icon */
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: var(--shadow-sm);
+  opacity: 0;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+  pointer-events: none;
+}
+
+/* Tooltip arrow */
+.tooltip-text::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -6px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: var(--panel) transparent transparent transparent;
+}
+
+/* Show tooltip on hover */
+.tooltip-icon:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+/* Modern sliding toggle already in your CSS (matches design) */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 34px;
+}
+
+.slider::before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+.switch input:checked + .slider {
+  background-color: var(--brand-1);
+}
+
+.switch input:checked + .slider::before {
+  transform: translateX(22px);
+}
+
+/* Label next to toggle */
+.toggle-label {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* ======================== File Upload ======================== */
@@ -996,7 +1146,10 @@ footer {
   color: var(--text);
   font-weight: 700;
   text-align: center;
-  transition: background 0.3s, transform 0.2s, box-shadow 0.2s;
+  transition:
+    background 0.3s,
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .file-upload-label:hover .file-upload-btn {
@@ -1215,8 +1368,11 @@ footer {
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: transform var(--tr-fast), box-shadow var(--tr-fast),
-    background var(--tr-fast), border-color var(--tr-fast);
+  transition:
+    transform var(--tr-fast),
+    box-shadow var(--tr-fast),
+    background var(--tr-fast),
+    border-color var(--tr-fast);
 }
 
 .variant-chip span {
@@ -1248,4 +1404,99 @@ footer {
 
 .variant-chip.selected span {
   color: rgba(255, 255, 255, 0.85);
+}
+
+.two-column-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 50/50 columns */
+  gap: 32px; /* space between left & right */
+  align-content: start; /* hindi mag-stretch pababa */
+}
+
+.form-column-right {
+  display: flex;
+  flex-direction: column;
+  gap: 24px; /* space sa variants toggle, section, at button */
+}
+
+.form-column-right button[type="submit"] {
+  margin-top: auto;
+  align-self: stretch; /* full width sa right column */
+  /* kung gusto mo mas specific na style, pwede mo i-add dito pero hindi na kailangan */
+}
+
+@media (max-width: 768px) {
+  .two-column-form {
+    grid-template-columns: 1fr; /* 1 column na lang */
+    gap: 24px;
+  }
+
+  .form-column-right button[type="submit"] {
+    margin-top: 16px;
+  }
+}
+
+.form-column-left {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-title {
+  font-size: 1.4rem;
+  font-weight: 900;
+  background: linear-gradient(90deg, var(--brand-2), var(--brand-1));
+  -webkit-background-clip: text;
+  color: transparent;
+  margin: 0 0 24px 0;
+  text-align: left;
+}
+
+.add-menu-form.two-column-form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 24px;
+}
+
+.form-columns-wrapper {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-content: start;
+}
+
+.form-column.form-column-left,
+.form-column.form-column-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.add-menu-form .submit-btn {
+  margin-top: auto;
+  align-self: stretch;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 800;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--brand-2), var(--brand-1));
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+  transition: all 0.25s ease;
+}
+
+.add-menu-form .submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 40px rgba(59, 130, 246, 0.4);
+}
+
+.modal-content.form-only {
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  overflow-y: auto;
 }

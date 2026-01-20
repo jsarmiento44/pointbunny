@@ -88,10 +88,11 @@ class NewOrderView extends View {
     });
   }
 
-  _closeMenuModal() {
+  _addHandlerCloseModal(handler) {
     this._parentElement.addEventListener("click", function (e) {
       const btn = e.target.closest(".modal-close");
       if (!btn) return;
+      handler();
 
       document.querySelector(".modal-overlay").classList.toggle("hidden");
     });

@@ -57,7 +57,7 @@ class NewOrderItemView extends View {
     variantsSection.innerHTML = "";
     variantsSection.insertAdjacentHTML("afterbegin", itemVariants);
 
-    this._selectSingleVariantListener();
+    this._selectMultipleVariantListener();
 
     this._basket = {
       itemName: item.itemName,

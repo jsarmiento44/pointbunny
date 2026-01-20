@@ -105,7 +105,7 @@ const controlConcludeTransaction = function () {
 
     modelState.salesBasket.push(modelState.cart);
 
-    modelState.cart = [];
+    clearCart();
     console.log(modelState.salesBasket);
 
     OrderCheckOutView._showSuccess();
@@ -118,10 +118,13 @@ const controlConcludeTransaction = function () {
   }
 };
 
+const clearCart = function () {
+  model.state.cart = [];
+};
 //listens to modal close button
 const controlNewOrderModals = async function () {
   NewOrderItemView._closeItemModal();
-  NewOrderView._closeMenuModal();
+  NewOrderView._addHandlerCloseModal(clearCart);
 };
 
 const init = function () {

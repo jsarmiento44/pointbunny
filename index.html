@@ -76,85 +76,104 @@
       <div class="new-order-parent"></div>
       <div class="order-checkout-parent"></div>
 
-      <!-- Form Modal Overlay -->
       <div class="modal-overlay-form hidden" id="addMenuModal">
         <div class="modal-content form-only">
           <button class="modal-close">&times;</button>
+          <h3 class="form-title">Add Menu Item</h3>
 
-          <!-- Form Panel -->
-          <div class="modal-right">
-            <form class="add-menu-form">
-              <h3 class="form-title">Add Menu Item</h3>
-
-              <label>
-                Menu Item Name
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="e.g. Iced Matcha Latte"
-                  value="test"
-                  required
-                />
-              </label>
-
-              <label>
-                Price
-                <input
-                  type="number"
-                  name="price"
-                  placeholder="₱0.00"
-                  step="1"
-                  min="0"
-                  value="50"
-                  required
-                />
-              </label>
-
-              <label>
-                Category
-                <div class="category-wrapper">
-                  <!-- Select dropdown -->
-                  <select
-                    class="select-options"
-                    name="category"
-                    id="categorySelect"
-                  >
-                    <option value="" disabled selected>Select category</option>
-                    <option value="new-category">Add new category</option>
-                  </select>
-
-                  <!-- Hidden input for new category -->
+          <form class="add-menu-form two-column-form">
+            <div class="form-columns-wrapper">
+              <div class="form-column form-column-left">
+                <label>
+                  Menu Item Name
                   <input
                     type="text"
-                    name="newCategory"
-                    id="newCategoryInput"
-                    placeholder="Enter new category"
-                    class="new-category-field hidden"
+                    name="name"
+                    placeholder="e.g. Iced Matcha Latte"
+                    value="test"
+                    required
                   />
+                </label>
 
-                  <button class="new-category-button hidden" type="button">
-                    add new category
+                <label>
+                  Price
+                  <input
+                    type="number"
+                    name="price"
+                    placeholder="₱0.00"
+                    step="1"
+                    min="0"
+                    value="50"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Category
+                  <div class="category-wrapper">
+                    <select
+                      class="select-options"
+                      name="category"
+                      id="categorySelect"
+                    >
+                      <option value="" disabled selected>
+                        Select category
+                      </option>
+                      <option value="new-category">Add new category</option>
+                    </select>
+                    <div>
+                      <input
+                        type="text"
+                        name="newCategory"
+                        id="newCategoryInput"
+                        placeholder="Enter new category"
+                        class="new-category-field hidden"
+                      />
+                      <button
+                        class="new-category-button hidden btn ghost"
+                        type="button"
+                      >
+                        Add new category
+                      </button>
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              <div class="form-column form-column-right">
+                <label class="file-upload-label">
+                  Upload Image
+                  <input type="file" name="image" accept="image/*" required />
+                  <span class="file-upload-btn">Choose File</span>
+                  <span class="file-upload-name">No file chosen</span>
+                </label>
+
+                <div class="variants-toggle-wrapper">
+                  <span class="toggle-label">
+                    Item Has Multiple Options?
+                    <span class="tooltip-icon"
+                      >(i)<span class="tooltip-text"
+                        >Enable this if your item has multiple variants, like
+                        sizes, flavors, or types.</span
+                      ></span
+                    >
+                  </span>
+                  <label class="switch">
+                    <input type="checkbox" id="hasVariantsCheckbox" />
+                    <span class="slider round"></span>
+                  </label>
+                </div>
+
+                <div id="variantsSection" class="hidden variants-section">
+                  <button type="button" id="addVariantSetBtn" class="btn ghost">
+                    Add Variant Set
                   </button>
                 </div>
-              </label>
+              </div>
+            </div>
 
-              <!-- File Upload -->
-              <label class="file-upload-label">
-                Upload Image
-                <input
-                  type="file"
-                  name="image"
-                  accept="image/*"
-                  required
-                  value="/Icons/POS Wowa.png"
-                />
-                <span class="file-upload-btn">Choose File</span>
-                <span class="file-upload-name">No file chosen</span>
-              </label>
-
-              <button type="submit">Add Item</button>
-            </form>
-          </div>
+            <button type="submit" class="submit-btn">Add Item</button>
+          </form>
         </div>
       </div>
 
