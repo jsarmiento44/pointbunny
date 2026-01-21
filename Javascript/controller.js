@@ -133,6 +133,9 @@ const init = function () {
   NewMenuItemView._uploadItem(controlUploadItem);
   NewMenuItemView._newMenuCategory();
   NewMenuItemView._addHandlerAddMenuCategory(controlAddNewCategory);
+  NewMenuItemView._itemVariantsToggle();
+  NewMenuItemView._addVariantOption();
+
   controlNewMenuButtonToggle();
 
   //NewOrder
@@ -147,4 +150,5 @@ const init = function () {
   OrderCheckOutView._addHandlerPrintReceipt(controlConcludeTransaction);
 };
 
+console.log(NewMenuItemView._variantCheckBoxElement);
 init();

@@ -90,20 +90,29 @@
                     type="text"
                     name="name"
                     placeholder="e.g. Iced Matcha Latte"
-                    value="test"
+                    value=""
                     required
                   />
                 </label>
 
                 <label>
-                  Price
+                  <span>
+                    Price
+                    <span class="info-icon">
+                      i
+                      <span class="tooltip-text-parent-price">
+                        Enable this if your item has multiple variants, like
+                        sizes, flavors, or types.
+                      </span>
+                    </span>
+                  </span>
                   <input
                     type="number"
                     name="price"
                     placeholder="₱0.00"
                     step="1"
                     min="0"
-                    value="50"
+                    value=""
                     required
                   />
                 </label>
@@ -143,32 +152,91 @@
               <div class="form-column form-column-right">
                 <label class="file-upload-label">
                   Upload Image
-                  <input type="file" name="image" accept="image/*" required />
+                  <input type="file" name="image" accept="image/*" />
                   <span class="file-upload-btn">Choose File</span>
                   <span class="file-upload-name">No file chosen</span>
                 </label>
 
-                <div class="variants-toggle-wrapper">
-                  <span class="toggle-label">
-                    Item Has Multiple Options?
-                    <span class="tooltip-icon"
-                      >(i)<span class="tooltip-text"
-                        >Enable this if your item has multiple variants, like
-                        sizes, flavors, or types.</span
-                      ></span
-                    >
+                <span class="toggle-label">
+                  Item Has Multiple Options?
+                  <span class="info-icon">
+                    i
+                    <span class="tooltip-text">
+                      Enable this if your item has multiple variants, like
+                      sizes, flavors, or types.
+                    </span>
                   </span>
-                  <label class="switch">
-                    <input type="checkbox" id="hasVariantsCheckbox" />
-                    <span class="slider round"></span>
+                </span>
+
+                <!-- Checkbox below -->
+                <label class="switch">
+                  <input type="checkbox" id="hasVariantsCheckbox" />
+                  <span class="slider round"></span>
+                </label>
+
+                <div id="variantsSection" class="hidden variants-section">
+                  <button type="button" id="showVariantField" class="btn ghost">
+                    Add variant set
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="variant-modal hidden" id="addVariantModal">
+              <div class="variant-content">
+                <!-- Close Button -->
+                <button class="variant-close">&times;</button>
+
+                <div class="field-label">
+                  <label>
+                    Variant Label Name
+                    <input
+                      type="text"
+                      name="variant-name"
+                      placeholder="e.g. Flavor, Size, Add-ons"
+                    />
                   </label>
                 </div>
 
-                <div id="variantsSection" class="hidden variants-section">
-                  <button type="button" id="addVariantSetBtn" class="btn ghost">
-                    Add Variant Set
-                  </button>
+                <div class="variant-options-container">
+                  <!-- Existing options go here -->
+                  <div class="variant-options-field">
+                    <label>
+                      Variant Option Name
+                      <input
+                        type="text"
+                        name="option-name"
+                        placeholder="e.g. Small, Medium, Large"
+                      />
+                    </label>
+                    <label class="price-label">
+                      <span>
+                        Price
+                        <span class="info-icon" aria-label="Info">
+                          i
+                          <span class="tooltip-text">
+                            Leave 0 if this variant does not add extra price.
+                            The main item price will apply.
+                          </span>
+                        </span>
+                      </span>
+                      <input
+                        type="number"
+                        name="option-price"
+                        placeholder="₱0.00"
+                        step="1"
+                        min="0"
+                      />
+                    </label>
+                  </div>
+
+                  <!-- Add another option button -->
+                  <div class="add-variant-option">Add Another Option</div>
                 </div>
+
+                <button class="add-variant" id="addVariantSet">
+                  Add Variant
+                </button>
               </div>
             </div>
 

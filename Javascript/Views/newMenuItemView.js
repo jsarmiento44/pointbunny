@@ -6,6 +6,21 @@ class NewMenuItemView extends View {
   _modalDiv = document.querySelector(".modal-parent");
   _formParent = this._parentElement.querySelector(".add-menu-form");
   _selectOptionsElement = document.querySelector(".select-options");
+  _variantCheckBoxElement = document.getElementById("hasVariantsCheckbox");
+  _showVariantBtn = document.getElementById("showVariantField");
+  _addVariantElement = document.querySelector(".variant-modal");
+  _addVariantOptionBtn = document.querySelector(".add-variant-option");
+  _variantContainer = document.querySelector(".variant-options-field");
+  _addVariantBtn = document.getElementById("addVariantSet");
+
+  _addedVariants;
+  constructor() {
+    super();
+
+    this._addVariantSet();
+    this._showVariantModal();
+    this._variantModalHide();
+  }
 
   _toggleModalClose() {
     this._closeBtn.addEventListener("click", (e) => {
@@ -58,6 +73,12 @@ class NewMenuItemView extends View {
           document
             .querySelector(".new-category-button")
             .classList.remove("hidden");
+        } else {
+          document.getElementById("newCategoryInput").classList.add("hidden");
+
+          document
+            .querySelector(".new-category-button")
+            .classList.add("hidden");
         }
       });
   }
@@ -94,6 +115,81 @@ class NewMenuItemView extends View {
     );
     console.log(markup);
     this._selectOptionsElement.insertAdjacentHTML("afterbegin", markup);
+  }
+
+  _itemVariantsToggle() {
+    this._variantCheckBoxElement.addEventListener("change", function () {
+      if (this.checked) {
+        document.querySelector(".variants-section").classList.remove("hidden");
+      } else {
+        document.querySelector(".variants-section").classList.add("hidden");
+      }
+    });
+  }
+
+  _showVariantModal() {
+    this._showVariantBtn.addEventListener("click", (e) => {
+      this._addVariantElement.classList.toggle("hidden");
+    });
+  }
+
+  _variantModalHide() {
+    this._parentElement.addEventListener("click", function (e) {
+      const btn = e.target.closest(".variant-close");
+      if (!btn) return;
+      document.querySelector(".variant-modal").classList.add("hidden");
+    });
+  }
+
+  _addVariantOption() {
+    this._addVariantOptionBtn.addEventListener("click", () => {
+      const markup = `
+      <div class="variant-options-field">  <!-- gamitin yung tamang class -->
+        <label>
+          <input type="text" name="option-name" placeholder="e.g. Small, Medium, Large" />
+        </label>
+        <label class="price-label">
+          <input
+            type="number"
+            name="option-price"
+            placeholder="₱0.00"
+            step="1"
+            min="0"
+          />
+        </label>
+      </div>
+    `;
+
+      this._variantContainer.insertAdjacentHTML("beforeend", markup);
+    });
+  }
+
+  _addVariantSet() {
+    this._addVariantBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      const optionLabel = document.querySelector(
+        'input[name="variant-name"]',
+      ).value;
+
+      const optionRows = document.querySelectorAll('input[name="option-name"]');
+
+      const options = Array.from(optionRows).map((optionInput) => {
+        const optionRow = optionInput.closest(".variant-options-field");
+        const priceInput = optionRow.querySelector(
+          'input[name="option-price"]',
+        );
+
+        return {
+          optionName: optionInput.value.trim(),
+          optionPrice: priceInput.value !== "" ? priceInput.value : "0",
+        };
+      });
+
+      this._addedVariants = { optionLabel: optionLabel, options: options };
+      console.log(this._addedVariants);
+    });
   }
 }
 
