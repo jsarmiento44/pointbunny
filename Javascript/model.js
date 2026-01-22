@@ -130,10 +130,10 @@ export const uploadNewMenuItem = async function (newItem) {
     price: newItem.price,
     category: newItem.category,
     _id: generateId(),
-    imageURL: newItem.image,
+    imageURL: "",
     _stock: `0`,
-    hasVariants: false,
-    variants: [],
+    hasVariants: true,
+    variants: newItem.variants,
     description: `This is a sample description of the menu item. You can add more details here.`,
     isActive: true,
   };

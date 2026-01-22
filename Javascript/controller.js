@@ -4,6 +4,7 @@ import MenuListView from "./Views/menuListView.js";
 import NewMenuItemView from "./Views/newMenuItemView.js";
 import NewOrderItemView from "./Views/newOrderItemView.js";
 import OrderCheckOutView from "./Views/orderCheckoutView.js";
+import newMenuItemView from "./Views/newMenuItemView.js";
 
 const modelState = model.state;
 
@@ -41,6 +42,9 @@ const controlNewMenuButtonToggle = function () {
 //listens to uploadItem form button
 const controlUploadItem = function (data) {
   MenuListView.renderSpinner();
+  data.variants = newMenuItemView._addedVariants;
+  console.log(data);
+  console.log(data.variants);
   model.uploadNewMenuItem(data);
   MenuListView.render(model.state);
 };
@@ -49,6 +53,7 @@ const controlUploadItem = function (data) {
 const controlNewOrder = async function () {
   try {
     NewOrderView.render(modelState);
+    console.log(model.state.menuItems);
   } catch (err) {
     alert(err);
   }
@@ -152,3 +157,5 @@ const init = function () {
 
 console.log(NewMenuItemView._variantCheckBoxElement);
 init();
+
+console.log(Array.isArray(NewMenuItemView._addedVariants));

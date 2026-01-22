@@ -13,7 +13,8 @@ class NewMenuItemView extends View {
   _variantContainer = document.querySelector(".variant-options-field");
   _addVariantBtn = document.getElementById("addVariantSet");
 
-  _addedVariants;
+  _addedVariants = [];
+
   constructor() {
     super();
 
@@ -187,7 +188,11 @@ class NewMenuItemView extends View {
         };
       });
 
-      this._addedVariants = { optionLabel: optionLabel, options: options };
+      this._addedVariants.push({
+        optionLabel: optionLabel,
+        options: options,
+      });
+      console.log(typeof this._addedVariants);
       console.log(this._addedVariants);
     });
   }

@@ -36,7 +36,7 @@ class NewOrderItemView extends View {
               ${optionsArr
                 .map(
                   (option) => `
-                      <div class="variant-chip" data-value="${option.optionName.trim()}" data-price="${option.optionPrice}">
+                      <div class="variant-chip" data-value="${option.optionName}" data-price="${option.optionPrice}">
                       ${option.optionName}
                       <span>${
                         option.optionPrice === "0"
