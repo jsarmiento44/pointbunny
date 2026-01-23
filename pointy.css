@@ -1913,3 +1913,33 @@ footer {
   position: relative;
   overflow: visible;
 }
+
+.variant-btn-section {
+  display: flex;
+  justify-content: start;
+  gap: 15px;
+}
+
+.variant-options-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.option-pairs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.option-pair {
+  display: inline-flex;
+  gap: 2px;
+  align-items: baseline;
+  white-space: nowrap;
+  padding: 0 2px; /* minimal padding */
+  background: #f0f0f0;
+  border-radius: 4px;
+  font-size: 12px;
+  width: max-content; /* makes box shrink to content */
+}

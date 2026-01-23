@@ -6,6 +6,10 @@ class NewMenuItemView extends View {
   _modalDiv = document.querySelector(".modal-parent");
   _formParent = this._parentElement.querySelector(".add-menu-form");
   _selectOptionsElement = document.querySelector(".select-options");
+
+  //variants
+  _variantSection = document.querySelector(".variant-btn-section");
+  _variantModal = document.getElementById("addVariantModal");
   _variantCheckBoxElement = document.getElementById("hasVariantsCheckbox");
   _showVariantBtn = document.getElementById("showVariantField");
   _addVariantElement = document.querySelector(".variant-modal");
@@ -54,8 +58,16 @@ class NewMenuItemView extends View {
       //3.) Send data to controller
       //4.) close form modal
       //5.) Show success
-      document.querySelector("#addMenuModal").classList.toggle("hidden");
+      document
+        .querySelectorAll(".variant-options-container-text")
+        .forEach((container) => container.remove());
+      document
+        .getElementById("addMenuModal")
+        .querySelectorAll("input")
+        .forEach((input) => {});
+      document.getElementById("addMenuModal").classList.toggle("hidden");
       document.getElementById("newCategoryInput").classList.add("hidden");
+      this._addedVariants = [];
     });
   }
 
@@ -145,21 +157,21 @@ class NewMenuItemView extends View {
   _addVariantOption() {
     this._addVariantOptionBtn.addEventListener("click", () => {
       const markup = `
-      <div class="variant-options-field">  <!-- gamitin yung tamang class -->
-        <label>
-          <input type="text" name="option-name" placeholder="e.g. Small, Medium, Large" />
-        </label>
-        <label class="price-label">
-          <input
-            type="number"
-            name="option-price"
-            placeholder="₱0.00"
-            step="1"
-            min="0"
-          />
-        </label>
-      </div>
-    `;
+        <div class="variant-options-field added-fields">  <!-- gamitin yung tamang class -->
+          <label>
+            <input type="text" name="option-name" placeholder="e.g. Small, Medium, Large"/>
+          </label>
+          <label class="price-label">
+            <input
+              type="number"
+              name="option-price"
+              placeholder="₱0.00"
+              step="1"
+              min="0"
+            />
+          </label>
+        </div>
+      `;
 
       this._variantContainer.insertAdjacentHTML("beforeend", markup);
     });
@@ -169,31 +181,72 @@ class NewMenuItemView extends View {
     this._addVariantBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopImmediatePropagation();
-
       const optionLabel = document.querySelector(
         'input[name="variant-name"]',
       ).value;
 
-      const optionRows = document.querySelectorAll('input[name="option-name"]');
+      if (optionLabel) {
+        let allVariantRows = [];
 
-      const options = Array.from(optionRows).map((optionInput) => {
-        const optionRow = optionInput.closest(".variant-options-field");
-        const priceInput = optionRow.querySelector(
-          'input[name="option-price"]',
+        const optionRows = document.querySelectorAll(
+          'input[name="option-name"]',
         );
 
-        return {
-          optionName: optionInput.value.trim(),
-          optionPrice: priceInput.value !== "" ? priceInput.value : "0",
-        };
-      });
+        const options = Array.from(optionRows).map((optionInput) => {
+          const optionRow = optionInput.closest(".variant-options-field");
+          allVariantRows.push(optionRow);
+          const priceInput = optionRow.querySelector(
+            'input[name="option-price"]',
+          );
 
-      this._addedVariants.push({
-        optionLabel: optionLabel,
-        options: options,
-      });
-      console.log(typeof this._addedVariants);
-      console.log(this._addedVariants);
+          return {
+            optionName: optionInput.value.trim(),
+            optionPrice: priceInput.value !== "" ? priceInput.value : "0",
+          };
+        });
+
+        this._addedVariants.push({
+          optionLabel: optionLabel,
+          options: options,
+        });
+
+        // Remove previously rendered variant HTML
+        document
+          .querySelectorAll(".variant-options-container-text")
+          .forEach((el) => el.remove());
+
+        const variantMarkup = this._addedVariants
+          .map((variant) => {
+            const optionsHTML = variant.options
+              .map(
+                (opt) =>
+                  `<div class="option-pair">
+               <span class="option-name">${opt.optionName}</span>
+               <span class="option-price">${opt.optionPrice}</span>
+             </div>`,
+              )
+              .join("");
+
+            return `<div class="variant-options-container-text">
+                <div class="option-label">${variant.optionLabel}</div>
+                <div class="option-pairs">${optionsHTML}</div>
+              </div>`;
+          })
+          .join("");
+
+        this._variantSection.insertAdjacentHTML("afterend", variantMarkup);
+
+        document
+          .querySelectorAll(".added-fields")
+          .forEach((field) => field.remove());
+        this._variantModal
+          .querySelectorAll("input")
+          .forEach((input) => (input.value = ""));
+
+        document.querySelector(".variant-modal").classList.add("hidden");
+      } else {
+        alert("Please insert an option name or label");
+      }
     });
   }
 }
