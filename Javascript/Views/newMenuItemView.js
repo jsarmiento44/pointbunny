@@ -77,7 +77,8 @@ class NewMenuItemView extends View {
       this._selectOptionsElement.value = "";
       document.getElementById("addMenuModal").classList.add("hidden");
       document.getElementById("newCategoryInput").classList.add("hidden");
-      document.querySelector(".new-category-button").add("hidden");
+      document.querySelector(".new-category-button").classList.add("hidden");
+      this._showVariantBtn.classList.add("hidden");
       this._addedVariants = [];
     });
   }
