@@ -25,6 +25,7 @@ class NewMenuItemView extends View {
     this._addVariantSet();
     this._showVariantModal();
     this._variantModalHide();
+    this._addFileUploadListener();
   }
 
   _toggleModalClose() {
@@ -32,6 +33,8 @@ class NewMenuItemView extends View {
       this._parentElement.classList.toggle("hidden");
       document.getElementById("newCategoryInput").classList.add("hidden");
       document.querySelector(".new-category-button").classList.add("hidden");
+
+      this._formReset();
     });
   }
 
@@ -58,29 +61,37 @@ class NewMenuItemView extends View {
       //3.) Send data to controller
       //4.) close form modal
       //5.) Show success
-      document
-        .querySelectorAll(".variant-options-container-text")
-        .forEach((container) => container.remove());
 
-      const inputs = document
-        .getElementById("addMenuModal")
-        .querySelectorAll("input, select, textarea");
-
-      inputs.forEach((input) => {
-        if (input.type === "checkbox" || input.type === "radio") {
-          input.checked = false;
-        } else {
-          input.value = "";
-        }
-      });
-
-      this._selectOptionsElement.value = "";
-      document.getElementById("addMenuModal").classList.add("hidden");
-      document.getElementById("newCategoryInput").classList.add("hidden");
-      document.querySelector(".new-category-button").classList.add("hidden");
-      this._showVariantBtn.classList.add("hidden");
-      this._addedVariants = [];
+      this._formReset();
     });
+  }
+
+  _formReset() {
+    document
+      .querySelectorAll(".variant-options-container-text")
+      .forEach((container) => container.remove());
+
+    const inputs = document
+      .getElementById("addMenuModal")
+      .querySelectorAll("input, select, textarea");
+
+    inputs.forEach((input) => {
+      if (input.type === "checkbox" || input.type === "radio") {
+        input.checked = false;
+      } else {
+        input.value = "";
+      }
+    });
+
+    this._selectOptionsElement.value = "";
+    document.getElementById("addMenuModal").classList.add("hidden");
+    document.getElementById("newCategoryInput").classList.add("hidden");
+    document.querySelector(".new-category-button").classList.add("hidden");
+    this._showVariantBtn.classList.add("hidden");
+    this._addedVariants = [];
+    const fileNameSpan = this._parentElement.querySelector(".file-upload-name");
+    fileNameSpan.textContent = "No file chosen";
+    fileNameSpan.style.color = "";
   }
 
   _newMenuCategory() {
@@ -261,6 +272,23 @@ class NewMenuItemView extends View {
         document.querySelector(".variant-modal").classList.add("hidden");
       } else {
         alert("Please insert an option name or label");
+      }
+    });
+  }
+
+  _addFileUploadListener() {
+    const fileInput = this._parentElement.querySelector(
+      'input[type="file"][name="image"]',
+    );
+    const fileNameSpan = this._parentElement.querySelector(".file-upload-name");
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files && fileInput.files.length > 0) {
+        fileNameSpan.textContent = fileInput.files[0].name;
+        fileNameSpan.style.color = "green";
+      } else {
+        fileNameSpan.textContent = "No file chosen";
+        fileNameSpan.style.color = "";
       }
     });
   }
