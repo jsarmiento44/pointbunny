@@ -47,10 +47,10 @@ class NewMenuItemView extends View {
   }
 
   _uploadItem(handler) {
-    this._formParent.addEventListener("submit", function (e) {
+    this._formParent.addEventListener("submit", (e) => {
       e.preventDefault();
       //1.) Extract the data from fields
-      const dataArr = [...new FormData(this)];
+      const dataArr = [...new FormData(this._formParent)];
       const data = Object.fromEntries(dataArr);
       if (!data) return;
       handler(data);
@@ -61,12 +61,23 @@ class NewMenuItemView extends View {
       document
         .querySelectorAll(".variant-options-container-text")
         .forEach((container) => container.remove());
-      document
+
+      const inputs = document
         .getElementById("addMenuModal")
-        .querySelectorAll("input")
-        .forEach((input) => {});
-      document.getElementById("addMenuModal").classList.toggle("hidden");
+        .querySelectorAll("input, select, textarea");
+
+      inputs.forEach((input) => {
+        if (input.type === "checkbox" || input.type === "radio") {
+          input.checked = false;
+        } else {
+          input.value = "";
+        }
+      });
+
+      this._selectOptionsElement.value = "";
+      document.getElementById("addMenuModal").classList.add("hidden");
       document.getElementById("newCategoryInput").classList.add("hidden");
+      document.querySelector(".new-category-button").add("hidden");
       this._addedVariants = [];
     });
   }
@@ -117,10 +128,12 @@ class NewMenuItemView extends View {
   }
 
   _mapMenuCategoriesMarkUp(data) {
+    this._selectOptionsElement.innerHTML = ``;
+
     this._selectOptionsElement.innerHTML = `
-    <option class="hidden" value="" disabled selected>Select category</option>
-    <option value="new-category">Add new category</option>
-  `;
+      <option class="hidden" value="Select category" disabled selected>Select category</option>
+      <option value="new-category">Add new category</option>
+    `;
 
     const markup = data.map(
       (i) => `<option value="${i}">${i[0].toUpperCase() + i.slice(1)}</option>
@@ -131,9 +144,10 @@ class NewMenuItemView extends View {
   }
 
   _itemVariantsToggle() {
-    this._variantCheckBoxElement.addEventListener("change", function () {
-      if (this.checked) {
+    this._variantCheckBoxElement.addEventListener("change", () => {
+      if (this._variantCheckBoxElement.checked) {
         document.querySelector(".variants-section").classList.remove("hidden");
+        this._showVariantBtn.classList.remove("hidden"); // ensure button is visible
       } else {
         document.querySelector(".variants-section").classList.add("hidden");
       }
@@ -142,7 +156,7 @@ class NewMenuItemView extends View {
 
   _showVariantModal() {
     this._showVariantBtn.addEventListener("click", (e) => {
-      this._addVariantElement.classList.toggle("hidden");
+      this._addVariantElement.classList.remove("hidden");
     });
   }
 

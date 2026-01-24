@@ -41,10 +41,17 @@ const controlNewMenuButtonToggle = function () {
 
 //listens to uploadItem form button
 const controlUploadItem = function (data) {
-  MenuListView.renderSpinner();
+  const invalidCategories = ["Select category", "new-category"];
+  if (invalidCategories.includes(data.category)) {
+    if (data.newCategory?.trim()) {
+      data.category = data.newCategory.trim();
+    } else {
+      alert("Please select a valid category or enter a new one.");
+      return;
+    }
+  }
+
   data.variants = newMenuItemView._addedVariants;
-  console.log(data);
-  console.log(data.variants);
   model.uploadNewMenuItem(data);
   MenuListView.render(model.state);
 };

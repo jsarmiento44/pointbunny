@@ -34,7 +34,7 @@ class MenuListView extends View {
                     </div>
                   </div>
                 </div>
-              `
+              `,
             )
             .join("")}
         </div>
