@@ -52,14 +52,26 @@ class NewOrderView extends View {
         style="display:flex; flex-direction:column; gap:12px; max-height:60vh; overflow-y:auto;"
       >
         ${this._data.cart
-          .map(
-            (item) => `
-              <div style="display:flex; justify-content:space-between;">
+          .map((item) => {
+            const variantsArr = item.selectedVariants.map((item) => {
+              return item.variantName;
+            });
+
+            const [...allVariants] = variantsArr;
+
+            console.log(variantsArr);
+            return `
+            <div style="display:flex; justify-content:space-between;">
+              <div style="display:flex; flex-direction:column;">
                 <span>${item.itemName} x${item.quantity}</span>
+                <span style="font-size:0.85rem; opacity:0.7;">
+                ${allVariants.join(", ")}
+                </span>
+              </div>
                 <span>₱${item.totalPrice}</span>
               </div>
-            `,
-          )
+                  `;
+          })
           .join("")}
       </div>
 

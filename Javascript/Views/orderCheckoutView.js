@@ -18,14 +18,24 @@ class OrderCheckOutView extends View {
     <!-- Scrollable Cart Items -->
     <div id="cartItems" class="cart-items">
       ${this._data.cart
-        .map(
-          (item) => `
-          <div class="cart-item">
+        .map((item) => {
+          const variantsArr = item.selectedVariants.map((item) => {
+            return item.variantName;
+          });
+
+          const [...allVariants] = variantsArr;
+          return `
+            <div style="display:flex; justify-content:space-between;">
+            <div style="display:flex; flex-direction:column;">
             <span>${item.itemName} x${item.quantity}</span>
-            <span>₱${item.price * item.quantity}</span>
-          </div>
-        `
-        )
+            <span style="font-size:0.85rem; opacity:0.7;">
+            ${allVariants.join(", ")}
+            </span>
+            </div>
+            <span>₱${item.totalPrice}</span>
+            </div>
+            `;
+        })
         .join("")}
     </div>
 
