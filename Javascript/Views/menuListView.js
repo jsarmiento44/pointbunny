@@ -25,7 +25,7 @@ class MenuListView extends View {
           ${items
             .map(
               (item) => `
-                <div class="card">
+                <div class="card" data-id="${item._id}">
                   <div class="btn-main">
                     <img src="${item.imageURL}" alt="${item.itemName}" />
                     <div>
@@ -41,9 +41,7 @@ class MenuListView extends View {
       `;
     })
     .join("")}
-</div>
-
-          
+    </div>      
     </div>`;
   }
 

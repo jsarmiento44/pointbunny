@@ -5,7 +5,7 @@ import NewMenuItemView from "./Views/newMenuItemView.js";
 import NewOrderItemView from "./Views/newOrderItemView.js";
 import OrderCheckOutView from "./Views/orderCheckoutView.js";
 import newMenuItemView from "./Views/newMenuItemView.js";
-
+import MenuEditView from "./Views/menuEditView.js";
 const modelState = model.state;
 
 //adding/displaying menu list
@@ -22,6 +22,20 @@ const controlMenuList = async function () {
     //3.) Listen for close event to hide modal
     MenuListView._addHandlerCloseModal();
     NewMenuItemView._mapMenuCategoriesMarkUp(state.menuCategories);
+  } catch (err) {
+    alert(err);
+  }
+};
+
+const controlEditMenu = async function (id) {
+  try {
+    const item = model.state.menuItems.find((item) => item._id === id);
+    const categories = model.state.menuCategories;
+    MenuEditView._clear();
+    MenuEditView._insertEditMenuMarkup(item);
+    MenuEditView._mapMenuCategoriesMarkUp(categories);
+
+    console.log(item);
   } catch (err) {
     alert(err);
   }
@@ -142,6 +156,9 @@ const controlNewOrderModals = async function () {
 const init = function () {
   //MenuList
   MenuListView._addHandlerShowModal(controlMenuList);
+  MenuEditView._showEditMenuForm(controlEditMenu);
+
+  //Adding New Menu
   NewMenuItemView._uploadItem(controlUploadItem);
   NewMenuItemView._newMenuCategory();
   NewMenuItemView._addHandlerAddMenuCategory(controlAddNewCategory);
@@ -162,7 +179,4 @@ const init = function () {
   OrderCheckOutView._addHandlerPrintReceipt(controlConcludeTransaction);
 };
 
-console.log(NewMenuItemView._variantCheckBoxElement);
 init();
-
-console.log(Array.isArray(NewMenuItemView._addedVariants));

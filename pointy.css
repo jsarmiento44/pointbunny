@@ -1943,3 +1943,450 @@ footer {
   font-size: 12px;
   width: max-content; /* makes box shrink to content */
 }
+
+/* ===================== Edit Item Form ===================== */
+
+.edit-item-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px;
+  background: var(--panel-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  box-sizing: border-box;
+}
+
+.edit-form-title {
+  font-size: 1.6rem;
+  font-weight: 900;
+  background: linear-gradient(90deg, var(--brand-2), var(--brand-1));
+  -webkit-background-clip: text;
+  color: transparent;
+  margin: 0;
+}
+
+/* Grid layout */
+.edit-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+.edit-form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Fields */
+.edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.edit-field input,
+.edit-field select,
+.edit-field textarea {
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.95rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.edit-field textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+
+.edit-field input::placeholder,
+.edit-field textarea::placeholder {
+  color: var(--muted);
+}
+
+.edit-field input:focus,
+.edit-field select:focus,
+.edit-field textarea:focus {
+  outline: none;
+  border-color: var(--brand-1);
+  box-shadow: 0 0 0 4px var(--ring);
+}
+
+/* File upload */
+.edit-file-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.edit-file-upload input[type="file"] {
+  display: none;
+}
+
+.edit-upload-btn {
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-weight: 800;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.edit-file-upload:hover .edit-upload-btn {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+  background: rgba(124, 58, 237, 0.06);
+}
+
+.edit-upload-name {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* Toggle */
+.edit-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.edit-toggle-label {
+  font-weight: 900;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+/* Switch */
+.edit-switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 30px;
+}
+
+.edit-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.edit-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #ccc;
+  border-radius: 999px;
+  transition: 0.35s ease;
+}
+
+.edit-slider::before {
+  content: "";
+  position: absolute;
+  height: 22px;
+  width: 22px;
+  left: 4px;
+  bottom: 4px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: 0.35s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.edit-switch input:checked + .edit-slider {
+  background: linear-gradient(135deg, var(--brand-2), var(--brand-1));
+}
+
+.edit-switch input:checked + .edit-slider::before {
+  transform: translateX(22px);
+}
+
+/* Variants section */
+.edit-variants-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.edit-variants-title {
+  font-weight: 900;
+  font-size: 1.05rem;
+  background: linear-gradient(90deg, var(--brand-2), var(--brand-1));
+  -webkit-background-clip: text;
+  color: transparent;
+  margin: 0;
+}
+
+.edit-variant-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px dashed var(--line);
+}
+
+.edit-variant-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.edit-variant-row {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: 10px;
+}
+
+.edit-variant-row input {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.edit-variant-row input:focus {
+  outline: none;
+  border-color: var(--brand-1);
+  box-shadow: 0 0 0 4px var(--ring);
+}
+
+/* Variant buttons */
+.edit-add-option-btn,
+.edit-add-variant-btn {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.edit-add-option-btn:hover,
+.edit-add-variant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+  background: rgba(124, 58, 237, 0.06);
+}
+
+/* Action buttons */
+.edit-form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.edit-update-btn {
+  padding: 14px;
+  border-radius: var(--radius);
+  border: none;
+  background: linear-gradient(135deg, var(--brand-2), var(--brand-1));
+  color: #fff;
+  font-weight: 900;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.edit-update-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 40px rgba(59, 130, 246, 0.4);
+}
+
+.edit-delete-btn {
+  padding: 12px;
+  border-radius: var(--radius);
+  border: 1px solid #fecaca;
+  background: #fee2e2;
+  color: #991b1b;
+  font-weight: 900;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.edit-delete-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.25);
+  background: #fecaca;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .edit-form-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .edit-form-actions {
+    margin-top: 16px;
+  }
+}
+
+/* Delete buttons */
+.edit-delete-variant-btn,
+.edit-delete-option-btn {
+  background: transparent;
+  border: none;
+  color: #991b1b;
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 999px;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.edit-delete-variant-btn:hover,
+.edit-delete-option-btn:hover {
+  background: #fee2e2;
+  transform: scale(1.05);
+}
+
+/* Layout tweaks */
+.edit-variant-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.edit-variant-header .edit-field {
+  flex: 1;
+}
+
+.edit-variant-row {
+  display: grid;
+  grid-template-columns: 1fr 120px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+/* BACKDROP */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  z-index: 9999;
+}
+
+/* MODAL */
+.modal-container {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 950px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 25px;
+  position: relative;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* CLOSE BUTTON */
+.modal-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  border: none;
+  background: #f87171;
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.modal-close-btn:hover {
+  transform: scale(1.1);
+}
+
+/* Make the form scrollable inside modal */
+.edit-item-form {
+  display: block;
+}
+
+/* Grid columns */
+.edit-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+}
+
+@media (max-width: 800px) {
+  .edit-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Container around uploaded image */
+.file-upload-preview-wrapper {
+  max-width: 200px; /* or same width as the form column */
+  max-height: 150px; /* adjust to your layout */
+  overflow: hidden; /* prevent scrollbars inside image */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+/* Uploaded image */
+.file-upload-preview-wrapper img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain; /* keeps image proportions */
+  border-radius: 12px; /* matches your UI style */
+}
