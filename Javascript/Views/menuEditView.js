@@ -2,6 +2,7 @@ import View from "./view.js";
 
 class MenuEditView extends View {
   _parentElement = document.querySelector(".modal-parent");
+  _formDiv = document.querySelector(".edit-form-parent");
 
   _showEditMenuForm(handler) {
     this._parentElement.addEventListener("click", (e) => {
@@ -18,7 +19,7 @@ class MenuEditView extends View {
 <div class="modal-backdrop">
   <!-- MODAL CONTAINER -->
   <div class="modal-container">
-    <button class="modal-close-btn" aria-label="Close modal">✕</button>
+    <button class="modal-close-btn" aria-label="Close modal">x</button>
 
     <form class="edit-item-form">
       <h2 class="edit-form-title">Edit Menu Item</h2>
@@ -29,40 +30,41 @@ class MenuEditView extends View {
 
           <!-- IMAGE PREVIEW -->
           <div class="file-upload-preview-wrapper">
-            <img src="${item.imageURL || "default-image.png"}" alt="Item Image" class="edit-image-preview"/>
+            <img src="${item.imageURL || "default-image.png"}" alt="Item Image" class="edit-image-preview" />
           </div>
 
-          <!-- IMAGE UPLOAD BUTTON -->
-          <label class="edit-field edit-file-upload">
-            Image
-            <input type="file" class="edit-image-input" />
+          <!-- IMAGE UPLOAD -->
+          <div class="edit-field edit-file-upload">
+            <label>
+              Image
+              <input type="file" class="edit-image-input" name="image" />
+            </label>
             <button type="button" class="edit-upload-btn">Update Image</button>
-          </label>
+          </div>
 
           <label class="edit-field">
             Item Name
-            <input type="text" value="${item.itemName}"/>
+            <input type="text" name="itemName" value="${item.itemName}" />
           </label>
 
           <label class="edit-field">
             Price
-            <input type="number" value="${item.price}"/>
+            <input type="number" name="price" value="${item.price}" />
           </label>
 
           <label class="edit-field">
             Category
-            <select class="edit-field-select">
-            </select>
+            <select class="edit-field-select" name="category"></select>
           </label>
 
           <label class="edit-field">
             Description
-            <textarea rows="4">${item.description}</textarea>
+            <textarea name="description" rows="4">${item.description}</textarea>
           </label>
 
           <label class="edit-field">
             Stock
-            <input type="number" value="${item._stock}" />
+            <input type="number" name="stock" value="${item._stock}" />
           </label>
 
         </div>
@@ -72,16 +74,16 @@ class MenuEditView extends View {
 
           <label class="edit-field">
             Status
-            <select>
-              <option ${item.isActive ? "selected" : ""}>Active</option>
-              <option ${!item.isActive ? "selected" : ""}>Inactive</option>
+            <select name="status">
+              <option value="Active" ${item.isActive ? "selected" : ""}>Active</option>
+              <option value="Inactive" ${!item.isActive ? "selected" : ""}>Inactive</option>
             </select>
           </label>
 
           <div class="edit-toggle-row">
             <span class="edit-toggle-label">Has Variants</span>
             <label class="edit-switch">
-              <input type="checkbox" ${item.hasVariants ? "checked" : ""} />
+              <input type="checkbox" name="hasVariants" ${item.hasVariants ? "checked" : ""} />
               <span class="edit-slider"></span>
             </label>
           </div>
@@ -92,24 +94,35 @@ class MenuEditView extends View {
             ${
               item.hasVariants
                 ? item.variants
-                    .map((variant) => {
+                    .map((variant, vIndex) => {
                       return `
             <div class="edit-variant-group">
               <div class="edit-variant-header">
                 <label class="edit-field">
-                  ${variant.optionLabel}
-                  <input type="text" placeholder="e.g. Size" value="${variant.optionLabel}" />
+                  Variant Group
+                  <input type="text" name="variants[${vIndex}][optionLabel]" value="${variant.optionLabel}" />
                 </label>
                 <button type="button" class="edit-delete-variant-btn">✕</button>
               </div>
 
               ${variant.options
-                .map((option) => {
+                .map((option, oIndex) => {
                   return `
                   <div class="edit-variant-options">
                     <div class="edit-variant-row">
-                      <input type="text" placeholder="Option name" value="${option.optionName}" />
-                      <input type="number" placeholder="Price" value="${option.optionPrice}" />
+                      <input
+                        type="text"
+                        name="variants[${vIndex}][options][${oIndex}][optionName]"
+                        placeholder="Option name"
+                        value="${option.optionName}"
+                        +
+                      />
+                      <input
+                        type="number"
+                        name="variants[${vIndex}][options][${oIndex}][optionPrice]"
+                        placeholder="Price"
+                        value="${option.optionPrice}"
+                      />
                       <button type="button" class="edit-delete-option-btn">✕</button>
                     </div>
                   </div>
@@ -139,24 +152,55 @@ class MenuEditView extends View {
     </form>
   </div>
 </div>
+
 `;
-    this._parentElement.insertAdjacentHTML("afterbegin", markUp);
+    this._formDiv.innerHTML = "";
+    this._formDiv.insertAdjacentHTML("beforeend", markUp);
   }
 
-  _mapMenuCategoriesMarkUp(data) {
+  _mapMenuCategoriesMarkUp(categories, selectedCategory) {
     const selectEl = document.querySelector(".edit-field-select");
-    selectEl.innerHTML = ``;
 
-    selectEl.innerHTML = `
-      <option class="hidden" value="Select category" disabled selected>Select category</option>
-      <option value="new-category">Add new category</option>
-    `;
+    // Start fresh
+    selectEl.innerHTML = "";
 
-    const markup = data.map(
-      (i) => `<option value="${i}">${i[0].toUpperCase() + i.slice(1)}</option>
-`,
+    // Default option (only selected if no category exists)
+    selectEl.insertAdjacentHTML(
+      "beforeend",
+      `<option value="" disabled ${!selectedCategory ? "selected" : ""}>
+       Select category
+     </option>`,
     );
-    selectEl.insertAdjacentHTML("afterbegin", markup);
+
+    // Add actual categories
+    const markup = categories
+      .map(
+        (cat) => `
+        <option value="${cat}" ${cat === selectedCategory ? "selected" : ""}>
+          ${cat[0].toUpperCase() + cat.slice(1)}
+        </option>
+      `,
+      )
+      .join("");
+
+    selectEl.insertAdjacentHTML("beforeend", markup);
+
+    // Add "new category" option
+    selectEl.insertAdjacentHTML(
+      "beforeend",
+      `<option value="new-category">Add new category</option>`,
+    );
+  }
+
+  _updateItemData(handler) {
+    this._formDiv.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const form = e.target.closest(".edit-item-form");
+      if (!form) return;
+      const dataArr = [...new FormData(form)];
+      const data = Object.fromEntries(dataArr);
+      handler(data);
+    });
   }
 }
 

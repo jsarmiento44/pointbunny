@@ -140,6 +140,111 @@ export const uploadNewMenuItem = async function (newItem) {
     description: `This is a sample description of the menu item. You can add more details here.`,
     isActive: true,
   };
-  this.state.menuItems.push(item);
+  state.menuItems.push(item);
   console.log(state.menuItems);
 };
+
+export const updateMenuItem = function (id, rawData) {
+  try {
+    // 1️⃣ Find the existing item
+    const item = state.menuItems.find((item) => item._id === id);
+    if (!item) throw new Error("Item not found");
+
+    // 2️⃣ Normalize boolean values
+    const hasVariants = rawData.hasVariants === "on";
+    const isActive = rawData.status === "Active";
+
+    // 3️⃣ Update basic fields
+    item.itemName = rawData.itemName || "";
+    item.price = rawData.price || "0";
+    item.category = rawData.category || "";
+    item._stock = rawData.stock || "0";
+    item.description = rawData.description || "";
+    item.hasVariants = hasVariants;
+    item.isActive = isActive;
+
+    // 4️⃣ Update image ONLY if a new one was selected
+    if (rawData.image && rawData.image.size > 0) {
+      item.imageURL = rawData.image.name;
+    }
+
+    // 5️⃣ Update variants safely
+    if (hasVariants) {
+      item.variants = parseVariants(rawData);
+    } else {
+      item.variants = [];
+    }
+
+    console.log("Updated item:", item);
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
+function parseVariants(raw) {
+  // This will temporarily store variants grouped by their index
+  // Example:
+  // {
+  //   0: { optionLabel: "Size", options: [...] },
+  //   1: { optionLabel: "Flavor", options: [...] }
+  // }
+  const variantMap = {};
+
+  // Loop through every key in the flat form object
+  Object.keys(raw).forEach((key) => {
+    // We use regex to detect keys that follow this pattern:
+    // variants[0][optionLabel]
+    // variants[0][options][1][optionName]
+    // variants[1][options][2][optionPrice]
+    const match = key.match(
+      /variants\[(\d+)\]\[(optionLabel|options)\](?:\[(\d+)\]\[(optionName|optionPrice)\])?/,
+    );
+
+    // If the key doesn't match that pattern, ignore it
+    if (!match) return;
+
+    // Extract matched values
+    const variantIndex = match[1]; // e.g. "0"
+    const field = match[2]; // "optionLabel" or "options"
+    const optionIndex = match[3]; // e.g. "1" (if inside options)
+    const optionField = match[4]; // "optionName" or "optionPrice"
+
+    // If this variant doesn't exist yet in our map, create it
+    if (!variantMap[variantIndex]) {
+      variantMap[variantIndex] = {
+        optionLabel: "",
+        options: [],
+      };
+    }
+
+    // If we're dealing with the variant label
+    // Example: variants[0][optionLabel]
+    if (field === "optionLabel") {
+      variantMap[variantIndex].optionLabel = raw[key];
+    }
+
+    // If we're inside options
+    // Example: variants[0][options][1][optionName]
+    if (field === "options") {
+      // If this specific option doesn't exist yet, create it
+      if (!variantMap[variantIndex].options[optionIndex]) {
+        variantMap[variantIndex].options[optionIndex] = {
+          optionName: "",
+          optionPrice: "0",
+        };
+      }
+
+      // Assign either optionName or optionPrice
+      variantMap[variantIndex].options[optionIndex][optionField] = raw[key];
+    }
+  });
+
+  // Convert the variantMap object into an array
+  // Also remove empty options (where user left blank rows)
+  return Object.values(variantMap).map((variant) => ({
+    ...variant,
+    options: variant.options.filter(
+      (option) => option.optionName.trim() !== "",
+    ),
+  }));
+}

@@ -900,7 +900,8 @@ footer {
 
 /* ======================== Close Button ======================== */
 .modal-close,
-.item-modal-close {
+.item-modal-close,
+.modal-close-btn {
   position: absolute;
   top: 16px;
   right: 16px;
@@ -2332,21 +2333,6 @@ footer {
 }
 
 /* CLOSE BUTTON */
-.modal-close-btn {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  border: none;
-  background: #f87171;
-  color: #fff;
-  font-size: 1.2rem;
-  font-weight: 700;
-  border-radius: 999px;
-  width: 30px;
-  height: 30px;
-  cursor: pointer;
-  transition: transform 0.15s ease;
-}
 
 .modal-close-btn:hover {
   transform: scale(1.1);

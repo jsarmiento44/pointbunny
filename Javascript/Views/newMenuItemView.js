@@ -55,6 +55,7 @@ class NewMenuItemView extends View {
       //1.) Extract the data from fields
       const dataArr = [...new FormData(this._formParent)];
       const data = Object.fromEntries(dataArr);
+      console.log(data);
       if (!data) return;
       handler(data);
       //2.) Refactor data to become model object

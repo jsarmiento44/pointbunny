@@ -7,7 +7,7 @@ import OrderCheckOutView from "./Views/orderCheckoutView.js";
 import newMenuItemView from "./Views/newMenuItemView.js";
 import MenuEditView from "./Views/menuEditView.js";
 const modelState = model.state;
-
+let item;
 //adding/displaying menu list
 
 //to add edit/delete option
@@ -27,15 +27,16 @@ const controlMenuList = async function () {
   }
 };
 
-const controlEditMenu = async function (id) {
+const controlShowEditMenu = async function (id) {
   try {
-    const item = model.state.menuItems.find((item) => item._id === id);
+    item = model.state.menuItems.find((item) => item._id === id);
     const categories = model.state.menuCategories;
     MenuEditView._clear();
     MenuEditView._insertEditMenuMarkup(item);
-    MenuEditView._mapMenuCategoriesMarkUp(categories);
-
+    MenuEditView._mapMenuCategoriesMarkUp(categories, item.category); //Model update item
     console.log(item);
+    //controller connect
+    MenuEditView._updateItemData((data) => model.updateMenuItem(id, data)); //view give info
   } catch (err) {
     alert(err);
   }
@@ -139,9 +140,7 @@ const controlConcludeTransaction = function () {
       OrderCheckOutView._hideModal();
       OrderCheckOutView._hideSuccess();
     }, 2000);
-  } catch (err) {
-    alert(err);
-  }
+  } catch (err) {}
 };
 
 const clearCart = function () {
@@ -156,7 +155,7 @@ const controlNewOrderModals = async function () {
 const init = function () {
   //MenuList
   MenuListView._addHandlerShowModal(controlMenuList);
-  MenuEditView._showEditMenuForm(controlEditMenu);
+  MenuEditView._showEditMenuForm(controlShowEditMenu);
 
   //Adding New Menu
   NewMenuItemView._uploadItem(controlUploadItem);
