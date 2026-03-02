@@ -115,7 +115,6 @@ class MenuEditView extends View {
                         name="variants[${vIndex}][options][${oIndex}][optionName]"
                         placeholder="Option name"
                         value="${option.optionName}"
-                        +
                       />
                       <input
                         type="number"
@@ -200,6 +199,52 @@ class MenuEditView extends View {
       const dataArr = [...new FormData(form)];
       const data = Object.fromEntries(dataArr);
       handler(data);
+    });
+  }
+
+  _deleteVariant() {
+    this._formDiv.addEventListener("click", (e) => {
+      const btn = e.target.closest(".edit-delete-variant-btn");
+      if (!btn) return;
+
+      const group = btn.closest(".edit-variant-group");
+      if (!group) return;
+
+      group.remove();
+
+      this._reindexVariants();
+    });
+  }
+
+  _reindexVariants() {
+    const groups = this._formDiv.querySelectorAll(".edit-variant-group");
+
+    groups.forEach((group, vIndex) => {
+      // Update variant label input
+      const labelInput = group.querySelector('input[name*="[optionLabel]"]');
+
+      labelInput.name = `variants[${vIndex}][optionLabel]`;
+
+      // Update option inputs
+      const optionRows = group.querySelectorAll(".edit-variant-row");
+
+      optionRows.forEach((row, oIndex) => {
+        const nameInput = row.querySelector('input[name*="[optionName]"]');
+        const priceInput = row.querySelector('input[name*="[optionPrice]"]');
+
+        nameInput.name = `variants[${vIndex}][options][${oIndex}][optionName]`;
+        priceInput.name = `variants[${vIndex}][options][${oIndex}][optionPrice]`;
+      });
+    });
+  }
+
+  _closeModal() {
+    this._formDiv.addEventListener("click", (e) => {
+      const btn = e.target.closest(".modal-close-btn");
+      if (!btn) return;
+
+      const backdrop = btn.closest(".modal-backdrop");
+      if (backdrop) backdrop.remove();
     });
   }
 }

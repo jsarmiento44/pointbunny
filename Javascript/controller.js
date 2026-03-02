@@ -156,6 +156,8 @@ const init = function () {
   //MenuList
   MenuListView._addHandlerShowModal(controlMenuList);
   MenuEditView._showEditMenuForm(controlShowEditMenu);
+  MenuEditView._deleteVariant();
+  MenuEditView._closeModal();
 
   //Adding New Menu
   NewMenuItemView._uploadItem(controlUploadItem);
