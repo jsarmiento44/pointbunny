@@ -199,6 +199,15 @@ class MenuEditView extends View {
       const dataArr = [...new FormData(form)];
       const data = Object.fromEntries(dataArr);
       handler(data);
+
+      const backdrop = form.closest(".modal-backdrop");
+      if (backdrop) backdrop.remove();
+
+      this._showSuccess();
+
+      setTimeout(() => {
+        this._hideSuccess();
+      }, 2000);
     });
   }
 
@@ -207,10 +216,12 @@ class MenuEditView extends View {
       const btn = e.target.closest(".edit-delete-variant-btn");
       if (!btn) return;
 
-      const group = btn.closest(".edit-variant-group");
-      if (!group) return;
+      const confirmDelete = window.confirm("Delete this variant group?");
 
-      group.remove();
+      if (!confirmDelete) return;
+
+      const group = btn.closest(".edit-variant-group");
+      if (group) group.remove();
 
       this._reindexVariants();
     });
@@ -235,6 +246,18 @@ class MenuEditView extends View {
         nameInput.name = `variants[${vIndex}][options][${oIndex}][optionName]`;
         priceInput.name = `variants[${vIndex}][options][${oIndex}][optionPrice]`;
       });
+    });
+  }
+
+  _deleteOption() {
+    this._formDiv.addEventListener("click", (e) => {
+      const btn = e.target.closest(".edit-delete-option-btn");
+      if (!btn) return;
+
+      const optionWrapper = btn.closest(".edit-variant-options");
+      if (optionWrapper) optionWrapper.remove();
+
+      this._reindexVariants();
     });
   }
 

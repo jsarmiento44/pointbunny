@@ -158,6 +158,7 @@ const init = function () {
   MenuEditView._showEditMenuForm(controlShowEditMenu);
   MenuEditView._deleteVariant();
   MenuEditView._closeModal();
+  MenuEditView._deleteOption();
 
   //Adding New Menu
   NewMenuItemView._uploadItem(controlUploadItem);
