@@ -21,14 +21,21 @@ class NewOrderItemView extends View {
 
   _itemModalContentUpdate(item) {
     const variantsSection = this._itemModal.querySelector(".variant-section");
+
     this._itemModal.querySelector(".title").textContent = item.itemName;
     this._itemModal.querySelector(".hint").textContent = item.category;
     this._itemModal.querySelector(".item-price").textContent = `₱${item.price}`;
+
+    const imgEl = this._itemModal.querySelector(".item-image");
+    if (imgEl) {
+      imgEl.src = item.imageURL || "../Icons/default image.png";
+      imgEl.alt = item.itemName;
+    }
+
     const itemVariants = item.hasVariants
       ? item.variants
           .map((variant) => {
             const [...optionsArr] = variant.options;
-
             return `
           <div class="variant-set">
             <div class="menu-category-header">${variant.optionLabel}</div>
@@ -36,14 +43,10 @@ class NewOrderItemView extends View {
               ${optionsArr
                 .map(
                   (option) => `
-                      <div class="variant-chip" data-value="${option.optionName}" data-price="${option.optionPrice}">
-                      ${option.optionName !== "" ? option.optionName : `Unamed option `}
-                      <span>${
-                        option.optionPrice === "0"
-                          ? ""
-                          : `₱${option.optionPrice}`
-                      }</span>
-                    </div>
+                  <div class="variant-chip" data-value="${option.optionName}" data-price="${option.optionPrice}">
+                    ${option.optionName !== "" ? option.optionName : `Unnamed option`}
+                    <span>${option.optionPrice === "0" ? "" : `₱${option.optionPrice}`}</span>
+                  </div>
                   `,
                 )
                 .join("")}
@@ -62,6 +65,7 @@ class NewOrderItemView extends View {
     this._basket = {
       itemName: item.itemName,
       price: item.price,
+      imageURL: item.imageURL || "../Icons/default image.png",
       selectedVariants: [],
       variantsTotalPrice: "",
       category: item.category,

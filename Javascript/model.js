@@ -164,8 +164,12 @@ export const updateMenuItem = function (id, rawData) {
     item.isActive = isActive;
 
     // 4️⃣ Update image ONLY if a new one was selected
+    // rawData.image is now the actual File object
     if (rawData.image && rawData.image.size > 0) {
-      item.imageURL = rawData.image.name;
+      // Use URL.createObjectURL for immediate preview
+      item.imageURL = URL.createObjectURL(rawData.image);
+      // Optionally, store the file itself if you need to upload to backend later
+      item.imageFile = rawData.image;
     }
 
     // 5️⃣ Update variants safely

@@ -2232,6 +2232,11 @@ footer {
   box-shadow: 0 14px 40px rgba(59, 130, 246, 0.4);
 }
 
+.edit-variants-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 .edit-delete-btn {
   padding: 12px;
   border-radius: var(--radius);
@@ -2375,4 +2380,38 @@ footer {
   height: auto;
   object-fit: contain; /* keeps image proportions */
   border-radius: 12px; /* matches your UI style */
+}
+
+.file-upload-preview-wrapper {
+  position: relative;
+  width: 150px; /* adjust as needed */
+  height: 150px; /* adjust as needed */
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.edit-image-preview {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.edit-image-overlay {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none;
 }

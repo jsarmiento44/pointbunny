@@ -28,19 +28,17 @@ class MenuEditView extends View {
         <!-- LEFT COLUMN -->
         <div class="edit-form-column">
 
-          <!-- IMAGE PREVIEW -->
-          <div class="file-upload-preview-wrapper">
-            <img src="${item.imageURL || "default-image.png"}" alt="Item Image" class="edit-image-preview" />
-          </div>
+          <!-- IMAGE PREVIEW + UPLOAD -->
+            <div class="file-upload-preview-wrapper">
+              <img
+                src="${item.imageURL || "default-image.png"}"
+                alt="Item Image"
+                class="edit-image-preview"
+              />
+              <input type="file" class="edit-image-input" name="image" style="display:none;" />
+              <span class="edit-image-overlay">Click to change image</span>
+            </div>
 
-          <!-- IMAGE UPLOAD -->
-          <div class="edit-field edit-file-upload">
-            <label>
-              Image
-              <input type="file" class="edit-image-input" name="image" />
-            </label>
-            <button type="button" class="edit-upload-btn">Update Image</button>
-          </div>
 
           <label class="edit-field">
             Item Name
@@ -90,7 +88,13 @@ class MenuEditView extends View {
 
           <!-- Variants Section -->
           <div class="edit-variants-section">
-            <h3 class="edit-variants-title">Variants</h3>
+
+            <!-- Header: Variants title + Add button -->
+            <div class="edit-variants-header">
+              <h3 class="edit-variants-title">Variants</h3>
+              <button type="button" class="edit-add-variant-btn">+ Add Variant Group</button>
+            </div>
+
             ${
               item.hasVariants
                 ? item.variants
@@ -138,8 +142,6 @@ class MenuEditView extends View {
             }
           </div>
 
-          <button type="button" class="edit-add-variant-btn">+ Add Variant Group</button>
-
           <!-- ACTION BUTTONS -->
           <div class="edit-form-actions">
             <button type="submit" class="edit-update-btn">Update</button>
@@ -151,7 +153,6 @@ class MenuEditView extends View {
     </form>
   </div>
 </div>
-
 `;
     this._formDiv.innerHTML = "";
     this._formDiv.insertAdjacentHTML("beforeend", markUp);
@@ -192,22 +193,184 @@ class MenuEditView extends View {
   }
 
   _updateItemData(handler) {
-    this._formDiv.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const form = e.target.closest(".edit-item-form");
-      if (!form) return;
-      const dataArr = [...new FormData(form)];
-      const data = Object.fromEntries(dataArr);
-      handler(data);
+    this._formDiv.addEventListener(
+      "submit",
+      (e) => {
+        e.preventDefault();
+        const form = e.target.closest(".edit-item-form");
+        if (!form) return;
 
-      const backdrop = form.closest(".modal-backdrop");
-      if (backdrop) backdrop.remove();
+        const formData = new FormData(form);
 
-      this._showSuccess();
+        // Convert formData to object but keep the file object
+        const data = {};
+        for (let [key, value] of formData.entries()) {
+          data[key] = value;
+        }
 
-      setTimeout(() => {
-        this._hideSuccess();
-      }, 2000);
+        handler(data); // now rawData.image is the real File
+        const backdrop = form.closest(".modal-backdrop");
+        if (backdrop) backdrop.remove();
+        this._showSuccess();
+        setTimeout(() => this._hideSuccess(), 1000);
+      },
+      { once: true },
+    );
+  }
+
+  _updateImagePreview() {
+    // Click image to open file dialog
+    this._formDiv.addEventListener("click", (e) => {
+      const wrapper = e.target.closest(".file-upload-preview-wrapper");
+      if (!wrapper) return;
+
+      const input = wrapper.querySelector(".edit-image-input");
+      if (!input) return;
+
+      input.click();
+    });
+
+    // Update preview when file selected
+    this._formDiv.addEventListener("change", (e) => {
+      const input = e.target.closest(".edit-image-input");
+      if (!input) return;
+
+      const file = input.files[0];
+      if (!file) return;
+
+      const preview = input
+        .closest(".file-upload-preview-wrapper")
+        .querySelector(".edit-image-preview");
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        preview.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  _addVariantGroup() {
+    this._formDiv.addEventListener("click", (e) => {
+      const btn = e.target.closest(".edit-add-variant-btn");
+      if (!btn) return;
+
+      const variantsSection = btn.closest(".edit-variants-section");
+      if (!variantsSection) return;
+
+      // Determine next index
+      const currentGroups = variantsSection.querySelectorAll(
+        ".edit-variant-group",
+      );
+      const vIndex = currentGroups.length;
+
+      // Build markup for a new empty variant group
+      const markup = `
+      <div class="edit-variant-group">
+        <div class="edit-variant-header">
+          <label class="edit-field">
+            Variant Group
+            <input type="text" name="variants[${vIndex}][optionLabel]" value="" placeholder="Variant Label" />
+          </label>
+          <button type="button" class="edit-delete-variant-btn">✕</button>
+        </div>
+
+        <div class="edit-variant-options">
+          <div class="edit-variant-row">
+            <input
+              type="text"
+              name="variants[${vIndex}][options][0][optionName]"
+              placeholder="Option name"
+            />
+            <input
+              type="number"
+              name="variants[${vIndex}][options][0][optionPrice]"
+              placeholder="Price"
+            />
+            <button type="button" class="edit-delete-option-btn">✕</button>
+          </div>
+        </div>
+
+        <button type="button" class="edit-add-option-btn">+ Add Option</button>
+      </div>
+    `;
+
+      // Insert new group at the bottom of variants section
+      variantsSection.insertAdjacentHTML("beforeend", markup);
+
+      // Get the newly added group
+      const newGroup = variantsSection.querySelector(
+        ".edit-variant-group:last-child",
+      );
+
+      // Scroll smoothly to the new group
+      newGroup.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      // Focus on the group name input
+      const input = newGroup.querySelector(
+        "input[name^='variants'][name$='[optionLabel]']",
+      );
+      if (input) input.focus();
+
+      this._reindexVariants(); // make sure indices stay correct
+    });
+  }
+
+  _addOption() {
+    this._formDiv.addEventListener("click", (e) => {
+      const btn = e.target.closest(".edit-add-option-btn");
+      if (!btn) return;
+
+      const variantGroup = btn.closest(".edit-variant-group");
+      if (!variantGroup) return;
+
+      const optionsContainer = variantGroup.querySelector(
+        ".edit-variant-options",
+      );
+      if (!optionsContainer) return;
+
+      // Determine next option index
+      const currentOptions =
+        optionsContainer.querySelectorAll(".edit-variant-row");
+      const oIndex = currentOptions.length;
+
+      // Determine vIndex for this variant group
+      const groupInput = variantGroup.querySelector(
+        "input[name^='variants'][name$='[optionLabel]']",
+      );
+      const vIndexMatch = groupInput.name.match(/variants\[(\d+)\]/);
+      const vIndex = vIndexMatch ? vIndexMatch[1] : 0;
+
+      // Build new option row
+      const markup = `
+      <div class="edit-variant-row">
+        <input
+          type="text"
+          name="variants[${vIndex}][options][${oIndex}][optionName]"
+          placeholder="Option name"
+        />
+        <input
+          type="number"
+          name="variants[${vIndex}][options][${oIndex}][optionPrice]"
+          placeholder="Price"
+        />
+        <button type="button" class="edit-delete-option-btn">✕</button>
+      </div>
+    `;
+
+      optionsContainer.insertAdjacentHTML("beforeend", markup);
+
+      // Scroll to the new option
+      const newOption = optionsContainer.querySelector(
+        ".edit-variant-row:last-child",
+      );
+      newOption.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      // Focus on the new option name input
+      const input = newOption.querySelector("input[name$='[optionName]']");
+      if (input) input.focus();
+
+      this._reindexVariants(); // make sure names stay correct
     });
   }
 

@@ -31,12 +31,34 @@ const controlShowEditMenu = async function (id) {
   try {
     item = model.state.menuItems.find((item) => item._id === id);
     const categories = model.state.menuCategories;
+
     MenuEditView._clear();
     MenuEditView._insertEditMenuMarkup(item);
-    MenuEditView._mapMenuCategoriesMarkUp(categories, item.category); //Model update item
-    console.log(item);
-    //controller connect
-    MenuEditView._updateItemData((data) => model.updateMenuItem(id, data)); //view give info
+    MenuEditView._mapMenuCategoriesMarkUp(categories, item.category);
+
+    MenuEditView._updateItemData((data) => {
+      model.updateMenuItem(item._id, data);
+
+      const modal = document.querySelector(".item-modal-overlay");
+      if (
+        !modal.classList.contains("hidden") &&
+        NewOrderItemView._basket?.id === item._id
+      ) {
+        // Only update the image smoothly
+        const imgEl = modal.querySelector(".item-image");
+        const updatedItem = model.state.menuItems.find(
+          (i) => i._id === item._id,
+        );
+        if (imgEl) {
+          imgEl.style.transition = "opacity 0.3s ease";
+          imgEl.style.opacity = 0;
+          setTimeout(() => {
+            imgEl.src = updatedItem.imageURL;
+            imgEl.style.opacity = 1;
+          }, 100);
+        }
+      }
+    });
   } catch (err) {
     alert(err);
   }
@@ -159,6 +181,9 @@ const init = function () {
   MenuEditView._deleteVariant();
   MenuEditView._closeModal();
   MenuEditView._deleteOption();
+  MenuEditView._addVariantGroup();
+  MenuEditView._addOption();
+  MenuEditView._updateImagePreview();
 
   //Adding New Menu
   NewMenuItemView._uploadItem(controlUploadItem);
