@@ -1069,6 +1069,14 @@ footer {
 
 /* ======================== Responsive ======================== */
 @media (max-width: 768px) {
+  .modal-overlay,
+  .modal-overlay-form,
+  .item-modal-overlay,
+  .modal-backdrop {
+    align-items: flex-start;
+    padding: 16px;
+  }
+
   .modal-content {
     flex-direction: column;
     padding: 24px;
@@ -1716,6 +1724,13 @@ footer {
   z-index: 9999;
 }
 
+@media (max-width: 768px) {
+  .modal-overlay-form {
+    align-items: flex-start;
+    padding: 16px;
+  }
+}
+
 .modal-content.form-only {
   background: var(--panel-strong);
   border-radius: 12px;
@@ -2315,37 +2330,54 @@ footer {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(16px);
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 20px;
   z-index: 9999;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .modal-backdrop {
+    align-items: flex-start;
+    padding: 16px;
+  }
 }
 
 /* MODAL */
 .modal-container {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--panel-strong);
+  border-radius: var(--radius-lg);
   width: 100%;
   max-width: 950px;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 25px;
+  box-sizing: border-box;
+  box-shadow: var(--shadow-lg);
   position: relative;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-container .modal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.edit-item-form {
+  overflow-y: auto;
+  flex: 1;
 }
 
 /* CLOSE BUTTON */
 
 .modal-close-btn:hover {
   transform: scale(1.1);
-}
-
-/* Make the form scrollable inside modal */
-.edit-item-form {
-  display: block;
 }
 
 /* Grid columns */
@@ -2358,6 +2390,10 @@ footer {
 @media (max-width: 800px) {
   .edit-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .modal-container {
+    max-height: calc(100vh - 32px);
   }
 }
 

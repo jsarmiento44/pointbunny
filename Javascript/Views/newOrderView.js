@@ -59,7 +59,6 @@ class NewOrderView extends View {
 
             const [...allVariants] = variantsArr;
 
-            console.log(variantsArr);
             return `
             <div style="display:flex; justify-content:space-between;">
               <div style="display:flex; flex-direction:column;">

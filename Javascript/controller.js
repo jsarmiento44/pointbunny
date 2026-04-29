@@ -97,7 +97,6 @@ const controlUploadItem = function (data) {
 const controlNewOrder = async function () {
   try {
     NewOrderView.render(modelState);
-    console.log(model.state.menuItems);
   } catch (err) {
     alert(err);
   }
@@ -124,7 +123,6 @@ const controlPushToModelCart = function () {
   );
   const quantity = Number(NewOrderItemView._basket.quantity);
   NewOrderItemView._basket.totalPrice = (basePrice + variantsTotal) * quantity;
-  console.log(NewOrderItemView._basket.selectedVariants);
 
   model.state.cart.push(NewOrderItemView._basket);
   NewOrderView.render(modelState);
@@ -148,21 +146,26 @@ const controlConcludeTransaction = function () {
   try {
     if (modelState.cart.length <= 0) throw `Cart is empty!`;
 
-    NewOrderItemView._basket.customerPayment =
-      OrderCheckOutView._customerPayment;
-    NewOrderItemView._basket.customerChange = OrderCheckOutView._customerChange;
+    const sale = {
+      items: [...modelState.cart],
+      totalPrice: OrderCheckOutView._totalPrice,
+      customerPayment: OrderCheckOutView._customerPayment,
+      customerChange: OrderCheckOutView._customerChange,
+      date: Date.now(),
+    };
 
-    modelState.salesBasket.push(modelState.cart);
+    modelState.salesBasket.push(sale);
 
     clearCart();
-    console.log(modelState.salesBasket);
 
     OrderCheckOutView._showSuccess();
     setTimeout(() => {
       OrderCheckOutView._hideModal();
       OrderCheckOutView._hideSuccess();
     }, 2000);
-  } catch (err) {}
+  } catch (err) {
+    alert(err);
+  }
 };
 
 const clearCart = function () {

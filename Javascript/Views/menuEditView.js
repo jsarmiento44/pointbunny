@@ -3,6 +3,7 @@ import View from "./view.js";
 class MenuEditView extends View {
   _parentElement = document.querySelector(".modal-parent");
   _formDiv = document.querySelector(".edit-form-parent");
+  _submitHandler = null;
 
   _showEditMenuForm(handler) {
     this._parentElement.addEventListener("click", (e) => {
@@ -109,10 +110,10 @@ class MenuEditView extends View {
                 <button type="button" class="edit-delete-variant-btn">✕</button>
               </div>
 
-              ${variant.options
-                .map((option, oIndex) => {
-                  return `
-                  <div class="edit-variant-options">
+              <div class="edit-variant-options">
+                ${variant.options
+                  .map((option, oIndex) => {
+                    return `
                     <div class="edit-variant-row">
                       <input
                         type="text"
@@ -128,10 +129,10 @@ class MenuEditView extends View {
                       />
                       <button type="button" class="edit-delete-option-btn">✕</button>
                     </div>
-                  </div>
-                  `;
-                })
-                .join("")}
+                    `;
+                  })
+                  .join("")}
+              </div>
 
               <button type="button" class="edit-add-option-btn">+ Add Option</button>   
             </div>
@@ -193,29 +194,32 @@ class MenuEditView extends View {
   }
 
   _updateItemData(handler) {
-    this._formDiv.addEventListener(
-      "submit",
-      (e) => {
-        e.preventDefault();
-        const form = e.target.closest(".edit-item-form");
-        if (!form) return;
+    if (this._submitHandler) {
+      this._formDiv.removeEventListener("submit", this._submitHandler);
+    }
 
-        const formData = new FormData(form);
+    this._submitHandler = (e) => {
+      e.preventDefault();
+      const form = e.target.closest(".edit-item-form");
+      if (!form) return;
 
-        // Convert formData to object but keep the file object
-        const data = {};
-        for (let [key, value] of formData.entries()) {
-          data[key] = value;
-        }
+      const formData = new FormData(form);
+      const data = {};
+      for (let [key, value] of formData.entries()) {
+        data[key] = value;
+      }
 
-        handler(data); // now rawData.image is the real File
-        const backdrop = form.closest(".modal-backdrop");
-        if (backdrop) backdrop.remove();
-        this._showSuccess();
-        setTimeout(() => this._hideSuccess(), 1000);
-      },
-      { once: true },
-    );
+      this._formDiv.removeEventListener("submit", this._submitHandler);
+      this._submitHandler = null;
+
+      handler(data);
+      const backdrop = form.closest(".modal-backdrop");
+      if (backdrop) backdrop.remove();
+      this._showSuccess();
+      setTimeout(() => this._hideSuccess(), 1000);
+    };
+
+    this._formDiv.addEventListener("submit", this._submitHandler);
   }
 
   _updateImagePreview() {
@@ -417,8 +421,8 @@ class MenuEditView extends View {
       const btn = e.target.closest(".edit-delete-option-btn");
       if (!btn) return;
 
-      const optionWrapper = btn.closest(".edit-variant-options");
-      if (optionWrapper) optionWrapper.remove();
+      const row = btn.closest(".edit-variant-row");
+      if (row) row.remove();
 
       this._reindexVariants();
     });

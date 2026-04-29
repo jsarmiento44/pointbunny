@@ -21,7 +21,7 @@ export const state = {
   menuItems: [
     {
       itemName: "French Fries",
-      price: `100`,
+      price: 100,
       category: `snacks`,
       _id: `#123123`,
       imageURL: `../Icons/default image.png`,
@@ -31,27 +31,27 @@ export const state = {
         {
           optionLabel: `Size`,
           options: [
-            { optionName: "Fries Medium", optionPrice: "35" },
-            { optionName: "Fries Large", optionPrice: "45" },
-            { optionName: "Bestie", optionPrice: "60" },
+            { optionName: "Fries Medium", optionPrice: 35 },
+            { optionName: "Fries Large", optionPrice: 45 },
+            { optionName: "Bestie", optionPrice: 60 },
           ],
         },
         {
           optionLabel: `Flavor`,
           options: [
-            { optionName: "Cheese", optionPrice: "0" },
-            { optionName: "Sour Cream", optionPrice: "0" },
-            { optionName: "BBQ", optionPrice: "0" },
-            { optionName: "Salted", optionPrice: "0" },
+            { optionName: "Cheese", optionPrice: 0 },
+            { optionName: "Sour Cream", optionPrice: 0 },
+            { optionName: "BBQ", optionPrice: 0 },
+            { optionName: "Salted", optionPrice: 0 },
           ],
         },
         {
           optionLabel: `Type`,
           options: [
-            { optionName: "Toasted", optionPrice: "60" },
-            { optionName: "Undercooked", optionPrice: "0" },
-            { optionName: "Well Done", optionPrice: "0" },
-            { optionName: "Not cooked", optionPrice: "0" },
+            { optionName: "Toasted", optionPrice: 60 },
+            { optionName: "Undercooked", optionPrice: 0 },
+            { optionName: "Well Done", optionPrice: 0 },
+            { optionName: "Not cooked", optionPrice: 0 },
           ],
         },
       ],
@@ -60,7 +60,7 @@ export const state = {
     },
     {
       itemName: "Ice Cream",
-      price: `60`,
+      price: 60,
       category: `dessert`,
       _id: `#321321`,
       imageURL: `../Icons/default image.png`,
@@ -72,7 +72,7 @@ export const state = {
     },
     {
       itemName: "Milkshake",
-      price: `79`,
+      price: 79,
       category: `drinks`,
       _id: `#01112`,
       imageURL: `../Icons/default image.png`,
@@ -82,19 +82,18 @@ export const state = {
         {
           optionLabel: `Flavors`,
           options: [
-            { optionName: "Red Velvet", optionPrice: "89" },
-            { optionName: "Strawberry", optionPrice: "89" },
-            { optionName: "Matcha", optionPrice: "99" },
+            { optionName: "Red Velvet", optionPrice: 89 },
+            { optionName: "Strawberry", optionPrice: 89 },
+            { optionName: "Matcha", optionPrice: 99 },
           ],
         },
-        ,
       ],
       description: `This is a sample description of the menu item. You can add more details here.`,
       isActive: true,
     },
     {
       itemName: "Frappe",
-      price: "150",
+      price: 150,
       category: "drinks",
       _id: "#49531",
       imageURL: `../Icons/default image.png`,
@@ -127,7 +126,7 @@ export const uploadNewMenuItem = async function (newItem) {
   //exrtract the data and convert into a new format object
   const item = {
     itemName: newItem.name,
-    price: newItem.price,
+    price: Number(newItem.price),
     category: newItem.category,
     _id: generateId(),
     imageURL:
@@ -141,7 +140,6 @@ export const uploadNewMenuItem = async function (newItem) {
     isActive: true,
   };
   state.menuItems.push(item);
-  console.log(state.menuItems);
 };
 
 export const updateMenuItem = function (id, rawData) {
@@ -156,7 +154,7 @@ export const updateMenuItem = function (id, rawData) {
 
     // 3️⃣ Update basic fields
     item.itemName = rawData.itemName || "";
-    item.price = rawData.price || "0";
+    item.price = Number(rawData.price) || 0;
     item.category = rawData.category || "";
     item._stock = rawData.stock || "0";
     item.description = rawData.description || "";
@@ -178,8 +176,6 @@ export const updateMenuItem = function (id, rawData) {
     } else {
       item.variants = [];
     }
-
-    console.log("Updated item:", item);
   } catch (err) {
     alert(err.message);
   }
@@ -239,7 +235,8 @@ function parseVariants(raw) {
       }
 
       // Assign either optionName or optionPrice
-      variantMap[variantIndex].options[optionIndex][optionField] = raw[key];
+      variantMap[variantIndex].options[optionIndex][optionField] =
+        optionField === "optionPrice" ? Number(raw[key]) || 0 : raw[key];
     }
   });
 

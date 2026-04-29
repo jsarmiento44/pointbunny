@@ -115,7 +115,6 @@ class NewOrderItemView extends View {
         this._qty >= 2 ? this._qty-- : (this._qty = 1);
         document.getElementById("item-qty").textContent = this._qty;
       }
-      console.log(this._qty);
     });
   }
 
@@ -159,7 +158,6 @@ class NewOrderItemView extends View {
     ).map((el) => {
       return { variantName: el.dataset.value, variantPrice: el.dataset.price };
     });
-    console.log(this._variants);
   }
 }
 

@@ -23,7 +23,7 @@ onReady(function () {
           }
         });
       },
-      { threshold: 0.2 }
+      { threshold: 0.2 },
     );
     var fades = document.querySelectorAll(".fade-up");
     for (var i = 0; i < fades.length; i++) io.observe(fades[i]);
@@ -60,7 +60,7 @@ onReady(function () {
   var prefersReduced = false;
   try {
     prefersReduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
+      "(prefers-reduced-motion: reduce)",
     ).matches;
   } catch (_) {}
 
@@ -267,11 +267,11 @@ onReady(function () {
           var grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
           grad.addColorStop(
             0,
-            "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")"
+            "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")",
           );
           grad.addColorStop(
             1,
-            "rgba(" + c[0] + "," + c[1] + "," + c[2] + ",0)"
+            "rgba(" + c[0] + "," + c[1] + "," + c[2] + ",0)",
           );
           ctx.fillStyle = grad;
           ctx.beginPath();
