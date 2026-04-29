@@ -46,7 +46,7 @@
               ✦
             </button>
           </div>
-          <button class="btn primary" type="button">Log Out</button>
+          <button class="btn" type="button">Log Out</button>
         </div>
       </nav>
     </header>
@@ -60,15 +60,22 @@
         <p class="sub">Ready to ring up sales and keep things moving.</p>
       </section>
 
-      <section class="info-bar fade-up" aria-label="Today overview">
-        <div class="date-time">
-          <span class="pill" id="dateStr">07/20/2025</span>
-          <span class="pill" id="timeStr">5:45 AM</span>
-          <span class="pill" id="shiftStr">Shift: A</span>
+      <section class="stats-bar fade-up" aria-label="Today overview">
+        <div class="stat-card stat-card--accent">
+          <span class="stat-label">Today's Sales</span>
+          <span class="stat-value" id="totalStr">₱0.00</span>
         </div>
-        <div class="sales-total">
-          <span class="badge">Today</span>
-          <span class="total" id="totalStr">₱5,790.00</span>
+        <div class="stat-card">
+          <span class="stat-label">Date</span>
+          <span class="stat-value" id="dateStr">--/--/----</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Time</span>
+          <span class="stat-value" id="timeStr">--:-- --</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Shift</span>
+          <span class="stat-value" id="shiftStr">A</span>
         </div>
       </section>
 
@@ -304,7 +311,7 @@
 
       <section class="main-buttons fade-up" aria-label="Primary actions">
         <!-- New Order -->
-        <article class="card" tabindex="0">
+        <article class="card card--featured" tabindex="0">
           <span class="ring" aria-hidden="true"></span>
           <button
             class="btn-main"
@@ -312,10 +319,16 @@
             aria-label="Create new order"
             id="#newOrderBtn"
           >
-            <img src="/Icons/POS Wowa.png" alt="New Order icon" />
+            <span class="card-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <path d="M16 10a4 4 0 01-8 0"/>
+              </svg>
+            </span>
             <div>
               <div class="title new-order">New Order</div>
-              <div class="hint">Start a sale • (N)</div>
+              <div class="hint">Start a sale <kbd>N</kbd></div>
             </div>
             <div class="chev" aria-hidden="true">→</div>
           </button>
@@ -330,55 +343,80 @@
             aria-label="Open menu list"
             id="menu-list"
           >
-            <img src="/Icons/POS Wowa (1).png" alt="Menu List icon" />
+            <span class="card-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                <rect x="14" y="14" width="7" height="7" rx="1"/>
+              </svg>
+            </span>
             <div>
               <div class="title">Menu List</div>
-              <div class="hint">Browse items • (M)</div>
+              <div class="hint">Browse items <kbd>M</kbd></div>
             </div>
             <div class="chev" aria-hidden="true">→</div>
           </button>
         </article>
 
         <!-- Discounts -->
-        <article class="card" tabindex="0">
+        <article class="card card--locked" tabindex="-1" aria-disabled="true">
           <span class="ring" aria-hidden="true"></span>
+          <span class="coming-soon-badge" aria-hidden="true">Soon</span>
           <button
             class="btn-main"
             data-action="discounts"
             aria-label="Apply discounts"
+            tabindex="-1"
           >
-            <img src="/Icons/POS Wowa (2).png" alt="Discounts icon" />
+            <span class="card-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="5" x2="5" y2="19"/>
+                <circle cx="6.5" cy="6.5" r="2.5"/>
+                <circle cx="17.5" cy="17.5" r="2.5"/>
+              </svg>
+            </span>
             <div>
               <div class="title">Discounts</div>
-              <div class="hint">Promos & codes • (D)</div>
+              <div class="hint">Promos &amp; codes</div>
             </div>
             <div class="chev" aria-hidden="true">→</div>
           </button>
         </article>
 
         <!-- Summary -->
-        <article class="card" tabindex="0">
+        <article class="card card--locked" tabindex="-1" aria-disabled="true">
           <span class="ring" aria-hidden="true"></span>
+          <span class="coming-soon-badge" aria-hidden="true">Soon</span>
           <button
             class="btn-main"
             data-action="summary"
             aria-label="View summary"
+            tabindex="-1"
           >
-            <img src="/Icons/POS Wowa (3).png" alt="Summary icon" />
+            <span class="card-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/>
+                <line x1="2" y1="20" x2="22" y2="20"/>
+              </svg>
+            </span>
             <div>
               <div class="title">Summary</div>
-              <div class="hint">Sales & reports • (S)</div>
+              <div class="hint">Sales &amp; reports</div>
             </div>
             <div class="chev" aria-hidden="true">→</div>
           </button>
         </article>
       </section>
 
+      <p class="section-label">Quick Actions</p>
       <section class="quick-actions fade-up" aria-label="Quick actions">
-        <button class="chip" data-action="scan">Scan Item</button>
-        <button class="chip" data-action="drawer">Open Drawer</button>
-        <button class="chip" data-action="refund">Refund</button>
-        <button class="chip" data-action="zreport">Z Report</button>
+        <button class="chip chip--locked" data-action="scan" disabled>Scan Item</button>
+        <button class="chip chip--locked" data-action="drawer" disabled>Open Drawer</button>
+        <button class="chip chip--locked" data-action="refund" disabled>Refund</button>
+        <button class="chip chip--locked" data-action="zreport" disabled>Z Report</button>
       </section>
     </main>
 
