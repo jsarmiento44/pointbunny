@@ -187,6 +187,7 @@ const init = function () {
   MenuEditView._addVariantGroup();
   MenuEditView._addOption();
   MenuEditView._updateImagePreview();
+  MenuEditView._addHandlerHasVariantsToggle();
 
   //Adding New Menu
   NewMenuItemView._uploadItem(controlUploadItem);

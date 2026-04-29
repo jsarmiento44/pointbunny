@@ -317,6 +317,14 @@ class MenuEditView extends View {
       if (input) input.focus();
 
       this._reindexVariants(); // make sure indices stay correct
+
+      // Auto-enable the hasVariants toggle when a group is added
+      const checkbox = this._formDiv.querySelector('[name="hasVariants"]');
+      if (checkbox && !checkbox.checked) {
+        checkbox.checked = true;
+        const variantsSection = this._formDiv.querySelector(".edit-variants-section");
+        if (variantsSection) variantsSection.style.display = "";
+      }
     });
   }
 
@@ -425,6 +433,64 @@ class MenuEditView extends View {
       if (row) row.remove();
 
       this._reindexVariants();
+    });
+  }
+
+  _addHandlerHasVariantsToggle() {
+    this._formDiv.addEventListener("change", (e) => {
+      const checkbox = e.target.closest('[name="hasVariants"]');
+      if (!checkbox) return;
+
+      const variantsSection = this._formDiv.querySelector(".edit-variants-section");
+
+      if (checkbox.checked) {
+        if (variantsSection) variantsSection.style.display = "";
+        return;
+      }
+
+      const existingGroups = this._formDiv.querySelectorAll(".edit-variant-group");
+
+      if (existingGroups.length === 0) {
+        if (variantsSection) variantsSection.style.display = "none";
+        return;
+      }
+
+      // Revert toggle until user confirms
+      checkbox.checked = true;
+
+      this._showVariantsToggleConfirm(() => {
+        checkbox.checked = false;
+        existingGroups.forEach((g) => g.remove());
+        if (variantsSection) variantsSection.style.display = "none";
+      });
+    });
+  }
+
+  _showVariantsToggleConfirm(onConfirm) {
+    const markup = `
+      <div class="edit-confirm-overlay">
+        <div class="edit-confirm-dialog">
+          <p class="edit-confirm-msg">Toggling this off will remove all existing variants. Do you want to continue?</p>
+          <div class="edit-confirm-actions">
+            <button type="button" class="edit-confirm-cancel-btn">Cancel</button>
+            <button type="button" class="edit-confirm-yes-btn">Continue</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const container = this._formDiv.querySelector(".modal-container");
+    container.insertAdjacentHTML("beforeend", markup);
+
+    const overlay = container.querySelector(".edit-confirm-overlay");
+
+    overlay.querySelector(".edit-confirm-yes-btn").addEventListener("click", () => {
+      overlay.remove();
+      onConfirm();
+    });
+
+    overlay.querySelector(".edit-confirm-cancel-btn").addEventListener("click", () => {
+      overlay.remove();
     });
   }
 

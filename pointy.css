@@ -1969,12 +1969,6 @@ footer {
   flex-direction: column;
   gap: 24px;
   width: 100%;
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 32px;
-  background: var(--panel-strong);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
   box-sizing: border-box;
 }
 
@@ -2374,6 +2368,73 @@ footer {
 .edit-item-form {
   overflow-y: auto;
   flex: 1;
+}
+
+/* Variants toggle confirmation dialog */
+.edit-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  z-index: 10;
+}
+
+.edit-confirm-dialog {
+  background: var(--panel-strong);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.edit-confirm-msg {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.edit-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.edit-confirm-cancel-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.edit-confirm-cancel-btn:hover {
+  background: var(--surface-hover, rgba(0,0,0,0.05));
+}
+
+.edit-confirm-yes-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: none;
+  background: #e53e3e;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.edit-confirm-yes-btn:hover {
+  background: #c53030;
 }
 
 /* CLOSE BUTTON */
