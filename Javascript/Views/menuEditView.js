@@ -4,6 +4,7 @@ class MenuEditView extends View {
   _parentElement = document.querySelector(".modal-parent");
   _formDiv = document.querySelector(".edit-form-parent");
   _submitHandler = null;
+  _currentItemId = null;
 
   _showEditMenuForm(handler) {
     this._parentElement.addEventListener("click", (e) => {
@@ -16,6 +17,7 @@ class MenuEditView extends View {
   }
 
   _insertEditMenuMarkup(item) {
+    this._currentItemId = item._id;
     const markUp = `<!-- BACKDROP -->
 <div class="modal-backdrop">
   <!-- MODAL CONTAINER -->
@@ -399,6 +401,12 @@ class MenuEditView extends View {
       if (group) group.remove();
 
       this._reindexVariants();
+
+      const remaining = this._formDiv.querySelectorAll(".edit-variant-group");
+      if (remaining.length === 0) {
+        const checkbox = this._formDiv.querySelector('[name="hasVariants"]');
+        if (checkbox) checkbox.checked = false;
+      }
     });
   }
 
@@ -491,6 +499,21 @@ class MenuEditView extends View {
 
     overlay.querySelector(".edit-confirm-cancel-btn").addEventListener("click", () => {
       overlay.remove();
+    });
+  }
+
+  _addHandlerDeleteItem(handler) {
+    this._formDiv.addEventListener("click", (e) => {
+      const btn = e.target.closest(".edit-delete-btn");
+      if (!btn) return;
+
+      const confirmed = window.confirm("Delete this item? This cannot be undone.");
+      if (!confirmed) return;
+
+      const backdrop = btn.closest(".modal-backdrop");
+      if (backdrop) backdrop.remove();
+
+      handler(this._currentItemId);
     });
   }
 

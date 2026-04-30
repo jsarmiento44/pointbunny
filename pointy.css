@@ -940,6 +940,14 @@ footer {
   overflow-y: auto;
 }
 
+.no-items-msg {
+  margin: auto;
+  text-align: center;
+  color: var(--text-muted, #888);
+  font-size: 0.95rem;
+  padding: 32px 16px;
+}
+
 .modal-right {
   flex: 1;
   padding-left: 16px;
@@ -1402,6 +1410,27 @@ footer {
   color: var(--text);
   cursor: not-allowed;
   opacity: 0.75;
+}
+
+@media (max-width: 768px) {
+  .pos-modal {
+    height: auto;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .receive-container {
+    flex-wrap: wrap;
+  }
+
+  .receive-container input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .receive-container button {
+    width: 100%;
+  }
 }
 
 /* Success modal sits ABOVE other modals */

@@ -13,17 +13,22 @@ let item;
 //to add edit/delete option
 const controlMenuList = async function () {
   try {
-    //1.)load menu list from backend/current account's menu list
     const state = model.state;
-    if (state.menuItems.length < 1 || state.menuItems.length === 0)
-      throw `no menu!`;
-    //2.)Render menu list in UI
     MenuListView.render(state);
     //3.) Listen for close event to hide modal
     MenuListView._addHandlerCloseModal();
     NewMenuItemView._mapMenuCategoriesMarkUp(state.menuCategories);
   } catch (err) {
     alert(err);
+  }
+};
+
+const controlDeleteMenuItem = function (id) {
+  try {
+    model.deleteMenuItem(id);
+    MenuListView.render(model.state);
+  } catch (err) {
+    alert(err.message);
   }
 };
 
@@ -188,6 +193,7 @@ const init = function () {
   MenuEditView._addOption();
   MenuEditView._updateImagePreview();
   MenuEditView._addHandlerHasVariantsToggle();
+  MenuEditView._addHandlerDeleteItem(controlDeleteMenuItem);
 
   //Adding New Menu
   NewMenuItemView._uploadItem(controlUploadItem);

@@ -142,6 +142,12 @@ export const uploadNewMenuItem = async function (newItem) {
   state.menuItems.push(item);
 };
 
+export const deleteMenuItem = function (id) {
+  const index = state.menuItems.findIndex((item) => item._id === id);
+  if (index === -1) throw new Error("Item not found");
+  state.menuItems.splice(index, 1);
+};
+
 export const updateMenuItem = function (id, rawData) {
   try {
     // 1️⃣ Find the existing item

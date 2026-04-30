@@ -14,33 +14,35 @@ class NewOrderView extends View {
 
     <!-- Left Panel: Menu Items -->
     <div class="modal-left">
-      ${this._data.menuCategories
-        .map((category) => {
-          const items = this._data.menuItems.filter(
-            (item) => item.category === category,
-          );
-          return `
-            <div class="menu-category-header">${category}</div>
-            <div class="menu-category">
-              ${items
-                .map(
-                  (item) => `
-                    <div class="item-card" data-id="${item._id}">
-                      <div class="btn-main">
-                        <img src="${item.imageURL}" alt="${item.itemName}" />
-                        <div>
-                          <div class="title">${item.itemName}</div>
-                          <div class="hint">${item.price}</div>
+      ${this._data.menuItems.length === 0
+        ? `<p class="no-items-msg">No items yet. Go to menu list and add a new item.</p>`
+        : this._data.menuCategories
+            .map((category) => {
+              const items = this._data.menuItems.filter(
+                (item) => item.category === category,
+              );
+              return `
+                <div class="menu-category-header">${category}</div>
+                <div class="menu-category">
+                  ${items
+                    .map(
+                      (item) => `
+                        <div class="item-card" data-id="${item._id}">
+                          <div class="btn-main">
+                            <img src="${item.imageURL}" alt="${item.itemName}" />
+                            <div>
+                              <div class="title">${item.itemName}</div>
+                              <div class="hint">${item.price}</div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  `,
-                )
-                .join("")}
-            </div>
-          `;
-        })
-        .join("")}
+                      `,
+                    )
+                    .join("")}
+                </div>
+              `;
+            })
+            .join("")}
     </div>
 
     <!-- Right Panel: Cart Summary -->
