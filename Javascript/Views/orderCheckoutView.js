@@ -2,78 +2,322 @@ import View from "./view.js";
 
 class OrderCheckOutView extends View {
   _parentElement = document.querySelector(".modal-parent");
+  _subtotal;
+  _adjResult;
   _totalPrice;
   _customerPayment;
   _customerChange;
 
+  // ── Cart items markup ─────────────────────────────────────────────────────────
+
+  _generateCartItemsMarkup(cart) {
+    return cart
+      .map(
+        (item, index) => {
+          const allVariants = item.selectedVariants.map((v) => v.variantName);
+          return `
+          <div class="cart-item-row">
+            <div style="display:flex; flex-direction:column;">
+              <span>${item.itemName} x${item.quantity}</span>
+              <span style="font-size:0.85rem; opacity:0.7;">${allVariants.join(", ")}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span>&#8369;${item.totalPrice}</span>
+              <button class="checkout-cart-delete-btn" data-cart-index="${index}" type="button">&times;</button>
+            </div>
+          </div>`;
+        },
+      )
+      .join("");
+  }
+
+  _refreshCartItems(cart) {
+    const el = this._parentElement.querySelector("#cartItems");
+    if (el) el.innerHTML = this._generateCartItemsMarkup(cart);
+  }
+
+  // ── Adj section markup (reused by both initial render and in-place refresh) ──
+
+  _generateAdjSectionMarkup(subtotal, allAdj, adjResult, showRemoved) {
+    const activeLines = adjResult.lineItems;
+    const removedLines = allAdj.filter((a) => a.removed);
+    const hasVisible =
+      activeLines.length > 0 || (showRemoved && removedLines.length > 0);
+
+    const activeHtml = activeLines
+      .map(
+        (adj) => `
+        <div class="receipt-adj-item" data-adj-id="${adj.id}">
+          <div class="receipt-adj-info">
+            <span>${adj.name}${adj.calculation === "percentage" ? ` (${adj.appliedValue}%)` : ""}</span>
+            <span class="receipt-adj-amount ${adj.type}">
+              ${adj.computedAmount >= 0 ? "+" : ""}&#8369;${adj.computedAmount.toFixed(2)}
+            </span>
+          </div>
+          <div class="receipt-adj-controls">
+            <button class="receipt-adj-edit-btn" data-adj-id="${adj.id}" type="button">Edit</button>
+            <button class="receipt-adj-remove-btn" data-adj-id="${adj.id}" type="button">&times;</button>
+          </div>
+        </div>
+      `,
+      )
+      .join("");
+
+    const removedHtml = showRemoved
+      ? removedLines
+          .map(
+            (adj) => `
+          <div class="receipt-adj-item receipt-adj-item--removed">
+            <div class="receipt-adj-info">
+              <span>${adj.name}${adj.calculation === "percentage" ? ` (${adj.appliedValue}%)` : ""} <em>(removed)</em></span>
+              <span>&#8369;0.00</span>
+            </div>
+          </div>
+        `,
+          )
+          .join("")
+      : "";
+
+    return `
+      ${
+        hasVisible
+          ? `
+        <div class="cart-subtotal">
+          <span>Subtotal</span>
+          <span>&#8369;${subtotal.toFixed(2)}</span>
+        </div>
+        <div class="receipt-adj-list">
+          ${activeHtml}
+          ${removedHtml}
+        </div>
+        <div class="adj-line-divider"></div>
+      `
+          : ""
+      }
+      <button class="receipt-add-adj-btn" type="button">+ Add adjustment</button>
+    `;
+  }
+
+  // ── Main markup ───────────────────────────────────────────────────────────────
+
   _generateMarkUp() {
+    const allAdj = this._data.currentReceiptAdjustments ?? [];
+    const adjResult = this._adjResult ?? {
+      lineItems: [],
+      finalTotal: this._totalPrice,
+    };
+    const showRemoved = this._data.settings?.showRemovedAdjustments ?? true;
+    const subtotal = this._subtotal ?? this._totalPrice;
+
     return `
 <div class="modal-overlay" id="newOrderModal">
   <div class="modal-content pos-modal">
-    <!-- Close Button -->
     <button class="modal-close">&times;</button>
-
+    <button class="checkout-back-btn" type="button" title="Back to order">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+    </button>
     <h3 class="form-title">Cart Summary</h3>
 
-    <!-- Scrollable Cart Items -->
     <div id="cartItems" class="cart-items">
-      ${this._data.cart
-        .map((item) => {
-          const variantsArr = item.selectedVariants.map((item) => {
-            return item.variantName;
-          });
-
-          const [...allVariants] = variantsArr;
-          return `
-            <div style="display:flex; justify-content:space-between;">
-            <div style="display:flex; flex-direction:column;">
-            <span>${item.itemName} x${item.quantity}</span>
-            <span style="font-size:0.85rem; opacity:0.7;">
-            ${allVariants.join(", ")}
-            </span>
-            </div>
-            <span>₱${item.totalPrice}</span>
-            </div>
-            `;
-        })
-        .join("")}
+      ${this._generateCartItemsMarkup(this._data.cart)}
     </div>
 
-    <!-- Payment Section (fixed at bottom) -->
     <div class="payment-section">
-  <div class="cart-total">
-    <span>Total:</span>
-    <span id="cartTotal">₱${this._totalPrice}</span>
+      <div id="receiptAdjSection">
+        ${this._generateAdjSectionMarkup(subtotal, allAdj, adjResult, showRemoved)}
+      </div>
+
+      <div class="cart-total">
+        <span>Total:</span>
+        <span id="cartTotal">&#8369;${this._totalPrice.toFixed(2)}</span>
+      </div>
+
+      <div class="receive-container" style="display:flex; gap:8px; align-items:center;">
+        <label for="customerPayment" style="margin:0;">Payment:</label>
+        <input type="number" id="customerPayment" placeholder="Enter amount received" />
+        <button id="enterPaymentBtn">Enter</button>
+      </div>
+
+      <label>
+        Change:
+        <div id="changeAmount" class="change-box">&#8369;0.00</div>
+      </label>
+
+      <button class="print-receipt-btn hidden" id="printReceiptBtn">Print Receipt</button>
+    </div>
   </div>
-
-  <!-- I Receive with Enter Button -->
-  <div class="receive-container" style="display: flex; gap: 8px; align-items: center;">
-    <label for="customerPayment" style="margin: 0;">
-      Payment:
-    </label>
-    <input type="number" id="customerPayment" placeholder="Enter amount received" />
-    <button id="enterPaymentBtn">Enter</button>
-  </div>
-
-  <label>
-  Change:
-  <div id="changeAmount" class="change-box">₱0.00</div>
-</label>
-
-
-  <button class="print-receipt-btn hidden"  id="printReceiptBtn">Print Receipt</button>
 </div>
-
-  </div>
-</div>
-        `;
+    `;
   }
+
+  // ── In-place refresh (does not reset the payment input) ───────────────────────
+
+  _refreshAdjustments(subtotal, allAdj, adjResult, showRemoved) {
+    this._subtotal = subtotal;
+    this._adjResult = adjResult;
+    this._totalPrice = adjResult.finalTotal;
+
+    const section = this._parentElement.querySelector("#receiptAdjSection");
+    if (section) {
+      section.innerHTML = this._generateAdjSectionMarkup(
+        subtotal,
+        allAdj,
+        adjResult,
+        showRemoved,
+      );
+    }
+
+    const totalEl = this._parentElement.querySelector("#cartTotal");
+    if (totalEl) totalEl.textContent = `₱${adjResult.finalTotal.toFixed(2)}`;
+
+    // Total changed — reset payment validation state
+    const changeBox = this._parentElement.querySelector("#changeAmount");
+    if (changeBox) {
+      changeBox.textContent = "₱0.00";
+      changeBox.classList.remove("ok");
+    }
+    this._parentElement
+      .querySelector(".print-receipt-btn")
+      ?.classList.add("hidden");
+  }
+
+  // ── Inline forms ──────────────────────────────────────────────────────────────
+
+  _showReceiptEditForm(adj) {
+    this._removeReceiptForms();
+    const item = this._parentElement.querySelector(
+      `.receipt-adj-item[data-adj-id="${adj.id}"]`,
+    );
+    if (!item) return;
+
+    const html = `
+      <div class="receipt-edit-form" id="receiptEditForm">
+        <label class="adj-form-sublabel">
+          New value (${adj.calculation === "percentage" ? "%" : "&#8369;"})
+        </label>
+        <input type="number" id="receiptEditValue" value="${adj.appliedValue}" min="0" step="0.01" />
+        <div class="adj-form-actions" style="margin-top:6px;">
+          <button class="btn" id="receiptEditCancelBtn" type="button">Cancel</button>
+          <button class="btn primary" id="receiptEditSaveBtn" data-adj-id="${adj.id}" type="button">Save</button>
+        </div>
+      </div>
+    `;
+    item.insertAdjacentHTML("afterend", html);
+    document
+      .getElementById("receiptEditCancelBtn")
+      .addEventListener("click", () => this._removeReceiptForms());
+    document.getElementById("receiptEditValue").focus();
+  }
+
+  _showReceiptAddManualForm() {
+    this._removeReceiptForms();
+    const modal = this._parentElement.querySelector(".pos-modal");
+    if (!modal) return;
+
+    const html = `
+      <div class="receipt-manual-overlay" id="receiptManualForm">
+      <div class="adj-form receipt-manual-card">
+        <h4 class="adj-form-title">Add One-off Adjustment</h4>
+
+        <div class="edit-field">
+          <label for="receiptManualName">Name</label>
+          <input type="text" id="receiptManualName" placeholder="e.g. Discount, Tip" />
+        </div>
+
+        <p class="adj-form-sublabel">Type</p>
+        <div class="adj-selector" id="receiptManualTypeSelector">
+          <button type="button" class="adj-selector-btn active" data-value="fee">Fee</button>
+          <button type="button" class="adj-selector-btn" data-value="discount">Discount</button>
+        </div>
+        <input type="hidden" id="receiptManualType" value="fee" />
+
+        <p class="adj-form-sublabel">Calculation</p>
+        <div class="adj-selector" id="receiptManualCalcSelector">
+          <button type="button" class="adj-selector-btn active" data-value="fixed">Fixed (&#8369;)</button>
+          <button type="button" class="adj-selector-btn" data-value="percentage">
+            Percentage (%)
+            <span class="adj-info-tip">i</span>
+          </button>
+        </div>
+        <input type="hidden" id="receiptManualCalc" value="fixed" />
+
+        <div class="edit-field">
+          <label id="receiptManualValueLabel">Value (&#8369;)</label>
+          <input type="number" id="receiptManualValue" min="0" step="0.01" placeholder="0" />
+        </div>
+
+        <div class="adj-form-actions">
+          <button type="button" class="btn" id="receiptManualCancelBtn">Cancel</button>
+          <button type="button" class="btn primary" id="receiptManualSaveBtn">Add</button>
+        </div>
+      </div>
+      </div>
+    `;
+    modal.insertAdjacentHTML("beforeend", html);
+
+    document
+      .querySelectorAll("#receiptManualTypeSelector, #receiptManualCalcSelector")
+      .forEach((group) => {
+        group.addEventListener("click", (e) => {
+          const btn = e.target.closest(".adj-selector-btn");
+          if (!btn) return;
+          group
+            .querySelectorAll(".adj-selector-btn")
+            .forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          if (group.id === "receiptManualCalcSelector") {
+            document.getElementById("receiptManualCalc").value = btn.dataset.value;
+            document.getElementById("receiptManualValueLabel").textContent =
+              btn.dataset.value === "percentage" ? "Value (%)" : "Value (₱)";
+          } else {
+            document.getElementById("receiptManualType").value = btn.dataset.value;
+          }
+        });
+      });
+
+    document
+      .getElementById("receiptManualCancelBtn")
+      .addEventListener("click", () => this._removeReceiptForms());
+    this._wireInfoTip();
+    document.getElementById("receiptManualName").focus();
+  }
+
+  _wireInfoTip() {
+    document.querySelectorAll(".adj-info-tip").forEach((tip) => {
+      tip.addEventListener("click", (e) => {
+        e.stopPropagation();
+        document.querySelector(".adj-tooltip")?.remove();
+
+        const rect = tip.getBoundingClientRect();
+        const el = document.createElement("div");
+        el.className = "adj-tooltip";
+        el.textContent =
+          "% of the running subtotal at the time this adjustment is applied";
+        document.body.appendChild(el);
+
+        el.style.left = `${rect.left + rect.width / 2 - el.offsetWidth / 2}px`;
+        el.style.top = `${rect.top - el.offsetHeight - 8}px`;
+
+        setTimeout(() => {
+          document.addEventListener("click", () => el.remove(), { once: true });
+        }, 0);
+      });
+    });
+  }
+
+  _removeReceiptForms() {
+    document.getElementById("receiptEditForm")?.remove();
+    document.getElementById("receiptManualForm")?.remove();
+  }
+
+  // ── Handlers ──────────────────────────────────────────────────────────────────
 
   _addHandlerShowCheckout(handler) {
     this._parentElement.addEventListener("click", function (e) {
       const btn = e.target.closest(".btn-checkout");
       if (!btn) return;
-
       handler();
     });
   }
@@ -81,24 +325,21 @@ class OrderCheckOutView extends View {
   _subtractChange() {
     this._parentElement.addEventListener("click", (e) => {
       const btn = e.target.closest("#enterPaymentBtn");
-      if (btn) {
-        const changeBox = document.querySelector(".change-box");
-        const payment =
-          +this._parentElement.querySelector("#customerPayment").value;
+      if (!btn) return;
 
-        this._customerPayment = payment;
+      const changeBox = document.querySelector(".change-box");
+      const payment =
+        +this._parentElement.querySelector("#customerPayment").value;
+      this._customerPayment = payment;
 
-        if (payment < this._totalPrice) {
-          changeBox.textContent = `Payment must be higher or equal to order total`;
-        } else if (payment >= this._totalPrice) {
-          const change = payment - this._totalPrice;
-          changeBox.classList.add("ok");
-          changeBox.textContent = change;
-          this._customerChange = change;
-          document
-            .querySelector(".print-receipt-btn")
-            .classList.toggle("hidden");
-        }
+      if (payment < this._totalPrice) {
+        changeBox.textContent = `Payment must be higher or equal to order total`;
+      } else {
+        const change = payment - this._totalPrice;
+        changeBox.classList.add("ok");
+        changeBox.textContent = change;
+        this._customerChange = change;
+        document.querySelector(".print-receipt-btn").classList.toggle("hidden");
       }
     });
   }
@@ -107,8 +348,81 @@ class OrderCheckOutView extends View {
     this._parentElement.addEventListener("click", function (e) {
       const btn = e.target.closest("#printReceiptBtn");
       if (!btn) return;
-
       handler();
+    });
+  }
+
+  _addHandlerReceiptEdit(handler) {
+    this._parentElement.addEventListener("click", (e) => {
+      const btn = e.target.closest(".receipt-adj-edit-btn");
+      if (!btn) return;
+      handler(btn.dataset.adjId);
+    });
+  }
+
+  _addHandlerReceiptRemove(handler) {
+    this._parentElement.addEventListener("click", (e) => {
+      const btn = e.target.closest(".receipt-adj-remove-btn");
+      if (!btn) return;
+      handler(btn.dataset.adjId);
+    });
+  }
+
+  _addHandlerReceiptAddManual(handler) {
+    this._parentElement.addEventListener("click", (e) => {
+      if (!e.target.closest(".receipt-add-adj-btn")) return;
+      handler();
+    });
+  }
+
+  _addHandlerReceiptSaveOverride(handler) {
+    this._parentElement.addEventListener("click", (e) => {
+      const btn = e.target.closest("#receiptEditSaveBtn");
+      if (!btn) return;
+      const value = parseFloat(
+        document.getElementById("receiptEditValue").value,
+      );
+      if (isNaN(value) || value < 0) {
+        alert("Please enter a valid value.");
+        return;
+      }
+      handler({ id: btn.dataset.adjId, value });
+    });
+  }
+
+  _addHandlerReceiptSaveManual(handler) {
+    this._parentElement.addEventListener("click", (e) => {
+      if (!e.target.closest("#receiptManualSaveBtn")) return;
+      const name = document.getElementById("receiptManualName")?.value.trim();
+      const type = document.getElementById("receiptManualType")?.value;
+      const calculation = document.getElementById("receiptManualCalc")?.value;
+      const value = parseFloat(
+        document.getElementById("receiptManualValue")?.value,
+      );
+      if (!name) {
+        alert("Please enter a name.");
+        return;
+      }
+      if (isNaN(value) || value < 0) {
+        alert("Please enter a valid value.");
+        return;
+      }
+      handler({ name, type, calculation, value });
+    });
+  }
+
+  _addHandlerBack(handler) {
+    this._parentElement.addEventListener("click", (e) => {
+      if (!e.target.closest(".checkout-back-btn")) return;
+      handler();
+    });
+  }
+
+  _addHandlerDeleteCartItem(handler) {
+    this._parentElement.addEventListener("click", (e) => {
+      const btn = e.target.closest(".checkout-cart-delete-btn");
+      if (!btn) return;
+      handler(Number(btn.dataset.cartIndex));
     });
   }
 

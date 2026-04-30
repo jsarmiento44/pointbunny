@@ -1,8 +1,14 @@
 let counter = 0;
+let adjCounter = 0;
 
 const generateId = function () {
   counter += 1;
   return `${Date.now()}-${counter}`;
+};
+
+const generateAdjustmentId = function () {
+  adjCounter += 1;
+  return `adj_${Date.now()}-${adjCounter}`;
 };
 
 class Account {
@@ -115,6 +121,11 @@ export const state = {
   ],
   cart: [],
   salesBasket: [],
+  settings: {
+    adjustments: [],
+    showRemovedAdjustments: true,
+  },
+  currentReceiptAdjustments: [],
 };
 
 const createNewAccount = function (username, password) {
@@ -146,6 +157,10 @@ export const deleteMenuItem = function (id) {
   const index = state.menuItems.findIndex((item) => item._id === id);
   if (index === -1) throw new Error("Item not found");
   state.menuItems.splice(index, 1);
+};
+
+export const deleteCartItem = function (index) {
+  state.cart.splice(index, 1);
 };
 
 export const updateMenuItem = function (id, rawData) {
@@ -185,6 +200,127 @@ export const updateMenuItem = function (id, rawData) {
   } catch (err) {
     alert(err.message);
   }
+};
+
+// ── Settings: adjustment CRUD ─────────────────────────────────────────────────
+
+export const addAdjustment = function (data) {
+  const adjustment = {
+    id: generateAdjustmentId(),
+    name: data.name,
+    type: data.type,           // "fee" | "discount"
+    calculation: data.calculation, // "fixed" | "percentage"
+    value: Number(data.value) || 0,
+    enabled: true,
+  };
+  state.settings.adjustments.push(adjustment);
+  return adjustment;
+};
+
+export const updateAdjustment = function (id, data) {
+  const adj = state.settings.adjustments.find((a) => a.id === id);
+  if (!adj) throw new Error("Adjustment not found");
+  adj.name = data.name;
+  adj.type = data.type;
+  adj.calculation = data.calculation;
+  adj.value = Number(data.value) || 0;
+};
+
+export const deleteAdjustment = function (id) {
+  const index = state.settings.adjustments.findIndex((a) => a.id === id);
+  if (index === -1) throw new Error("Adjustment not found");
+  state.settings.adjustments.splice(index, 1);
+};
+
+export const toggleAdjustment = function (id) {
+  const adj = state.settings.adjustments.find((a) => a.id === id);
+  if (!adj) throw new Error("Adjustment not found");
+  adj.enabled = !adj.enabled;
+};
+
+// ── Per-receipt adjustments ───────────────────────────────────────────────────
+
+export const initReceiptAdjustments = function () {
+  state.currentReceiptAdjustments = state.settings.adjustments
+    .filter((a) => a.enabled)
+    .map((a) => ({
+      id: a.id,
+      name: a.name,
+      type: a.type,
+      calculation: a.calculation,
+      value: a.value,
+      appliedValue: a.value,
+      removed: false,
+      source: "auto",
+    }));
+};
+
+export const overrideReceiptAdjustment = function (id, newValue) {
+  const adj = state.currentReceiptAdjustments.find((a) => a.id === id);
+  if (!adj) throw new Error("Receipt adjustment not found");
+  adj.appliedValue = Number(newValue) || 0;
+};
+
+export const removeReceiptAdjustment = function (id) {
+  const adj = state.currentReceiptAdjustments.find((a) => a.id === id);
+  if (!adj) throw new Error("Receipt adjustment not found");
+  adj.removed = true;
+};
+
+export const addManualReceiptAdjustment = function (data) {
+  const adjustment = {
+    id: generateAdjustmentId(),
+    name: data.name,
+    type: data.type,
+    calculation: data.calculation,
+    value: Number(data.value) || 0,
+    appliedValue: Number(data.value) || 0,
+    removed: false,
+    source: "manual",
+  };
+  state.currentReceiptAdjustments.push(adjustment);
+  return adjustment;
+};
+
+export const clearReceiptAdjustments = function () {
+  state.currentReceiptAdjustments = [];
+};
+
+// ── Calculation ───────────────────────────────────────────────────────────────
+// Expects receipt-level adjustments (with appliedValue + removed).
+// Order: subtotal → discounts (% of subtotal) → fees (% of post-discount total)
+
+export const calculateAdjustments = function (subtotal, adjustments) {
+  const active = adjustments.filter((a) => !a.removed);
+  const discounts = active.filter((a) => a.type === "discount");
+  const fees = active.filter((a) => a.type === "fee");
+
+  let runningTotal = subtotal;
+  const lineItems = [];
+
+  discounts.forEach((adj) => {
+    const amount =
+      adj.calculation === "percentage"
+        ? subtotal * (adj.appliedValue / 100)
+        : adj.appliedValue;
+    lineItems.push({ ...adj, computedAmount: -amount });
+    runningTotal -= amount;
+  });
+
+  fees.forEach((adj) => {
+    const amount =
+      adj.calculation === "percentage"
+        ? runningTotal * (adj.appliedValue / 100)
+        : adj.appliedValue;
+    lineItems.push({ ...adj, computedAmount: amount });
+    runningTotal += amount;
+  });
+
+  return {
+    subtotal,
+    lineItems,
+    finalTotal: Math.max(0, runningTotal),
+  };
 };
 
 function parseVariants(raw) {

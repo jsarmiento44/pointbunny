@@ -6,6 +6,7 @@ import NewOrderItemView from "./Views/newOrderItemView.js";
 import OrderCheckOutView from "./Views/orderCheckoutView.js";
 import newMenuItemView from "./Views/newMenuItemView.js";
 import MenuEditView from "./Views/menuEditView.js";
+import SettingsView from "./Views/settingsView.js";
 const modelState = model.state;
 let item;
 //adding/displaying menu list
@@ -137,10 +138,17 @@ const controlPushToModelCart = function () {
 const controlOrderCheckout = function () {
   try {
     if (model.state.cart.length === 0) throw `You must add an item to the cart`;
-    OrderCheckOutView._totalPrice = modelState.cart.reduce(
-      (acc, item) => acc + item.totalPrice,
-      0,
+
+    const subtotal = modelState.cart.reduce((acc, item) => acc + item.totalPrice, 0);
+    model.initReceiptAdjustments();
+    const adjResult = model.calculateAdjustments(
+      subtotal,
+      model.state.currentReceiptAdjustments,
     );
+
+    OrderCheckOutView._subtotal = subtotal;
+    OrderCheckOutView._adjResult = adjResult;
+    OrderCheckOutView._totalPrice = adjResult.finalTotal;
     OrderCheckOutView.render(modelState);
   } catch (err) {
     alert(err);
@@ -153,6 +161,8 @@ const controlConcludeTransaction = function () {
 
     const sale = {
       items: [...modelState.cart],
+      subtotal: OrderCheckOutView._subtotal ?? OrderCheckOutView._totalPrice,
+      adjustments: [...model.state.currentReceiptAdjustments],
       totalPrice: OrderCheckOutView._totalPrice,
       customerPayment: OrderCheckOutView._customerPayment,
       customerChange: OrderCheckOutView._customerChange,
@@ -162,6 +172,7 @@ const controlConcludeTransaction = function () {
     modelState.salesBasket.push(sale);
 
     clearCart();
+    model.clearReceiptAdjustments();
 
     OrderCheckOutView._showSuccess();
     setTimeout(() => {
@@ -176,6 +187,113 @@ const controlConcludeTransaction = function () {
 const clearCart = function () {
   model.state.cart = [];
 };
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+
+const controlOpenSettings = function () {
+  SettingsView.renderAdjustments(model.state.settings.adjustments);
+  SettingsView.syncShowRemovedToggle(model.state.settings.showRemovedAdjustments);
+};
+
+const controlSaveAdjustment = function (data) {
+  if (data.id) {
+    model.updateAdjustment(data.id, data);
+  } else {
+    model.addAdjustment(data);
+  }
+  SettingsView.renderAdjustments(model.state.settings.adjustments);
+};
+
+const controlEditAdjustment = function (id) {
+  const adj = model.state.settings.adjustments.find((a) => a.id === id);
+  if (!adj) return;
+  SettingsView.showForm(adj);
+};
+
+const controlDeleteAdjustment = function (id) {
+  model.deleteAdjustment(id);
+  SettingsView.renderAdjustments(model.state.settings.adjustments);
+};
+
+const controlToggleAdjustment = function (id) {
+  model.toggleAdjustment(id);
+  SettingsView.renderAdjustments(model.state.settings.adjustments);
+};
+
+const controlShowRemoved = function (value) {
+  model.state.settings.showRemovedAdjustments = value;
+};
+
+// ── Per-receipt adjustment controls ───────────────────────────────────────────
+
+const _refreshCheckoutAdj = function () {
+  const adjResult = model.calculateAdjustments(
+    OrderCheckOutView._subtotal,
+    model.state.currentReceiptAdjustments,
+  );
+  OrderCheckOutView._refreshAdjustments(
+    OrderCheckOutView._subtotal,
+    model.state.currentReceiptAdjustments,
+    adjResult,
+    model.state.settings.showRemovedAdjustments,
+  );
+};
+
+const controlReceiptEdit = function (id) {
+  const adj = model.state.currentReceiptAdjustments.find((a) => a.id === id);
+  if (!adj) return;
+  OrderCheckOutView._showReceiptEditForm(adj);
+};
+
+const controlSaveReceiptOverride = function ({ id, value }) {
+  model.overrideReceiptAdjustment(id, value);
+  _refreshCheckoutAdj();
+};
+
+const controlRemoveReceiptAdj = function (id) {
+  model.removeReceiptAdjustment(id);
+  _refreshCheckoutAdj();
+};
+
+const controlShowReceiptAddManualForm = function () {
+  OrderCheckOutView._showReceiptAddManualForm();
+};
+
+const controlSaveManualReceiptAdj = function (data) {
+  model.addManualReceiptAdjustment(data);
+  _refreshCheckoutAdj();
+};
+// ── Cart item deletion ────────────────────────────────────────────────────────
+
+const controlGoBackToOrder = function () {
+  NewOrderView.render(modelState);
+};
+
+const controlDeleteCartItemInOrder = function (index) {
+  model.deleteCartItem(index);
+  NewOrderView.render(modelState);
+};
+
+const controlDeleteCartItemInCheckout = function (index) {
+  model.deleteCartItem(index);
+
+  if (model.state.cart.length === 0) {
+    NewOrderView.render(modelState);
+    return;
+  }
+
+  const subtotal = model.state.cart.reduce((acc, item) => acc + item.totalPrice, 0);
+  OrderCheckOutView._subtotal = subtotal;
+  const adjResult = model.calculateAdjustments(subtotal, model.state.currentReceiptAdjustments);
+  OrderCheckOutView._refreshCartItems(model.state.cart);
+  OrderCheckOutView._refreshAdjustments(
+    subtotal,
+    model.state.currentReceiptAdjustments,
+    adjResult,
+    model.state.settings.showRemovedAdjustments,
+  );
+};
+
 //listens to modal close button
 const controlNewOrderModals = async function () {
   NewOrderItemView._closeItemModal();
@@ -204,16 +322,35 @@ const init = function () {
 
   controlNewMenuButtonToggle();
 
+  // Settings
+  SettingsView._addHandlerOpen(controlOpenSettings);
+  SettingsView._addHandlerClose();
+  SettingsView._addHandlerAdd();
+  SettingsView._addHandlerSave(controlSaveAdjustment);
+  SettingsView._addHandlerEdit(controlEditAdjustment);
+  SettingsView._addHandlerDelete(controlDeleteAdjustment);
+  SettingsView._addHandlerToggle(controlToggleAdjustment);
+  SettingsView._addHandlerShowRemoved(controlShowRemoved);
+
   //NewOrder
   NewOrderView._addHandlerShowMenuModal(controlNewOrder);
   NewOrderItemView._addHandlerShowItemModal(controlDisplayMenuItem);
   controlNewOrderModals();
   NewOrderItemView._pushToCart(controlPushToModelCart);
   NewOrderItemView._adjustQuantity();
+  NewOrderView._addHandlerDeleteCartItem(controlDeleteCartItemInOrder);
+
   //New Order Check Out
   OrderCheckOutView._addHandlerShowCheckout(controlOrderCheckout);
+  OrderCheckOutView._addHandlerDeleteCartItem(controlDeleteCartItemInCheckout);
+  OrderCheckOutView._addHandlerBack(controlGoBackToOrder);
   OrderCheckOutView._subtractChange();
   OrderCheckOutView._addHandlerPrintReceipt(controlConcludeTransaction);
+  OrderCheckOutView._addHandlerReceiptEdit(controlReceiptEdit);
+  OrderCheckOutView._addHandlerReceiptRemove(controlRemoveReceiptAdj);
+  OrderCheckOutView._addHandlerReceiptAddManual(controlShowReceiptAddManualForm);
+  OrderCheckOutView._addHandlerReceiptSaveOverride(controlSaveReceiptOverride);
+  OrderCheckOutView._addHandlerReceiptSaveManual(controlSaveManualReceiptAdj);
 };
 
 init();

@@ -54,24 +54,19 @@ class NewOrderView extends View {
         style="display:flex; flex-direction:column; gap:12px; max-height:60vh; overflow-y:auto;"
       >
         ${this._data.cart
-          .map((item) => {
-            const variantsArr = item.selectedVariants.map((item) => {
-              return item.variantName;
-            });
-
-            const [...allVariants] = variantsArr;
-
+          .map((item, index) => {
+            const allVariants = item.selectedVariants.map((v) => v.variantName);
             return `
-            <div style="display:flex; justify-content:space-between;">
+            <div class="cart-item-row">
               <div style="display:flex; flex-direction:column;">
                 <span>${item.itemName} x${item.quantity}</span>
-                <span style="font-size:0.85rem; opacity:0.7;">
-                ${allVariants.join(", ")}
-                </span>
+                <span style="font-size:0.85rem; opacity:0.7;">${allVariants.join(", ")}</span>
               </div>
+              <div style="display:flex; align-items:center; gap:8px;">
                 <span>₱${item.totalPrice}</span>
+                <button class="cart-item-delete-btn" data-cart-index="${index}" type="button">&times;</button>
               </div>
-                  `;
+            </div>`;
           })
           .join("")}
       </div>
@@ -92,6 +87,14 @@ class NewOrderView extends View {
   </div>
 </div>
 `;
+  }
+
+  _addHandlerDeleteCartItem(handler) {
+    this._parentElement.addEventListener("click", (e) => {
+      const btn = e.target.closest(".cart-item-delete-btn");
+      if (!btn) return;
+      handler(Number(btn.dataset.cartIndex));
+    });
   }
 
   _addHandlerShowMenuModal(handler) {

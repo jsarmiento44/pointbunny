@@ -46,6 +46,12 @@
               ✦
             </button>
           </div>
+          <button class="btn icon-btn" type="button" id="settingsBtn" aria-label="Settings" title="Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+            </svg>
+          </button>
           <button class="btn" type="button">Log Out</button>
         </div>
       </nav>
@@ -83,6 +89,49 @@
       <div class="new-order-parent"></div>
       <div class="order-checkout-parent"></div>
       <div class="edit-form-parent"></div>
+      <div class="settings-parent"></div>
+
+      <!-- Settings Modal -->
+      <div class="modal-backdrop hidden" id="settingsModal">
+        <div class="modal-container settings-modal-container">
+          <button class="modal-close-btn" id="settingsCloseBtn">&times;</button>
+          <h2 class="edit-form-title">Settings</h2>
+
+          <div class="settings-body">
+
+            <!-- Receipt Adjustments -->
+            <section class="settings-section">
+              <div class="settings-section-header">
+                <div>
+                  <h3 class="settings-section-title">Receipt Adjustments</h3>
+                  <p class="settings-section-hint">Auto-applied to every new receipt. Fees and discounts.</p>
+                </div>
+                <button class="btn primary" id="addAdjustmentBtn" type="button">+ Add</button>
+              </div>
+
+              <!-- Populated by settingsView.js -->
+              <ul class="adjustment-list" id="adjustmentList">
+                <li class="adjustment-empty">No adjustments yet.</li>
+              </ul>
+            </section>
+
+            <!-- Show removed adjustments toggle -->
+            <section class="settings-section">
+              <div class="settings-toggle-row">
+                <div>
+                  <p class="settings-toggle-label">Show removed adjustments on receipt</p>
+                  <p class="settings-toggle-hint">When on, removed line items appear crossed out on the receipt.</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="showRemovedToggle" checked />
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </section>
+
+          </div>
+        </div>
+      </div>
 
       <div class="modal-overlay-form hidden" id="addMenuModal">
         <div class="modal-content form-only">
