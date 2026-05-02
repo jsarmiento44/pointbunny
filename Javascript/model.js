@@ -62,7 +62,7 @@ export const state = {
         },
       ],
       description: `This is a sample description of the menu item. You can add more details here.`,
-      isActive: true,
+      status: "active",
     },
     {
       itemName: "Ice Cream",
@@ -74,7 +74,7 @@ export const state = {
       hasVariants: false,
       variants: [],
       description: `This is a sample description of the menu item. You can add more details here.`,
-      isActive: true,
+      status: "active",
     },
     {
       itemName: "Milkshake",
@@ -95,7 +95,7 @@ export const state = {
         },
       ],
       description: `This is a sample description of the menu item. You can add more details here.`,
-      isActive: true,
+      status: "active",
     },
     {
       itemName: "Frappe",
@@ -107,7 +107,7 @@ export const state = {
       hasVariants: false,
       variants: [],
       description: `This is a sample description of the menu item. You can add more details here.`,
-      isActive: true,
+      status: "active",
     },
   ],
   menuCategories: [`snacks`, `drinks`, `dessert`],
@@ -148,7 +148,7 @@ export const uploadNewMenuItem = async function (newItem) {
     hasVariants: newItem.variants && newItem.variants.length > 0,
     variants: newItem.variants,
     description: `This is a sample description of the menu item. You can add more details here.`,
-    isActive: true,
+    status: "active",
   };
   state.menuItems.push(item);
 };
@@ -169,9 +169,8 @@ export const updateMenuItem = function (id, rawData) {
     const item = state.menuItems.find((item) => item._id === id);
     if (!item) throw new Error("Item not found");
 
-    // 2️⃣ Normalize boolean values
+    // 2️⃣ Normalize fields
     const hasVariants = rawData.hasVariants === "on";
-    const isActive = rawData.status === "Active";
 
     // 3️⃣ Update basic fields
     item.itemName = rawData.itemName || "";
@@ -180,7 +179,7 @@ export const updateMenuItem = function (id, rawData) {
     item._stock = rawData.stock || "0";
     item.description = rawData.description || "";
     item.hasVariants = hasVariants;
-    item.isActive = isActive;
+    item.status = rawData.status?.toLowerCase() || "active";
 
     // 4️⃣ Update image ONLY if a new one was selected
     // rawData.image is now the actual File object
@@ -200,6 +199,22 @@ export const updateMenuItem = function (id, rawData) {
   } catch (err) {
     alert(err.message);
   }
+};
+
+// ── Settings: category CRUD ───────────────────────────────────────────────────
+
+export const addCategory = function (name) {
+  const normalized = name.trim().toLowerCase();
+  if (!normalized) throw new Error("Category name cannot be empty");
+  if (state.menuCategories.includes(normalized))
+    throw new Error("Category already exists");
+  state.menuCategories.push(normalized);
+};
+
+export const deleteCategory = function (name) {
+  const index = state.menuCategories.indexOf(name);
+  if (index === -1) throw new Error("Category not found");
+  state.menuCategories.splice(index, 1);
 };
 
 // ── Settings: adjustment CRUD ─────────────────────────────────────────────────

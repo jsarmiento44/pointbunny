@@ -85,8 +85,7 @@ class NewMenuItemView extends View {
 
     this._selectOptionsElement.value = "";
     document.getElementById("addMenuModal").classList.add("hidden");
-    document.getElementById("newCategoryInput").classList.add("hidden");
-    document.querySelector(".new-category-button").classList.add("hidden");
+    document.querySelector(".new-category-row").classList.add("hidden");
     this._showVariantBtn.classList.add("hidden");
     this._addedVariants = [];
     const fileNameSpan = this._parentElement.querySelector(".file-upload-name");
@@ -95,47 +94,38 @@ class NewMenuItemView extends View {
   }
 
   _newMenuCategory() {
+    const row = document.querySelector(".new-category-row");
     document
       .querySelector(".select-options")
-      .addEventListener("change", function (e) {
-        const value = this.value;
-
-        if (value === `new-category`) {
-          document
-            .getElementById("newCategoryInput")
-            .classList.remove("hidden");
-
-          document
-            .querySelector(".new-category-button")
-            .classList.remove("hidden");
+      .addEventListener("change", function () {
+        if (this.value === "new-category") {
+          row.classList.remove("hidden");
+          row.querySelector(".new-category-field").focus();
         } else {
-          document.getElementById("newCategoryInput").classList.add("hidden");
-
-          document
-            .querySelector(".new-category-button")
-            .classList.add("hidden");
+          row.classList.add("hidden");
         }
       });
   }
 
   _addHandlerAddMenuCategory(handler) {
-    document
-      .querySelector(".new-category-button")
-      .addEventListener("click", function () {
-        const field = document.getElementById("newCategoryInput");
-        const newCateg = field.value.trim();
+    const row = document.querySelector(".new-category-row");
+    const field = document.getElementById("newCategoryInput");
 
-        if (newCateg !== "") {
-          handler(newCateg);
-          document.getElementById("newCategoryInput").classList.add("hidden");
+    const submit = () => {
+      const newCateg = field.value.trim();
+      if (!newCateg) {
+        alert("Please enter a category name");
+        return;
+      }
+      handler(newCateg);
+      field.value = "";
+      row.classList.add("hidden");
+    };
 
-          document
-            .querySelector(".new-category-button")
-            .classList.add("hidden");
-        } else {
-          alert("Please insert an input");
-        }
-      });
+    document.querySelector(".new-category-button").addEventListener("click", submit);
+    field.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); submit(); }
+    });
   }
 
   _mapMenuCategoriesMarkUp(data) {

@@ -19,25 +19,27 @@ class NewOrderView extends View {
         : this._data.menuCategories
             .map((category) => {
               const items = this._data.menuItems.filter(
-                (item) => item.category === category,
+                (item) => item.category === category && item.status !== "inactive",
               );
+              if (items.length === 0) return "";
               return `
                 <div class="menu-category-header">${category}</div>
                 <div class="menu-category">
                   ${items
-                    .map(
-                      (item) => `
-                        <div class="item-card" data-id="${item._id}">
+                    .map((item) => {
+                      const unavailable = item.status === "unavailable";
+                      return `
+                        <div class="item-card${unavailable ? " item-card--unavailable" : ""}" data-id="${item._id}">
                           <div class="btn-main">
                             <img src="${item.imageURL}" alt="${item.itemName}" />
                             <div>
                               <div class="title">${item.itemName}</div>
-                              <div class="hint">${item.price}</div>
+                              <div class="hint">₱${item.price}</div>
                             </div>
                           </div>
                         </div>
-                      `,
-                    )
+                      `;
+                    })
                     .join("")}
                 </div>
               `;

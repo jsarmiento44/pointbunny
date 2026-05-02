@@ -993,6 +993,34 @@ footer {
   box-shadow: var(--shadow-lg);
 }
 
+/* ── Unavailable item card ───────────────────────────────────────────────── */
+.item-card--unavailable {
+  position: relative;
+  overflow: hidden;
+  pointer-events: none;
+  cursor: default;
+  filter: grayscale(100%);
+  opacity: 0.72;
+}
+
+.item-card--unavailable::after {
+  content: "Unavailable";
+  position: absolute;
+  top: 20px;
+  right: -34px;
+  width: 136px;
+  padding: 5px 0;
+  background: #374151;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: center;
+  transform: rotate(45deg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
 .card .btn-main {
   display: flex;
   align-items: center;
@@ -1043,6 +1071,63 @@ footer {
 
 .modal-right .category-wrapper {
   position: relative;
+}
+
+/* ── New category inline row (add & edit forms) ─────────────────────────── */
+.new-category-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  animation: slideDown 180ms ease both;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.new-category-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.new-category-button {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  border: none;
+  background: var(--brand-1);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background var(--tr-fast), transform var(--tr-fast);
+  white-space: nowrap;
+}
+
+.new-category-button:hover {
+  background: var(--brand-2);
+  transform: translateY(-1px);
+}
+
+.new-category-button:active {
+  transform: translateY(0);
+}
+
+/* Override the broad .add-menu-form button rule for this specific button */
+.add-menu-form .new-category-button {
+  margin-top: 0;
+  padding: 10px 16px;
+  box-shadow: none;
+}
+
+.add-menu-form .new-category-button:hover {
+  box-shadow: none;
+}
+
+.add-menu-form .new-category-button:active {
+  box-shadow: none;
 }
 
 .modal-right button {
@@ -2817,6 +2902,64 @@ kbd {
   font-size: 0.83rem;
   color: var(--muted);
   margin: 0;
+}
+
+/* Category list */
+.category-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.category-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--panel-strong);
+  border-radius: var(--radius-sm, 10px);
+}
+
+.category-item-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.category-delete-btn {
+  background: none;
+  border: none;
+  color: var(--danger, #e53e3e);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.category-delete-btn:hover {
+  background: rgba(229, 62, 62, 0.1);
+}
+
+.category-add-row {
+  display: flex;
+  gap: 8px;
+}
+
+.category-input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm, 10px);
+  border: 1.5px solid var(--border, var(--line));
+  background: var(--input-bg, var(--panel));
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.category-input:focus {
+  outline: none;
+  border-color: var(--accent, var(--brand-1));
 }
 
 /* Adjustment list */

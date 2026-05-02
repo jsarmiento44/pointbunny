@@ -41,8 +41,18 @@ const controlShowEditMenu = async function (id) {
     MenuEditView._clear();
     MenuEditView._insertEditMenuMarkup(item);
     MenuEditView._mapMenuCategoriesMarkUp(categories, item.category);
+    MenuEditView._newEditCategoryToggle((name) => {
+      try {
+        model.addCategory(name);
+        NewMenuItemView._mapMenuCategoriesMarkUp(model.state.menuCategories);
+        MenuEditView._mapMenuCategoriesMarkUp(model.state.menuCategories, name);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
 
     MenuEditView._updateItemData((data) => {
+      if (data.category === "new-category") data.category = item.category;
       model.updateMenuItem(item._id, data);
 
       const modal = document.querySelector(".item-modal-overlay");
@@ -191,8 +201,45 @@ const clearCart = function () {
 // ── Settings ──────────────────────────────────────────────────────────────────
 
 const controlOpenSettings = function () {
+  SettingsView.renderCategories(model.state.menuCategories);
   SettingsView.renderAdjustments(model.state.settings.adjustments);
   SettingsView.syncShowRemovedToggle(model.state.settings.showRemovedAdjustments);
+};
+
+const _refreshCategoryDropdowns = function () {
+  NewMenuItemView._mapMenuCategoriesMarkUp(model.state.menuCategories);
+  if (document.querySelector(".edit-field-select"))
+    MenuEditView._mapMenuCategoriesMarkUp(model.state.menuCategories, "");
+};
+
+const controlAddCategoryFromSettings = function (name) {
+  try {
+    model.addCategory(name);
+    SettingsView.renderCategories(model.state.menuCategories);
+    _refreshCategoryDropdowns();
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
+const controlDeleteCategory = function (name) {
+  const itemsInCategory = model.state.menuItems.filter(
+    (item) => item.category === name,
+  );
+  if (
+    itemsInCategory.length > 0 &&
+    !confirm(
+      `"${name}" has ${itemsInCategory.length} menu item(s). Delete it anyway?`,
+    )
+  )
+    return;
+  try {
+    model.deleteCategory(name);
+    SettingsView.renderCategories(model.state.menuCategories);
+    _refreshCategoryDropdowns();
+  } catch (err) {
+    alert(err.message);
+  }
 };
 
 const controlSaveAdjustment = function (data) {
@@ -325,6 +372,8 @@ const init = function () {
   // Settings
   SettingsView._addHandlerOpen(controlOpenSettings);
   SettingsView._addHandlerClose();
+  SettingsView._addHandlerAddCategory(controlAddCategoryFromSettings);
+  SettingsView._addHandlerDeleteCategory(controlDeleteCategory);
   SettingsView._addHandlerAdd();
   SettingsView._addHandlerSave(controlSaveAdjustment);
   SettingsView._addHandlerEdit(controlEditAdjustment);

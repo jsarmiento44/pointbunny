@@ -99,6 +99,21 @@
 
           <div class="settings-body">
 
+            <!-- Menu Categories -->
+            <section class="settings-section">
+              <div class="settings-section-header">
+                <div>
+                  <h3 class="settings-section-title">Menu Categories</h3>
+                  <p class="settings-section-hint">Add or remove categories used when creating menu items.</p>
+                </div>
+              </div>
+              <ul class="category-list" id="categoryList"></ul>
+              <div class="category-add-row">
+                <input type="text" id="categoryInput" placeholder="New category name" class="category-input" />
+                <button class="btn primary" id="addCategoryBtn" type="button">+ Add</button>
+              </div>
+            </section>
+
             <!-- Receipt Adjustments -->
             <section class="settings-section">
               <div class="settings-section-header">
@@ -187,20 +202,18 @@
                       </option>
                       <option value="new-category">Add new category</option>
                     </select>
-                    <div>
+                    <div class="new-category-row hidden">
                       <input
                         type="text"
                         name="newCategory"
                         id="newCategoryInput"
-                        placeholder="Enter new category"
-                        class="new-category-field hidden"
+                        placeholder="New category name"
+                        class="new-category-field"
                       />
                       <button
-                        class="new-category-button hidden btn ghost"
+                        class="new-category-button"
                         type="button"
-                      >
-                        Add new category
-                      </button>
+                      >+ Add</button>
                     </div>
                   </div>
                 </label>
@@ -319,7 +332,7 @@
 
             <div class="item-card">
               <div class="btn-main">
-                <img class="item-image" src="" alt="Item Image" />
+                <img class="item-image" alt="Item Image" />
                 <div>
                   <div class="title">${item.itemName}</div>
                   <div class="hint">Category: ${item.category}s</div>

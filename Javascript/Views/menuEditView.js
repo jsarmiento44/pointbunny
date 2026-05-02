@@ -53,10 +53,16 @@ class MenuEditView extends View {
             <input type="number" name="price" value="${item.price}" />
           </label>
 
-          <label class="edit-field">
-            Category
-            <select class="edit-field-select" name="category"></select>
-          </label>
+          <div class="edit-field">
+            <span class="edit-field-label">Category</span>
+            <div class="category-wrapper">
+              <select class="edit-field-select" name="category"></select>
+              <div class="new-category-row hidden">
+                <input type="text" class="new-category-field edit-new-category-input" placeholder="New category name" />
+                <button class="new-category-button" type="button">+ Add</button>
+              </div>
+            </div>
+          </div>
 
           <label class="edit-field">
             Description
@@ -76,8 +82,9 @@ class MenuEditView extends View {
           <label class="edit-field">
             Status
             <select name="status">
-              <option value="Active" ${item.isActive ? "selected" : ""}>Active</option>
-              <option value="Inactive" ${!item.isActive ? "selected" : ""}>Inactive</option>
+              <option value="Active" ${item.status === "active" ? "selected" : ""}>Active</option>
+              <option value="Inactive" ${item.status === "inactive" ? "selected" : ""}>Inactive</option>
+              <option value="Unavailable" ${item.status === "unavailable" ? "selected" : ""}>Unavailable</option>
             </select>
           </label>
 
@@ -324,7 +331,9 @@ class MenuEditView extends View {
       const checkbox = this._formDiv.querySelector('[name="hasVariants"]');
       if (checkbox && !checkbox.checked) {
         checkbox.checked = true;
-        const variantsSection = this._formDiv.querySelector(".edit-variants-section");
+        const variantsSection = this._formDiv.querySelector(
+          ".edit-variants-section",
+        );
         if (variantsSection) variantsSection.style.display = "";
       }
     });
@@ -449,14 +458,18 @@ class MenuEditView extends View {
       const checkbox = e.target.closest('[name="hasVariants"]');
       if (!checkbox) return;
 
-      const variantsSection = this._formDiv.querySelector(".edit-variants-section");
+      const variantsSection = this._formDiv.querySelector(
+        ".edit-variants-section",
+      );
 
       if (checkbox.checked) {
         if (variantsSection) variantsSection.style.display = "";
         return;
       }
 
-      const existingGroups = this._formDiv.querySelectorAll(".edit-variant-group");
+      const existingGroups = this._formDiv.querySelectorAll(
+        ".edit-variant-group",
+      );
 
       if (existingGroups.length === 0) {
         if (variantsSection) variantsSection.style.display = "none";
@@ -492,14 +505,18 @@ class MenuEditView extends View {
 
     const overlay = container.querySelector(".edit-confirm-overlay");
 
-    overlay.querySelector(".edit-confirm-yes-btn").addEventListener("click", () => {
-      overlay.remove();
-      onConfirm();
-    });
+    overlay
+      .querySelector(".edit-confirm-yes-btn")
+      .addEventListener("click", () => {
+        overlay.remove();
+        onConfirm();
+      });
 
-    overlay.querySelector(".edit-confirm-cancel-btn").addEventListener("click", () => {
-      overlay.remove();
-    });
+    overlay
+      .querySelector(".edit-confirm-cancel-btn")
+      .addEventListener("click", () => {
+        overlay.remove();
+      });
   }
 
   _addHandlerDeleteItem(handler) {
@@ -507,7 +524,9 @@ class MenuEditView extends View {
       const btn = e.target.closest(".edit-delete-btn");
       if (!btn) return;
 
-      const confirmed = window.confirm("Delete this item? This cannot be undone.");
+      const confirmed = window.confirm(
+        "Delete this item? This cannot be undone.",
+      );
       if (!confirmed) return;
 
       const backdrop = btn.closest(".modal-backdrop");
@@ -524,6 +543,54 @@ class MenuEditView extends View {
 
       const backdrop = btn.closest(".modal-backdrop");
       if (backdrop) backdrop.remove();
+    });
+  }
+
+  _newEditCategoryToggle(handler) {
+    this._formDiv.addEventListener("change", (e) => {
+      const select = e.target.closest(".edit-field-select");
+      if (!select) return;
+      const row = select
+        .closest(".category-wrapper")
+        ?.querySelector(".new-category-row");
+      if (!row) return;
+      if (select.value === "new-category") {
+        row.classList.remove("hidden");
+        row.querySelector(".new-category-field").focus();
+      } else {
+        row.classList.add("hidden");
+      }
+    });
+
+    this._formDiv.addEventListener("click", (e) => {
+      const btn = e.target.closest(".edit-field .new-category-button");
+      if (!btn) return;
+      const row = btn.closest(".new-category-row");
+      const input = row.querySelector(".new-category-field");
+      const name = input.value.trim();
+      if (!name) {
+        alert("Please enter a category name");
+        return;
+      }
+      handler(name);
+      input.value = "";
+      row.classList.add("hidden");
+    });
+
+    this._formDiv.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      const input = e.target.closest(".edit-new-category-input");
+      if (!input) return;
+      e.preventDefault();
+      const row = input.closest(".new-category-row");
+      const name = input.value.trim();
+      if (!name) {
+        alert("Please enter a category name");
+        return;
+      }
+      handler(name);
+      input.value = "";
+      row.classList.add("hidden");
     });
   }
 }

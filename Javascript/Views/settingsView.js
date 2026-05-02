@@ -5,6 +5,9 @@ class SettingsView {
   _addBtn = document.getElementById("addAdjustmentBtn");
   _list = document.getElementById("adjustmentList");
   _showRemovedToggle = document.getElementById("showRemovedToggle");
+  _categoryList = document.getElementById("categoryList");
+  _categoryInput = document.getElementById("categoryInput");
+  _addCategoryBtn = document.getElementById("addCategoryBtn");
 
   // ── Open / Close ─────────────────────────────────────────────────────────────
 
@@ -25,6 +28,45 @@ class SettingsView {
   _close() {
     this._modal.classList.add("hidden");
     this._removeForm();
+  }
+
+  // ── Category List ────────────────────────────────────────────────────────────
+
+  renderCategories(categories) {
+    if (categories.length === 0) {
+      this._categoryList.innerHTML =
+        '<li class="adjustment-empty">No categories yet.</li>';
+      return;
+    }
+    this._categoryList.innerHTML = categories
+      .map(
+        (cat) => `
+        <li class="category-item">
+          <span class="category-item-name">${cat[0].toUpperCase() + cat.slice(1)}</span>
+          <button class="category-delete-btn" data-category="${cat}" type="button">Delete</button>
+        </li>`,
+      )
+      .join("");
+  }
+
+  _addHandlerAddCategory(handler) {
+    this._addCategoryBtn.addEventListener("click", () => {
+      handler(this._categoryInput.value);
+      this._categoryInput.value = "";
+    });
+    this._categoryInput.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      handler(this._categoryInput.value);
+      this._categoryInput.value = "";
+    });
+  }
+
+  _addHandlerDeleteCategory(handler) {
+    this._categoryList.addEventListener("click", (e) => {
+      const btn = e.target.closest(".category-delete-btn");
+      if (!btn) return;
+      handler(btn.dataset.category);
+    });
   }
 
   // ── Adjustment List ───────────────────────────────────────────────────────────

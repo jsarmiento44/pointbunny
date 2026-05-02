@@ -4,7 +4,7 @@
     <meta name="description" content="Pointy — modern for small businesses">
     <title>Pointy POS</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/Pointy.b8f60916.css">
+    <link rel="stylesheet" href="/Pointy%20Project.b8f60916.css">
   </head>
 
   <body>
@@ -20,12 +20,8 @@
           </a>
           <span class="brand">Pointy POS</span>
         </div>
-        <div class="search" role="search">
-          <input type="search" placeholder="Search ( / )" aria-label="Search">
-          <span class="kbd">/</span>
-        </div>
+
         <div class="nav-actions">
-          <button class="btn ghost" type="button">Home</button>
           <div class="toggle" role="group" aria-label="Theme toggle">
             <button id="lightBtn" aria-pressed="false" title="Light mode" aria-label="Light mode">
               ☀︎
@@ -34,7 +30,13 @@
               ✦
             </button>
           </div>
-          <button class="btn primary" type="button">Log Out</button>
+          <button class="btn icon-btn" type="button" id="settingsBtn" aria-label="Settings" title="Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"></path>
+            </svg>
+          </button>
+          <button class="btn" type="button">Log Out</button>
         </div>
       </nav>
     </header>
@@ -48,74 +50,277 @@
         <p class="sub">Ready to ring up sales and keep things moving.</p>
       </section>
 
-      <section class="info-bar fade-up" aria-label="Today overview">
-        <div class="date-time">
-          <span class="pill" id="dateStr">07/20/2025</span>
-          <span class="pill" id="timeStr">5:45 AM</span>
-          <span class="pill" id="shiftStr">Shift: A</span>
+      <section class="stats-bar fade-up" aria-label="Today overview">
+        <div class="stat-card stat-card--accent">
+          <span class="stat-label">Today's Sales</span>
+          <span class="stat-value" id="totalStr">₱0.00</span>
         </div>
-        <div class="sales-total">
-          <span class="badge">Today</span>
-          <span class="total" id="totalStr">₱5,790.00</span>
+        <div class="stat-card">
+          <span class="stat-label">Date</span>
+          <span class="stat-value" id="dateStr">--/--/----</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Time</span>
+          <span class="stat-value" id="timeStr">--:-- --</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Shift</span>
+          <span class="stat-value" id="shiftStr">A</span>
         </div>
       </section>
 
-      <div class="modal-parent">Modal Overlay</div>
+      <div class="modal-parent"></div>
+      <div class="new-order-parent"></div>
+      <div class="order-checkout-parent"></div>
+      <div class="edit-form-parent"></div>
+      <div class="settings-parent"></div>
 
-      <!-- Form Modal Overlay -->
+      <!-- Settings Modal -->
+      <div class="modal-backdrop hidden" id="settingsModal">
+        <div class="modal-container settings-modal-container">
+          <button class="modal-close-btn" id="settingsCloseBtn">×</button>
+          <h2 class="edit-form-title">Settings</h2>
+
+          <div class="settings-body">
+
+            <!-- Menu Categories -->
+            <section class="settings-section">
+              <div class="settings-section-header">
+                <div>
+                  <h3 class="settings-section-title">Menu Categories</h3>
+                  <p class="settings-section-hint">Add or remove categories used when creating menu items.</p>
+                </div>
+              </div>
+              <ul class="category-list" id="categoryList"></ul>
+              <div class="category-add-row">
+                <input type="text" id="categoryInput" placeholder="New category name" class="category-input">
+                <button class="btn primary" id="addCategoryBtn" type="button">+ Add</button>
+              </div>
+            </section>
+
+            <!-- Receipt Adjustments -->
+            <section class="settings-section">
+              <div class="settings-section-header">
+                <div>
+                  <h3 class="settings-section-title">Receipt Adjustments</h3>
+                  <p class="settings-section-hint">Auto-applied to every new receipt. Fees and discounts.</p>
+                </div>
+                <button class="btn primary" id="addAdjustmentBtn" type="button">+ Add</button>
+              </div>
+
+              <!-- Populated by settingsView.js -->
+              <ul class="adjustment-list" id="adjustmentList">
+                <li class="adjustment-empty">No adjustments yet.</li>
+              </ul>
+            </section>
+
+            <!-- Show removed adjustments toggle -->
+            <section class="settings-section">
+              <div class="settings-toggle-row">
+                <div>
+                  <p class="settings-toggle-label">Show removed adjustments on receipt</p>
+                  <p class="settings-toggle-hint">When on, removed line items appear crossed out on the receipt.</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="showRemovedToggle" checked="">
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+
       <div class="modal-overlay-form hidden" id="addMenuModal">
         <div class="modal-content form-only">
           <button class="modal-close">×</button>
+          <h3 class="form-title">Add Menu Item</h3>
 
-          <!-- Form Panel -->
-          <div class="modal-right">
-            <form class="add-menu-form">
-              <h3 class="form-title">Add Menu Item</h3>
+          <form class="add-menu-form two-column-form">
+            <div class="form-columns-wrapper">
+              <div class="form-column form-column-left">
+                <label>
+                  Menu Item Name
+                  <input type="text" name="name" placeholder="e.g. Iced Matcha Latte" value="" required="">
+                </label>
 
-              <label>
-                Menu Item Name
-                <input type="text" name="name" placeholder="e.g. Iced Matcha Latte" value="test" required="">
-              </label>
+                <label>
+                  <span>
+                    Price
+                    <span class="info-icon">
+                      i
+                      <span class="tooltip-text-parent-price">
+                        Enable this if your item has multiple variants, like
+                        sizes, flavors, or types.
+                      </span>
+                    </span>
+                  </span>
+                  <input type="number" name="price" placeholder="₱0.00" step="1" min="0" value="" required="">
+                </label>
 
-              <label>
-                Price
-                <input type="number" name="price" placeholder="₱0.00" step="1" min="0" value="50" required="">
-              </label>
+                <label>
+                  Category
+                  <div class="category-wrapper">
+                    <select class="select-options" name="category" id="categorySelect">
+                      <option value="" disabled="" selected="">
+                        Select category
+                      </option>
+                      <option value="new-category">Add new category</option>
+                    </select>
+                    <div class="new-category-row hidden">
+                      <input type="text" name="newCategory" id="newCategoryInput" placeholder="New category name" class="new-category-field">
+                      <button class="new-category-button" type="button">+ Add</button>
+                    </div>
+                  </div>
+                </label>
+              </div>
 
-              <label>
-                Category
-                <select name="category">
-                  <option value="" disabled="" selected="">Select category</option>
-                  <option value="coffee">Coffee</option>
-                  <option value="non-coffee">Non-Coffee</option>
-                  <option value="tea">Tea</option>
-                  <option value="dessert">Dessert</option>
-                </select>
-              </label>
+              <div class="form-column form-column-right">
+                <label class="file-upload-label">
+                  Upload Image
+                  <input type="file" name="image" accept="image/*">
+                  <span class="file-upload-btn">Choose File</span>
+                  <span class="file-upload-name">No file chosen</span>
+                </label>
 
-              <!-- File Upload -->
-              <label class="file-upload-label">
-                Upload Image
-                <input type="file" name="image" accept="image/*" required="" value="/Icons/POS Wowa.png">
-                <span class="file-upload-btn">Choose File</span>
-                <span class="file-upload-name">No file chosen</span>
-              </label>
+                <span class="toggle-label">
+                  Item Has Multiple Options?
+                  <span class="info-icon">
+                    i
+                    <span class="tooltip-text">
+                      Enable this if your item has multiple variants, like
+                      sizes, flavors, or types.
+                    </span>
+                  </span>
+                </span>
 
-              <button type="submit">Add Item</button>
-            </form>
+                <!-- Checkbox below -->
+                <div class="variant-btn-section">
+                  <label class="switch">
+                    <input type="checkbox" id="hasVariantsCheckbox">
+                    <span class="slider round"></span>
+                  </label>
+
+                  <div id="variantsSection" class="hidden variants-section">
+                    <button type="button" id="showVariantField" class="btn ghost">
+                      Add variant set
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="variant-modal hidden" id="addVariantModal">
+              <div class="variant-content">
+                <!-- Close Button -->
+                <button class="variant-close">×</button>
+
+                <div class="field-label">
+                  <label>
+                    Variant Label Name
+                    <input type="text" name="variant-name" placeholder="e.g. Flavor, Size, Add-ons">
+                  </label>
+                </div>
+
+                <div class="variant-options-container">
+                  <!-- Existing options go here -->
+                  <div class="variant-options-field">
+                    <label>
+                      Variant Option Name
+                      <input type="text" name="option-name" placeholder="e.g. Small, Medium, Large">
+                    </label>
+                    <label class="price-label">
+                      <span>
+                        Price
+                        <span class="info-icon" aria-label="Info">
+                          i
+                          <span class="tooltip-text">
+                            Leave 0 if this variant does not add extra price.
+                            The main item price will apply.
+                          </span>
+                        </span>
+                      </span>
+                      <input type="number" name="option-price" placeholder="₱0.00" step="1" min="0">
+                    </label>
+                  </div>
+
+                  <!-- Add another option button -->
+                  <div class="add-variant-option">Add Another Option</div>
+                </div>
+
+                <button class="add-variant" id="addVariantSet">
+                  Add Variant
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Add Item</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="item-modal-overlay hidden" id="${item._id}">
+        <div class="modal-content">
+          <!-- Close Button -->
+          <button class="item-modal-close">×</button>
+
+          <!-- Single Panel Item Info -->
+          <div class="modal-left">
+            <h2 class="menu-category-header">Item Details</h2>
+
+            <div class="item-card">
+              <div class="btn-main">
+                <img class="item-image" alt="Item Image">
+                <div>
+                  <div class="title">${item.itemName}</div>
+                  <div class="hint">Category: ${item.category}s</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="variant-section"></div>
+
+            <p class="hint" style="margin-top: 12px">
+              This is a sample description of the menu item. You can add more
+              details here.
+            </p>
+
+            <div class="item-price" style="margin-top: 12px; font-weight: 900">
+              ₱${item.price}
+            </div>
+
+            <div class="quantity-wrapper">
+              <span class="hint">Quantity</span>
+              <div class="quantity-buttons">
+                <button class="qty-btn" data-action="decrease">−</button>
+                <span id="item-qty">1</span>
+                <button class="qty-btn" data-action="increase">+</button>
+              </div>
+            </div>
+
+            <button class="btn primary" id="btn-add-to-cart" style="flex-shrink: 0; width: 100%; margin-top: 16px">
+              Add to Cart
+            </button>
           </div>
         </div>
       </div>
 
       <section class="main-buttons fade-up" aria-label="Primary actions">
         <!-- New Order -->
-        <article class="card" tabindex="0">
+        <article class="card card--featured" tabindex="0">
           <span class="ring" aria-hidden="true"></span>
           <button class="btn-main" data-action="new-order" aria-label="Create new order" id="#newOrderBtn">
-            <img src="/POS%20Wowa.af77d787.png" alt="New Order icon">
+            <span class="card-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"></path>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <path d="M16 10a4 4 0 01-8 0"></path>
+              </svg>
+            </span>
             <div>
               <div class="title new-order">New Order</div>
-              <div class="hint">Start a sale • (N)</div>
+              <div class="hint">Start a sale <kbd>N</kbd></div>
             </div>
             <div class="chev" aria-hidden="true">→</div>
           </button>
@@ -125,58 +330,85 @@
         <article class="card" tabindex="0">
           <span class="ring" aria-hidden="true"></span>
           <button class="btn-main" data-action="menu-list" aria-label="Open menu list" id="menu-list">
-            <img src="/POS%20Wowa%20(1).e58c409e.png" alt="Menu List icon">
+            <span class="card-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+              </svg>
+            </span>
             <div>
               <div class="title">Menu List</div>
-              <div class="hint">Browse items • (M)</div>
+              <div class="hint">Browse items <kbd>M</kbd></div>
             </div>
             <div class="chev" aria-hidden="true">→</div>
           </button>
         </article>
 
         <!-- Discounts -->
-        <article class="card" tabindex="0">
+        <article class="card card--locked" tabindex="-1" aria-disabled="true">
           <span class="ring" aria-hidden="true"></span>
-          <button class="btn-main" data-action="discounts" aria-label="Apply discounts">
-            <img src="/POS%20Wowa%20(2).9d7699d5.png" alt="Discounts icon">
+          <span class="coming-soon-badge" aria-hidden="true">Soon</span>
+          <button class="btn-main" data-action="discounts" aria-label="Apply discounts" tabindex="-1">
+            <span class="card-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="5" x2="5" y2="19"></line>
+                <circle cx="6.5" cy="6.5" r="2.5"></circle>
+                <circle cx="17.5" cy="17.5" r="2.5"></circle>
+              </svg>
+            </span>
             <div>
               <div class="title">Discounts</div>
-              <div class="hint">Promos &amp; codes • (D)</div>
+              <div class="hint">Promos &amp; codes</div>
             </div>
             <div class="chev" aria-hidden="true">→</div>
           </button>
         </article>
 
         <!-- Summary -->
-        <article class="card" tabindex="0">
+        <article class="card card--locked" tabindex="-1" aria-disabled="true">
           <span class="ring" aria-hidden="true"></span>
-          <button class="btn-main" data-action="summary" aria-label="View summary">
-            <img src="/POS%20Wowa%20(3).602c996e.png" alt="Summary icon">
+          <span class="coming-soon-badge" aria-hidden="true">Soon</span>
+          <button class="btn-main" data-action="summary" aria-label="View summary" tabindex="-1">
+            <span class="card-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"></line>
+                <line x1="12" y1="20" x2="12" y2="4"></line>
+                <line x1="6" y1="20" x2="6" y2="14"></line>
+                <line x1="2" y1="20" x2="22" y2="20"></line>
+              </svg>
+            </span>
             <div>
               <div class="title">Summary</div>
-              <div class="hint">Sales &amp; reports • (S)</div>
+              <div class="hint">Sales &amp; reports</div>
             </div>
             <div class="chev" aria-hidden="true">→</div>
           </button>
         </article>
       </section>
 
+      <p class="section-label">Quick Actions</p>
       <section class="quick-actions fade-up" aria-label="Quick actions">
-        <button class="chip" data-action="scan">Scan Item</button>
-        <button class="chip" data-action="drawer">Open Drawer</button>
-        <button class="chip" data-action="refund">Refund</button>
-        <button class="chip" data-action="zreport">Z Report</button>
+        <button class="chip chip--locked" data-action="scan" disabled="">
+          Scan Item
+        </button>
+        <button class="chip chip--locked" data-action="drawer" disabled="">
+          Open Drawer
+        </button>
+        <button class="chip chip--locked" data-action="refund" disabled="">
+          Refund
+        </button>
+        <button class="chip chip--locked" data-action="zreport" disabled="">
+          Z Report
+        </button>
       </section>
     </main>
 
     <footer></footer>
 
-    <script type="module" src="/Pointy.227e3f3a.js" defer=""></script>
-    <script type="module" src="/Pointy.494665d6.js" defer=""></script>
-    <script type="module" src="/Pointy.ffce6faa.js" defer=""></script>
-    <script type="module" src="/Pointy.f9d6bf37.js" defer=""></script>
-    <script type="module" src="/Pointy.3b63cdc7.js" defer=""></script>
-    <script type="module" src="/Pointy.7cf3d575.js" defer=""></script>
+    <script type="module" src="/Pointy%20Project.227e3f3a.js" defer=""></script>
+    <script type="module" src="/Pointy%20Project.494665d6.js" defer=""></script>
   
 
 </body></html>
