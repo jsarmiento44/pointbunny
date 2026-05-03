@@ -36,7 +36,7 @@
               <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"></path>
             </svg>
           </button>
-          <button class="btn" type="button">Log Out</button>
+          <button class="btn" type="button" id="logoutBtn">Log Out</button>
         </div>
       </nav>
     </header>
@@ -406,6 +406,76 @@
     </main>
 
     <footer></footer>
+
+    <!-- App loading overlay — shown while initApp runs after login/session restore -->
+    <div id="appLoadingOverlay" class="app-loading-overlay hidden">
+      <div class="spinner">
+        <div></div><div></div><div></div><div></div>
+      </div>
+    </div>
+
+    <!-- Auth overlay — shown when no session exists -->
+    <div id="authOverlay" class="auth-overlay hidden">
+      <div class="auth-card">
+        <img src="/Pointy.f0667a20.png" alt="Pointy logo" class="auth-logo">
+        <h2 class="auth-brand">Pointy POS</h2>
+
+        <!-- Forms wrapper — slides horizontally for the transition -->
+        <div class="auth-forms-wrapper" id="authFormsWrapper">
+
+          <!-- Sign-in form -->
+          <form id="loginForm" class="auth-form" novalidate="">
+            <div class="auth-field">
+              <label for="loginEmail">Email</label>
+              <input type="email" id="loginEmail" placeholder="you@example.com" required="" autocomplete="email">
+            </div>
+            <div class="auth-field">
+              <label for="loginPassword">Password</label>
+              <input type="password" id="loginPassword" placeholder="••••••••" required="" autocomplete="current-password">
+            </div>
+            <p id="loginError" class="auth-error"></p>
+            <button type="submit" id="signInBtn" class="btn primary auth-submit">Sign In</button>
+            <p class="auth-switch">No account? <a href="#" id="showSignUpLink">Create one</a></p>
+          </form>
+
+          <!-- Sign-up form -->
+          <form id="signUpForm" class="auth-form hidden" novalidate="">
+
+            <div class="auth-col-pair">
+              <div class="auth-field">
+                <label for="signUpFirstName">First name</label>
+                <input type="text" id="signUpFirstName" placeholder="Maria" required="" autocomplete="given-name">
+              </div>
+              <div class="auth-field">
+                <label for="signUpLastName">Last name</label>
+                <input type="text" id="signUpLastName" placeholder="Santos" required="" autocomplete="family-name">
+              </div>
+            </div>
+
+            <div class="auth-field">
+              <label for="signUpEmail">Email</label>
+              <input type="email" id="signUpEmail" placeholder="you@example.com" required="" autocomplete="email">
+            </div>
+
+            <div class="auth-col-pair">
+              <div class="auth-field">
+                <label for="signUpPassword">Password</label>
+                <input type="password" id="signUpPassword" placeholder="Min. 6 characters" required="" autocomplete="new-password">
+              </div>
+              <div class="auth-field">
+                <label for="signUpConfirm">Confirm password</label>
+                <input type="password" id="signUpConfirm" placeholder="••••••••" required="" autocomplete="new-password">
+              </div>
+            </div>
+
+            <p id="signUpError" class="auth-error"></p>
+            <button type="submit" id="signUpBtn" class="btn primary auth-submit">Create Account</button>
+            <p class="auth-switch">Already have an account? <a href="#" id="showSignInLink">Sign in</a></p>
+          </form>
+
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="/Pointy%20Project.227e3f3a.js" defer=""></script>
     <script type="module" src="/Pointy%20Project.494665d6.js" defer=""></script>

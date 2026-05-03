@@ -657,9 +657,8 @@ footer {
 }
 
 :focus-visible {
-  outline: 3px solid var(--ring);
-  outline-offset: 2px;
-  border-radius: 12px;
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--brand-1);
 }
 @media (min-width: 960px) {
   .search {
@@ -786,7 +785,6 @@ footer {
   background: var(--panel-strong);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  overflow: hidden;
   padding: 32px;
   gap: 32px;
   transition: all 0.3s ease;
@@ -1230,7 +1228,7 @@ footer {
 .add-menu-form select:focus {
   outline: none;
   border-color: var(--brand-1);
-  box-shadow: 0 0 0 4px var(--ring);
+  box-shadow: inset 0 0 0 2px var(--brand-1);
 }
 
 .add-menu-form button {
@@ -1577,8 +1575,53 @@ footer {
 }
 
 /* Success modal sits ABOVE other modals */
+/* ── Success modal animations ─────────────────────────────────────────────── */
+@keyframes success-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes success-card-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+@keyframes success-icon-pop {
+  0%   { transform: scale(0);    opacity: 0; }
+  65%  { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+@keyframes success-check-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes success-title-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
 .success-overlay {
   z-index: 10050;
+  animation: success-backdrop-in 0.2s ease forwards;
+}
+
+.success-modal .modal-close {
+  width: 30px;
+  height: 30px;
+  font-size: 18px;
+  background: var(--panel-strong);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  top: -14px;
+  right: -14px;
+}
+
+.success-modal .modal-close:hover {
+  background: var(--panel-strong);
+  color: var(--text);
+  transform: scale(1.05);
 }
 
 /* Compact modal */
@@ -1588,6 +1631,7 @@ footer {
   padding: 32px;
   display: flex;
   justify-content: center;
+  animation: success-card-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 /* Body */
@@ -1606,11 +1650,22 @@ footer {
   border-radius: 999px;
   display: grid;
   place-items: center;
-  font-size: 36px;
-  font-weight: 900;
   color: #fff;
   background: linear-gradient(135deg, var(--brand-3), var(--brand-2));
   box-shadow: 0 14px 40px rgba(34, 197, 94, 0.35);
+  animation: success-icon-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.success-svg {
+  width: 44px;
+  height: 44px;
+}
+
+.success-check {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: success-check-draw 0.38s ease-out forwards;
+  animation-delay: 0.32s;
 }
 
 /* Text */
@@ -1620,6 +1675,9 @@ footer {
   background: linear-gradient(90deg, var(--brand-2), var(--brand-1));
   -webkit-background-clip: text;
   color: transparent;
+  opacity: 0;
+  animation: success-title-in 0.3s ease forwards;
+  animation-delay: 0.55s;
 }
 
 .success-sub {
@@ -2206,7 +2264,7 @@ footer {
 .edit-field textarea:focus {
   outline: none;
   border-color: var(--brand-1);
-  box-shadow: 0 0 0 4px var(--ring);
+  box-shadow: inset 0 0 0 2px var(--brand-1);
 }
 
 /* File upload */
@@ -2359,7 +2417,7 @@ footer {
 .edit-variant-row input:focus {
   outline: none;
   border-color: var(--brand-1);
-  box-shadow: 0 0 0 4px var(--ring);
+  box-shadow: inset 0 0 0 2px var(--brand-1);
 }
 
 /* Variant buttons */
@@ -2522,7 +2580,7 @@ footer {
   width: 100%;
   max-width: 950px;
   max-height: 90vh;
-  overflow: hidden;
+  overflow-y: auto;
   padding: 25px;
   box-sizing: border-box;
   box-shadow: var(--shadow-lg);
@@ -3335,3 +3393,197 @@ body[data-theme="dark"] .receipt-manual-overlay {
   width: 100%;
   margin-bottom: 0;
 }
+
+/* ── Auth Overlay ─────────────────────────────────────────────────────────── */
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  overflow-y: auto;
+}
+.auth-overlay.hidden { display: none; }
+
+.auth-card {
+  position: relative;
+  background: var(--panel-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  transition: max-width 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.auth-card--wide      { max-width: 580px; }
+.auth-card--animating { overflow: hidden; }
+
+.auth-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.auth-brand {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+}
+
+.auth-forms-wrapper { width: 100%; }
+
+.auth-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-col-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.auth-section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--brand-1);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 6px;
+  margin: 2px 0 -2px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.auth-field label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.auth-field input,
+.auth-field select {
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.9rem;
+  outline: none;
+  width: 100%;
+  transition: border-color var(--tr-fast), box-shadow var(--tr-fast);
+}
+
+.auth-field input:focus,
+.auth-field select:focus {
+  outline: none;
+  border-color: var(--brand-1);
+  box-shadow: inset 0 0 0 2px var(--brand-1);
+}
+
+.auth-field select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+}
+
+.auth-error {
+  color: var(--warn);
+  font-size: 0.82rem;
+  min-height: 1.1em;
+  margin: 0;
+}
+
+.auth-submit {
+  width: 100%;
+  margin-top: 2px;
+}
+
+.auth-switch {
+  font-size: 0.83rem;
+  text-align: center;
+  color: var(--text-muted, #888);
+  margin: 6px 0 0;
+}
+.auth-switch a {
+  color: var(--brand-1);
+  text-decoration: none;
+  font-weight: 600;
+}
+.auth-switch a:hover { text-decoration: underline; }
+
+/* Green sweep that runs across the bottom during form transition */
+.auth-sweep {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand-1), #6ee7a0);
+  transform: scaleX(0);
+  transition: transform 0.44s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0 0 2px 2px;
+}
+.auth-sweep--forward { transform-origin: left; }
+.auth-sweep--back    { transform-origin: right; }
+.auth-sweep--active  { transform: scaleX(1); }
+
+@media (max-width: 520px) {
+  .auth-card { padding: 32px 20px; gap: 16px; }
+  .auth-col-pair { grid-template-columns: 1fr; }
+}
+
+/* ── App loading overlay ──────────────────────────────────────────────────── */
+.app-loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg, #0d1f17);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 8000;
+}
+.app-loading-overlay.hidden { display: none; }
+
+/* ── Toast notifications ──────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 18px;
+  border-radius: var(--radius-sm, 10px);
+  font-size: 0.9rem;
+  font-weight: 500;
+  max-width: 320px;
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+}
+.toast--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.toast--error  { background: #c0392b; color: #fff; }
+.toast--info   { background: var(--brand-1); color: #fff; }
+.toast--success { background: #27ae60; color: #fff; }

@@ -1,5 +1,7 @@
 import NewOrderView from "./Views/newOrderView.js";
 import * as model from "./model.js";
+import { supabase } from "./supabase.js";
+import AuthView from "./Views/authView.js";
 import MenuListView from "./Views/menuListView.js";
 import NewMenuItemView from "./Views/newMenuItemView.js";
 import NewOrderItemView from "./Views/newOrderItemView.js";
@@ -7,8 +9,35 @@ import OrderCheckOutView from "./Views/orderCheckoutView.js";
 import newMenuItemView from "./Views/newMenuItemView.js";
 import MenuEditView from "./Views/menuEditView.js";
 import SettingsView from "./Views/settingsView.js";
+
 const modelState = model.state;
 let item;
+
+// ── Toast notifications ───────────────────────────────────────────────────────
+
+const showToast = function (message, type = 'error') {
+  const toast = document.createElement('div');
+  toast.className = `toast toast--${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('toast--visible'));
+  setTimeout(() => {
+    toast.classList.remove('toast--visible');
+    toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+  }, 3500);
+};
+
+// ── App loading overlay ───────────────────────────────────────────────────────
+
+const _appLoadingEl = document.getElementById('appLoadingOverlay');
+
+const showLoadingScreen = function () {
+  _appLoadingEl?.classList.remove('hidden');
+};
+
+const hideLoadingScreen = function () {
+  _appLoadingEl?.classList.add('hidden');
+};
 //adding/displaying menu list
 
 //to add edit/delete option
@@ -16,20 +45,19 @@ const controlMenuList = async function () {
   try {
     const state = model.state;
     MenuListView.render(state);
-    //3.) Listen for close event to hide modal
     MenuListView._addHandlerCloseModal();
     NewMenuItemView._mapMenuCategoriesMarkUp(state.menuCategories);
   } catch (err) {
-    alert(err);
+    showToast(err.message ?? err);
   }
 };
 
-const controlDeleteMenuItem = function (id) {
+const controlDeleteMenuItem = async function (id) {
   try {
-    model.deleteMenuItem(id);
+    await model.deleteMenuItem(id);
     MenuListView.render(model.state);
   } catch (err) {
-    alert(err.message);
+    showToast(err.message ?? err);
   }
 };
 
@@ -41,26 +69,30 @@ const controlShowEditMenu = async function (id) {
     MenuEditView._clear();
     MenuEditView._insertEditMenuMarkup(item);
     MenuEditView._mapMenuCategoriesMarkUp(categories, item.category);
-    MenuEditView._newEditCategoryToggle((name) => {
+    MenuEditView._newEditCategoryToggle(async (name) => {
       try {
-        model.addCategory(name);
+        await model.addCategory(name);
         NewMenuItemView._mapMenuCategoriesMarkUp(model.state.menuCategories);
         MenuEditView._mapMenuCategoriesMarkUp(model.state.menuCategories, name);
       } catch (err) {
-        alert(err.message);
+        showToast(err.message ?? err);
       }
     });
 
-    MenuEditView._updateItemData((data) => {
+    MenuEditView._updateItemData(async (data) => {
       if (data.category === "new-category") data.category = item.category;
-      model.updateMenuItem(item._id, data);
+      try {
+        await model.updateMenuItem(item._id, data);
+      } catch (err) {
+        showToast(err.message ?? err);
+        return;
+      }
 
       const modal = document.querySelector(".item-modal-overlay");
       if (
         !modal.classList.contains("hidden") &&
         NewOrderItemView._basket?.id === item._id
       ) {
-        // Only update the image smoothly
         const imgEl = modal.querySelector(".item-image");
         const updatedItem = model.state.menuItems.find(
           (i) => i._id === item._id,
@@ -76,14 +108,21 @@ const controlShowEditMenu = async function (id) {
       }
     });
   } catch (err) {
-    alert(err);
+    showToast(err.message ?? err);
   }
 };
 
 //adding new menu category
-const controlAddNewCategory = function (data) {
-  modelState.menuCategories.push(data);
-  NewMenuItemView._mapMenuCategoriesMarkUp(modelState.menuCategories);
+const controlAddNewCategory = async function (data) {
+  try {
+    await model.addCategory(data);
+    NewMenuItemView._mapMenuCategoriesMarkUp(model.state.menuCategories);
+    const newCategory = model.state.menuCategories[model.state.menuCategories.length - 1];
+    const categorySelect = document.getElementById('categorySelect');
+    if (categorySelect) categorySelect.value = newCategory;
+  } catch (err) {
+    showToast(err.message ?? err);
+  }
 };
 
 //listening for buttons to close/open new menu item
@@ -93,20 +132,25 @@ const controlNewMenuButtonToggle = function () {
 };
 
 //listens to uploadItem form button
-const controlUploadItem = function (data) {
+const controlUploadItem = async function (data) {
   const invalidCategories = ["Select category", "new-category"];
-  if (invalidCategories.includes(data.category)) {
+  const categoryMissing = !data.category || invalidCategories.includes(data.category);
+  if (categoryMissing) {
     if (data.newCategory?.trim()) {
       data.category = data.newCategory.trim();
     } else {
-      alert("Please select a valid category or enter a new one.");
+      alert("Please select a category for this item before saving.");
       return;
     }
   }
 
-  data.variants = newMenuItemView._addedVariants;
-  model.uploadNewMenuItem(data);
-  MenuListView.render(model.state);
+  try {
+    data.variants = newMenuItemView._addedVariants;
+    await model.uploadNewMenuItem(data);
+    MenuListView.render(model.state);
+  } catch (err) {
+    showToast(err.message ?? err);
+  }
 };
 
 //listens to new order button and renders the markup
@@ -114,7 +158,7 @@ const controlNewOrder = async function () {
   try {
     NewOrderView.render(modelState);
   } catch (err) {
-    alert(err);
+    showToast(err.message ?? err);
   }
 };
 
@@ -161,11 +205,13 @@ const controlOrderCheckout = function () {
     OrderCheckOutView._totalPrice = adjResult.finalTotal;
     OrderCheckOutView.render(modelState);
   } catch (err) {
-    alert(err);
+    showToast(err.message ?? err);
   }
 };
 
-const controlConcludeTransaction = function () {
+const controlConcludeTransaction = async function () {
+  const printBtn = document.getElementById('printReceiptBtn');
+  if (printBtn) printBtn.disabled = true;
   try {
     if (modelState.cart.length <= 0) throw `Cart is empty!`;
 
@@ -181,16 +227,38 @@ const controlConcludeTransaction = function () {
 
     modelState.salesBasket.push(sale);
 
+    await supabase.from('sales').insert({
+      user_id: model.state.userId,
+      subtotal: sale.subtotal,
+      total_price: sale.totalPrice,
+      customer_payment: sale.customerPayment,
+      customer_change: sale.customerChange,
+      items: sale.items,
+      adjustments: sale.adjustments,
+    });
+
     clearCart();
     model.clearReceiptAdjustments();
 
     OrderCheckOutView._showSuccess();
-    setTimeout(() => {
+
+    const successOverlay = document.querySelector('.success-overlay');
+    const autoCloseTimer = setTimeout(() => {
       OrderCheckOutView._hideModal();
-      OrderCheckOutView._hideSuccess();
+      successOverlay?.remove();
     }, 2000);
+
+    const successCloseBtn = successOverlay?.querySelector('.modal-close');
+    if (successCloseBtn) {
+      successCloseBtn.addEventListener('click', () => {
+        clearTimeout(autoCloseTimer);
+        OrderCheckOutView._hideModal();
+        successOverlay.remove();
+      });
+    }
   } catch (err) {
-    alert(err);
+    showToast(err.message ?? err);
+    if (printBtn) printBtn.disabled = false;
   }
 };
 
@@ -212,17 +280,17 @@ const _refreshCategoryDropdowns = function () {
     MenuEditView._mapMenuCategoriesMarkUp(model.state.menuCategories, "");
 };
 
-const controlAddCategoryFromSettings = function (name) {
+const controlAddCategoryFromSettings = async function (name) {
   try {
-    model.addCategory(name);
+    await model.addCategory(name);
     SettingsView.renderCategories(model.state.menuCategories);
     _refreshCategoryDropdowns();
   } catch (err) {
-    alert(err.message);
+    showToast(err.message ?? err);
   }
 };
 
-const controlDeleteCategory = function (name) {
+const controlDeleteCategory = async function (name) {
   const itemsInCategory = model.state.menuItems.filter(
     (item) => item.category === name,
   );
@@ -234,21 +302,25 @@ const controlDeleteCategory = function (name) {
   )
     return;
   try {
-    model.deleteCategory(name);
+    await model.deleteCategory(name);
     SettingsView.renderCategories(model.state.menuCategories);
     _refreshCategoryDropdowns();
   } catch (err) {
-    alert(err.message);
+    showToast(err.message ?? err);
   }
 };
 
-const controlSaveAdjustment = function (data) {
-  if (data.id) {
-    model.updateAdjustment(data.id, data);
-  } else {
-    model.addAdjustment(data);
+const controlSaveAdjustment = async function (data) {
+  try {
+    if (data.id) {
+      await model.updateAdjustment(data.id, data);
+    } else {
+      await model.addAdjustment(data);
+    }
+    SettingsView.renderAdjustments(model.state.settings.adjustments);
+  } catch (err) {
+    showToast(err.message ?? err);
   }
-  SettingsView.renderAdjustments(model.state.settings.adjustments);
 };
 
 const controlEditAdjustment = function (id) {
@@ -257,14 +329,22 @@ const controlEditAdjustment = function (id) {
   SettingsView.showForm(adj);
 };
 
-const controlDeleteAdjustment = function (id) {
-  model.deleteAdjustment(id);
-  SettingsView.renderAdjustments(model.state.settings.adjustments);
+const controlDeleteAdjustment = async function (id) {
+  try {
+    await model.deleteAdjustment(id);
+    SettingsView.renderAdjustments(model.state.settings.adjustments);
+  } catch (err) {
+    showToast(err.message ?? err);
+  }
 };
 
-const controlToggleAdjustment = function (id) {
-  model.toggleAdjustment(id);
-  SettingsView.renderAdjustments(model.state.settings.adjustments);
+const controlToggleAdjustment = async function (id) {
+  try {
+    await model.toggleAdjustment(id);
+    SettingsView.renderAdjustments(model.state.settings.adjustments);
+  } catch (err) {
+    showToast(err.message ?? err);
+  }
 };
 
 const controlShowRemoved = function (value) {
@@ -347,7 +427,58 @@ const controlNewOrderModals = async function () {
   NewOrderView._addHandlerCloseModal(clearCart);
 };
 
-const init = function () {
+const initApp = async function (user) {
+  model.state.userId = user.id;
+  model.state.username = user.user_metadata?.display_name ?? user.user_metadata?.business_name ?? user.email;
+  document.querySelector('.company-name').textContent = model.state.username;
+  await model.loadMenuItems();
+  await model.loadMenuCategories();
+  await model.loadAdjustments();
+  await model.loadEmployees();
+};
+
+const controlSignIn = async function (email, password) {
+  AuthView.setLoading(true);
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    AuthView.setLoading(false);
+    AuthView.showError(error.message);
+    return;
+  }
+  AuthView.hide();
+  showLoadingScreen();
+  await initApp(data.user);
+  hideLoadingScreen();
+  _wireApp();
+};
+
+const controlSignUp = async function ({ firstName, lastName, email, password }) {
+  AuthView.setSignUpLoading(true);
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        first_name: firstName,
+        last_name: lastName,
+        display_name: `${firstName} ${lastName}`,
+      },
+    },
+  });
+  AuthView.setSignUpLoading(false);
+  if (error) {
+    AuthView.showSignUpError(error.message);
+    return;
+  }
+  AuthView.showCheckEmail(email);
+};
+
+const controlSignOut = async function () {
+  await supabase.auth.signOut();
+  window.location.reload();
+};
+
+const _wireApp = function () {
   //MenuList
   MenuListView._addHandlerShowModal(controlMenuList);
   MenuEditView._showEditMenuForm(controlShowEditMenu);
@@ -402,4 +533,20 @@ const init = function () {
   OrderCheckOutView._addHandlerReceiptSaveManual(controlSaveManualReceiptAdj);
 };
 
-init();
+const initAuth = async function () {
+  AuthView._addHandlerSignIn(controlSignIn);
+  AuthView._addHandlerSignUp(controlSignUp);
+  document.getElementById('logoutBtn').addEventListener('click', controlSignOut);
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    showLoadingScreen();
+    await initApp(session.user);
+    hideLoadingScreen();
+    _wireApp();
+  } else {
+    AuthView.show();
+  }
+};
+
+initAuth();

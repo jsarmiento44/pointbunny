@@ -32,7 +32,12 @@ export default class View {
       <div class="modal-content success-modal">
         <button class="modal-close">&times;</button>
         <div class="success-body">
-          <div class="success-icon">✓</div>
+          <div class="success-icon">
+            <svg class="success-svg" viewBox="0 0 52 52" aria-hidden="true">
+              <path class="success-check" fill="none" stroke="#fff" stroke-width="5"
+                stroke-linecap="round" stroke-linejoin="round" d="M14 27 l9 9 16-18"/>
+            </svg>
+          </div>
           <h2 class="success-title">Success</h2>
         </div>
       </div>
@@ -51,6 +56,7 @@ export default class View {
   }
 
   _hideSuccess() {
-    document.querySelector(".success-overlay").classList.toggle("hidden");
+    const overlay = document.querySelector(".success-overlay");
+    if (overlay) overlay.remove();
   }
 }

@@ -55,7 +55,7 @@ class OrderCheckOutView extends View {
             </span>
           </div>
           <div class="receipt-adj-controls">
-            <button class="receipt-adj-edit-btn" data-adj-id="${adj.id}" type="button">Edit</button>
+            ${adj.source === 'manual' ? `<button class="receipt-adj-edit-btn" data-adj-id="${adj.id}" type="button">Edit</button>` : ''}
             <button class="receipt-adj-remove-btn" data-adj-id="${adj.id}" type="button">&times;</button>
           </div>
         </div>
@@ -408,6 +408,7 @@ class OrderCheckOutView extends View {
         return;
       }
       handler({ name, type, calculation, value });
+      this._removeReceiptForms();
     });
   }
 
@@ -427,7 +428,7 @@ class OrderCheckOutView extends View {
   }
 
   _hideModal() {
-    document.querySelector(".modal-overlay").classList.add("hidden");
+    this._parentElement.innerHTML = "";
   }
 }
 

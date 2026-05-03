@@ -207,11 +207,11 @@
       });
     }
   }
-})({"hV7rB":[function(require,module,exports,__globalThis) {
+})({"02cfu":[function(require,module,exports,__globalThis) {
 var global = arguments[3];
 var HMR_HOST = null;
 var HMR_PORT = null;
-var HMR_SERVER_PORT = 49993;
+var HMR_SERVER_PORT = 60682;
 var HMR_SECURE = false;
 var HMR_ENV_HASH = "439701173a9199ea";
 var HMR_USE_SSE = false;
@@ -971,6 +971,6 @@ onReady(function() {
     })();
 });
 
-},{}]},["hV7rB","l5McU"], "l5McU", "parcelRequireae58", {})
+},{}]},["02cfu","l5McU"], "l5McU", "parcelRequireae58", {})
 
 //# sourceMappingURL=Pointy Project.227e3f3a.js.map

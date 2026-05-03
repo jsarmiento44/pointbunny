@@ -1,124 +1,18 @@
-let counter = 0;
-let adjCounter = 0;
+import { supabase } from "./supabase.js";
 
-const generateId = function () {
-  counter += 1;
-  return `${Date.now()}-${counter}`;
-};
+let adjCounter = 0;
 
 const generateAdjustmentId = function () {
   adjCounter += 1;
   return `adj_${Date.now()}-${adjCounter}`;
 };
 
-class Account {
-  constructor(username, password) {
-    this.username = username;
-    this.password = password;
-  }
-
-  menuItems = [];
-  menuCategories = [];
-  employees = [];
-}
-
 export const state = {
+  userId: null,
   username: "Wowa",
-  menuItems: [
-    {
-      itemName: "French Fries",
-      price: 100,
-      category: `snacks`,
-      _id: `#123123`,
-      imageURL: `../Icons/default image.png`,
-      _stock: `0`,
-      hasVariants: true,
-      variants: [
-        {
-          optionLabel: `Size`,
-          options: [
-            { optionName: "Fries Medium", optionPrice: 35 },
-            { optionName: "Fries Large", optionPrice: 45 },
-            { optionName: "Bestie", optionPrice: 60 },
-          ],
-        },
-        {
-          optionLabel: `Flavor`,
-          options: [
-            { optionName: "Cheese", optionPrice: 0 },
-            { optionName: "Sour Cream", optionPrice: 0 },
-            { optionName: "BBQ", optionPrice: 0 },
-            { optionName: "Salted", optionPrice: 0 },
-          ],
-        },
-        {
-          optionLabel: `Type`,
-          options: [
-            { optionName: "Toasted", optionPrice: 60 },
-            { optionName: "Undercooked", optionPrice: 0 },
-            { optionName: "Well Done", optionPrice: 0 },
-            { optionName: "Not cooked", optionPrice: 0 },
-          ],
-        },
-      ],
-      description: `This is a sample description of the menu item. You can add more details here.`,
-      status: "active",
-    },
-    {
-      itemName: "Ice Cream",
-      price: 60,
-      category: `dessert`,
-      _id: `#321321`,
-      imageURL: `../Icons/default image.png`,
-      _stock: `0`,
-      hasVariants: false,
-      variants: [],
-      description: `This is a sample description of the menu item. You can add more details here.`,
-      status: "active",
-    },
-    {
-      itemName: "Milkshake",
-      price: 79,
-      category: `drinks`,
-      _id: `#01112`,
-      imageURL: `../Icons/default image.png`,
-      _stock: `0`,
-      hasVariants: true,
-      variants: [
-        {
-          optionLabel: `Flavors`,
-          options: [
-            { optionName: "Red Velvet", optionPrice: 89 },
-            { optionName: "Strawberry", optionPrice: 89 },
-            { optionName: "Matcha", optionPrice: 99 },
-          ],
-        },
-      ],
-      description: `This is a sample description of the menu item. You can add more details here.`,
-      status: "active",
-    },
-    {
-      itemName: "Frappe",
-      price: 150,
-      category: "drinks",
-      _id: "#49531",
-      imageURL: `../Icons/default image.png`,
-      _stock: `0`,
-      hasVariants: false,
-      variants: [],
-      description: `This is a sample description of the menu item. You can add more details here.`,
-      status: "active",
-    },
-  ],
-  menuCategories: [`snacks`, `drinks`, `dessert`],
-  employees: [
-    {
-      _id: `1`,
-      name: `Ben`,
-      role: `Cashier`,
-      systemRole: `admin`,
-    },
-  ],
+  menuItems: [],
+  menuCategories: [],
+  employees: [],
   cart: [],
   salesBasket: [],
   settings: {
@@ -128,129 +22,261 @@ export const state = {
   currentReceiptAdjustments: [],
 };
 
-const createNewAccount = function (username, password) {
-  const newAccount = new Account(username, password);
-  allAccounts.push(newAccount);
+// ── DB ↔ app shape mapping ────────────────────────────────────────────────────
+
+const dbToItem = (row) => ({
+  _id: row.id,
+  itemName: row.item_name,
+  price: Number(row.price),
+  category: row.category,
+  imageURL: row.image_url ?? "../Icons/default image.png",
+  _stock: row.stock ?? "0",
+  hasVariants: row.has_variants,
+  variants: row.variants ?? [],
+  description: row.description ?? "",
+  status: row.status ?? "active",
+});
+
+// ── DB ↔ app shape mapping (employees) ───────────────────────────────────────
+
+const dbToEmployee = (row) => ({
+  id: row.id,
+  name: row.name,
+  role: row.role ?? "",
+  systemRole: row.system_role ?? "",
+});
+
+// ── Loaders (called once at app init) ────────────────────────────────────────
+
+export const loadEmployees = async function () {
+  const { data, error } = await supabase
+    .from("employees")
+    .select("*")
+    .eq("user_id", state.userId)
+    .order("created_at");
+  if (error) throw error;
+  state.employees = data.map(dbToEmployee);
+};
+
+export const loadMenuItems = async function () {
+  const { data, error } = await supabase
+    .from("menu_items")
+    .select("*")
+    .eq("user_id", state.userId)
+    .order("created_at");
+  if (error) throw error;
+  state.menuItems = data.map(dbToItem);
+};
+
+export const loadMenuCategories = async function () {
+  const { data, error } = await supabase
+    .from("menu_categories")
+    .select("name")
+    .eq("user_id", state.userId)
+    .order("created_at");
+  if (error) throw error;
+  state.menuCategories = data.map((r) => r.name);
+};
+
+// ── Menu item CRUD ────────────────────────────────────────────────────────────
+
+const uploadImage = async function (file, existingUrl = null) {
+  if (!file || file.size === 0) return existingUrl ?? "../Icons/default image.png";
+  const ext = file.name.split(".").pop();
+  const path = `${state.userId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("item-images").upload(path, file);
+  if (error) throw error;
+  const { data } = supabase.storage.from("item-images").getPublicUrl(path);
+  return data.publicUrl;
 };
 
 export const uploadNewMenuItem = async function (newItem) {
-  //exrtract the data and convert into a new format object
-  const item = {
-    itemName: newItem.name,
-    price: Number(newItem.price),
-    category: newItem.category,
-    _id: generateId(),
-    imageURL:
-      newItem.image && newItem.image.size > 0
-        ? URL.createObjectURL(newItem.image)
-        : "../Icons/default image.png",
-    _stock: `0`,
-    hasVariants: newItem.variants && newItem.variants.length > 0,
-    variants: newItem.variants,
-    description: `This is a sample description of the menu item. You can add more details here.`,
-    status: "active",
-  };
-  state.menuItems.push(item);
+  const variants = newItem.variants ?? [];
+  const imageURL = await uploadImage(newItem.image);
+
+  const { data, error } = await supabase
+    .from("menu_items")
+    .insert({
+      user_id: state.userId,
+      item_name: newItem.name,
+      price: Number(newItem.price),
+      category: newItem.category,
+      image_url: imageURL,
+      stock: "0",
+      has_variants: variants.length > 0,
+      variants,
+      description:
+        "This is a sample description of the menu item. You can add more details here.",
+      status: "active",
+    })
+    .select()
+    .single();
+  if (error) throw error;
+
+  state.menuItems.push(dbToItem(data));
 };
 
-export const deleteMenuItem = function (id) {
+export const deleteMenuItem = async function (id) {
+  const { error } = await supabase
+    .from("menu_items")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", state.userId);
+  if (error) throw error;
   const index = state.menuItems.findIndex((item) => item._id === id);
-  if (index === -1) throw new Error("Item not found");
-  state.menuItems.splice(index, 1);
+  if (index !== -1) state.menuItems.splice(index, 1);
 };
 
 export const deleteCartItem = function (index) {
   state.cart.splice(index, 1);
 };
 
-export const updateMenuItem = function (id, rawData) {
-  try {
-    // 1️⃣ Find the existing item
-    const item = state.menuItems.find((item) => item._id === id);
-    if (!item) throw new Error("Item not found");
+export const updateMenuItem = async function (id, rawData) {
+  const item = state.menuItems.find((item) => item._id === id);
+  if (!item) throw new Error("Item not found");
 
-    // 2️⃣ Normalize fields
-    const hasVariants = rawData.hasVariants === "on";
+  const hasVariants = rawData.hasVariants === "on";
+  const variants = hasVariants ? parseVariants(rawData) : [];
 
-    // 3️⃣ Update basic fields
-    item.itemName = rawData.itemName || "";
-    item.price = Number(rawData.price) || 0;
-    item.category = rawData.category || "";
-    item._stock = rawData.stock || "0";
-    item.description = rawData.description || "";
-    item.hasVariants = hasVariants;
-    item.status = rawData.status?.toLowerCase() || "active";
+  const newImageURL = await uploadImage(rawData.image, item.imageURL);
 
-    // 4️⃣ Update image ONLY if a new one was selected
-    // rawData.image is now the actual File object
-    if (rawData.image && rawData.image.size > 0) {
-      // Use URL.createObjectURL for immediate preview
-      item.imageURL = URL.createObjectURL(rawData.image);
-      // Optionally, store the file itself if you need to upload to backend later
-      item.imageFile = rawData.image;
-    }
+  const { error } = await supabase
+    .from("menu_items")
+    .update({
+      item_name: rawData.itemName || "",
+      price: Number(rawData.price) || 0,
+      category: rawData.category || "",
+      stock: rawData.stock || "0",
+      description: rawData.description || "",
+      has_variants: hasVariants,
+      variants,
+      status: rawData.status?.toLowerCase() || "active",
+      image_url: newImageURL,
+    })
+    .eq("id", id)
+    .eq("user_id", state.userId);
+  if (error) throw error;
 
-    // 5️⃣ Update variants safely
-    if (hasVariants) {
-      item.variants = parseVariants(rawData);
-    } else {
-      item.variants = [];
-    }
-  } catch (err) {
-    alert(err.message);
-  }
+  item.itemName = rawData.itemName || "";
+  item.price = Number(rawData.price) || 0;
+  item.category = rawData.category || "";
+  item._stock = rawData.stock || "0";
+  item.description = rawData.description || "";
+  item.hasVariants = hasVariants;
+  item.variants = variants;
+  item.status = rawData.status?.toLowerCase() || "active";
+  item.imageURL = newImageURL;
 };
 
-// ── Settings: category CRUD ───────────────────────────────────────────────────
+// ── Category CRUD ─────────────────────────────────────────────────────────────
 
-export const addCategory = function (name) {
+export const addCategory = async function (name) {
   const normalized = name.trim().toLowerCase();
   if (!normalized) throw new Error("Category name cannot be empty");
   if (state.menuCategories.includes(normalized))
     throw new Error("Category already exists");
+
+  const { error } = await supabase
+    .from("menu_categories")
+    .insert({ user_id: state.userId, name: normalized });
+  if (error) throw error;
   state.menuCategories.push(normalized);
 };
 
-export const deleteCategory = function (name) {
+export const deleteCategory = async function (name) {
+  const { error } = await supabase
+    .from("menu_categories")
+    .delete()
+    .eq("user_id", state.userId)
+    .eq("name", name);
+  if (error) throw error;
   const index = state.menuCategories.indexOf(name);
-  if (index === -1) throw new Error("Category not found");
-  state.menuCategories.splice(index, 1);
+  if (index !== -1) state.menuCategories.splice(index, 1);
 };
 
 // ── Settings: adjustment CRUD ─────────────────────────────────────────────────
 
-export const addAdjustment = function (data) {
-  const adjustment = {
-    id: generateAdjustmentId(),
-    name: data.name,
-    type: data.type,           // "fee" | "discount"
-    calculation: data.calculation, // "fixed" | "percentage"
-    value: Number(data.value) || 0,
-    enabled: true,
-  };
+const dbToAdjustment = (row) => ({
+  id: row.id,
+  name: row.name,
+  type: row.type,
+  calculation: row.calculation,
+  value: Number(row.value),
+  enabled: row.enabled,
+});
+
+export const loadAdjustments = async function () {
+  const { data, error } = await supabase
+    .from("adjustments")
+    .select("*")
+    .eq("user_id", state.userId)
+    .order("created_at");
+  if (error) throw error;
+  state.settings.adjustments = data.map(dbToAdjustment);
+};
+
+export const addAdjustment = async function (data) {
+  const { data: row, error } = await supabase
+    .from("adjustments")
+    .insert({
+      user_id: state.userId,
+      name: data.name,
+      type: data.type,
+      calculation: data.calculation,
+      value: Number(data.value) || 0,
+      enabled: true,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  const adjustment = dbToAdjustment(row);
   state.settings.adjustments.push(adjustment);
   return adjustment;
 };
 
-export const updateAdjustment = function (id, data) {
+export const updateAdjustment = async function (id, data) {
+  const { error } = await supabase
+    .from("adjustments")
+    .update({
+      name: data.name,
+      type: data.type,
+      calculation: data.calculation,
+      value: Number(data.value) || 0,
+    })
+    .eq("id", id)
+    .eq("user_id", state.userId);
+  if (error) throw error;
   const adj = state.settings.adjustments.find((a) => a.id === id);
-  if (!adj) throw new Error("Adjustment not found");
-  adj.name = data.name;
-  adj.type = data.type;
-  adj.calculation = data.calculation;
-  adj.value = Number(data.value) || 0;
+  if (adj) {
+    adj.name = data.name;
+    adj.type = data.type;
+    adj.calculation = data.calculation;
+    adj.value = Number(data.value) || 0;
+  }
 };
 
-export const deleteAdjustment = function (id) {
+export const deleteAdjustment = async function (id) {
+  const { error } = await supabase
+    .from("adjustments")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", state.userId);
+  if (error) throw error;
   const index = state.settings.adjustments.findIndex((a) => a.id === id);
-  if (index === -1) throw new Error("Adjustment not found");
-  state.settings.adjustments.splice(index, 1);
+  if (index !== -1) state.settings.adjustments.splice(index, 1);
 };
 
-export const toggleAdjustment = function (id) {
+export const toggleAdjustment = async function (id) {
   const adj = state.settings.adjustments.find((a) => a.id === id);
   if (!adj) throw new Error("Adjustment not found");
-  adj.enabled = !adj.enabled;
+  const newEnabled = !adj.enabled;
+  const { error } = await supabase
+    .from("adjustments")
+    .update({ enabled: newEnabled })
+    .eq("id", id)
+    .eq("user_id", state.userId);
+  if (error) throw error;
+  adj.enabled = newEnabled;
 };
 
 // ── Per-receipt adjustments ───────────────────────────────────────────────────
@@ -302,8 +328,6 @@ export const clearReceiptAdjustments = function () {
 };
 
 // ── Calculation ───────────────────────────────────────────────────────────────
-// Expects receipt-level adjustments (with appliedValue + removed).
-// Order: subtotal → discounts (% of subtotal) → fees (% of post-discount total)
 
 export const calculateAdjustments = function (subtotal, adjustments) {
   const active = adjustments.filter((a) => !a.removed);
@@ -339,66 +363,39 @@ export const calculateAdjustments = function (subtotal, adjustments) {
 };
 
 function parseVariants(raw) {
-  // This will temporarily store variants grouped by their index
-  // Example:
-  // {
-  //   0: { optionLabel: "Size", options: [...] },
-  //   1: { optionLabel: "Flavor", options: [...] }
-  // }
   const variantMap = {};
 
-  // Loop through every key in the flat form object
   Object.keys(raw).forEach((key) => {
-    // We use regex to detect keys that follow this pattern:
-    // variants[0][optionLabel]
-    // variants[0][options][1][optionName]
-    // variants[1][options][2][optionPrice]
     const match = key.match(
       /variants\[(\d+)\]\[(optionLabel|options)\](?:\[(\d+)\]\[(optionName|optionPrice)\])?/,
     );
-
-    // If the key doesn't match that pattern, ignore it
     if (!match) return;
 
-    // Extract matched values
-    const variantIndex = match[1]; // e.g. "0"
-    const field = match[2]; // "optionLabel" or "options"
-    const optionIndex = match[3]; // e.g. "1" (if inside options)
-    const optionField = match[4]; // "optionName" or "optionPrice"
+    const variantIndex = match[1];
+    const field = match[2];
+    const optionIndex = match[3];
+    const optionField = match[4];
 
-    // If this variant doesn't exist yet in our map, create it
     if (!variantMap[variantIndex]) {
-      variantMap[variantIndex] = {
-        optionLabel: "",
-        options: [],
-      };
+      variantMap[variantIndex] = { optionLabel: "", options: [] };
     }
 
-    // If we're dealing with the variant label
-    // Example: variants[0][optionLabel]
     if (field === "optionLabel") {
       variantMap[variantIndex].optionLabel = raw[key];
     }
 
-    // If we're inside options
-    // Example: variants[0][options][1][optionName]
     if (field === "options") {
-      // If this specific option doesn't exist yet, create it
       if (!variantMap[variantIndex].options[optionIndex]) {
         variantMap[variantIndex].options[optionIndex] = {
           optionName: "",
           optionPrice: "0",
         };
       }
-
-      // Assign either optionName or optionPrice
       variantMap[variantIndex].options[optionIndex][optionField] =
         optionField === "optionPrice" ? Number(raw[key]) || 0 : raw[key];
     }
   });
 
-  // Convert the variantMap object into an array
-  // Also remove empty options (where user left blank rows)
   return Object.values(variantMap).map((variant) => ({
     ...variant,
     options: variant.options.filter(
