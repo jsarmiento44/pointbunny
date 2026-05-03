@@ -56,13 +56,14 @@ class MenuListView extends View {
   _addHandlerCloseModal() {
     this._parentElement.addEventListener("click", (e) => {
       const btn = e.target.closest(".modal-close");
-      if (!btn) return;
-
-      if (btn) {
-        const modal = this._parentElement.querySelector(".modal-overlay");
-        modal.classList.add("hidden");
-      }
-
+      if (!btn || !btn.closest("#menuModal")) return;
+      const modal = this._parentElement.querySelector(".modal-overlay");
+      const inner = modal?.querySelector(".modal-content");
+      if (inner) inner.classList.add("modal-exiting");
+      setTimeout(() => {
+        if (inner) inner.classList.remove("modal-exiting");
+        if (modal) modal.classList.add("hidden");
+      }, 220);
       e.preventDefault();
     });
   }

@@ -186,6 +186,10 @@ const controlPushToModelCart = function () {
 
   model.state.cart.push(NewOrderItemView._basket);
   NewOrderView.render(modelState);
+  const cartItemsEl = document.getElementById('cartItems');
+  if (cartItemsEl) cartItemsEl.scrollTop = cartItemsEl.scrollHeight;
+  const lastRow = document.querySelector('#cartItems .cart-item-row:last-child');
+  if (lastRow) lastRow.classList.add('cart-item--added');
 };
 
 //Listents to "checkout event" and wraps up transaction
@@ -264,6 +268,15 @@ const controlConcludeTransaction = async function () {
 
 const clearCart = function () {
   model.state.cart = [];
+  document.querySelector('.confirm-overlay')?.remove();
+};
+
+const controlCloseOrderModal = function (close) {
+  if (model.state.cart.length === 0) { close(); return; }
+  NewOrderView.showConfirmModal({
+    message: 'You have items in your cart. Close and discard them?',
+    onConfirm: () => { clearCart(); close(); },
+  });
 };
 
 // ── Settings ──────────────────────────────────────────────────────────────────
@@ -424,7 +437,7 @@ const controlDeleteCartItemInCheckout = function (index) {
 //listens to modal close button
 const controlNewOrderModals = async function () {
   NewOrderItemView._closeItemModal();
-  NewOrderView._addHandlerCloseModal(clearCart);
+  NewOrderView._addHandlerCloseModal(controlCloseOrderModal);
 };
 
 const initApp = async function (user) {
@@ -445,7 +458,7 @@ const controlSignIn = async function (email, password) {
     AuthView.showError(error.message);
     return;
   }
-  AuthView.hide();
+  await AuthView.playSignInSuccess();
   showLoadingScreen();
   await initApp(data.user);
   hideLoadingScreen();
@@ -474,8 +487,12 @@ const controlSignUp = async function ({ firstName, lastName, email, password }) 
 };
 
 const controlSignOut = async function () {
+  const sweepEl = document.createElement('div');
+  sweepEl.className = 'app-exit-sweep';
+  sweepEl.innerHTML = '<span class="app-exit-label">Signing out…</span>';
+  document.body.appendChild(sweepEl);
   await supabase.auth.signOut();
-  window.location.reload();
+  setTimeout(() => window.location.reload(), 500);
 };
 
 const _wireApp = function () {

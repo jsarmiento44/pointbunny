@@ -109,10 +109,16 @@ class NewOrderView extends View {
   _addHandlerCloseModal(handler) {
     this._parentElement.addEventListener("click", function (e) {
       const btn = e.target.closest(".modal-close");
-      if (!btn) return;
-      handler();
-
-      document.querySelector(".modal-overlay").classList.toggle("hidden");
+      if (!btn || !btn.closest("#newOrderModal")) return;
+      const overlay = document.querySelector(".modal-overlay");
+      const inner = overlay?.querySelector(".modal-content");
+      handler(() => {
+        if (inner) inner.classList.add("modal-exiting");
+        setTimeout(() => {
+          if (inner) inner.classList.remove("modal-exiting");
+          if (overlay) overlay.classList.add("hidden");
+        }, 220);
+      });
     });
   }
 }

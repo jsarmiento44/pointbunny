@@ -2,20 +2,20 @@
 
 ## What is Pointy?
 
-Pointy is a **Point of Sale (POS) web application** built for small businesses — coffee shops, cafés, restaurants, retail stores, and more. It runs entirely in the browser with no installation required. Each business gets their own isolated account with persistent data stored in the cloud.
+Pointy is a **Point of Sale (POS) web application** built for businesses — coffee shops, cafés, restaurants, retail stores, service businesses and more. It runs entirely in the browser with no installation required. Each business gets their own isolated account with persistent data stored in the cloud.
 
 ---
 
 ## At a Glance
 
-| Layer | Technology |
-|---|---|
-| Frontend | Vanilla JavaScript (ES6 modules), HTML, CSS |
-| Bundler | Parcel 2 (dev server + production builds) |
-| Backend / Database | Supabase (PostgreSQL + Auth + Storage) |
-| Authentication | Supabase Auth (email + password, JWT sessions) |
-| File Storage | Supabase Storage (menu item images) |
-| Hosting (planned) | Static host (Netlify / Vercel) + Supabase cloud |
+| Layer              | Technology                                      |
+| ------------------ | ----------------------------------------------- |
+| Frontend           | Vanilla JavaScript (ES6 modules), HTML, CSS     |
+| Bundler            | Parcel 2 (dev server + production builds)       |
+| Backend / Database | Supabase (PostgreSQL + Auth + Storage)          |
+| Authentication     | Supabase Auth (email + password, JWT sessions)  |
+| File Storage       | Supabase Storage (menu item images)             |
+| Hosting (planned)  | Static host (Netlify / Vercel) + Supabase cloud |
 
 ---
 
@@ -55,6 +55,7 @@ Pointy is a **Point of Sale (POS) web application** built for small businesses �
 The frontend follows a strict **Model → Controller → View** pattern. No framework — pure JavaScript ES6 modules.
 
 ### Model (`Javascript/model.js`)
+
 - Single source of truth for all app state
 - Owns all reads and writes to Supabase
 - Exposes async functions that the controller calls
@@ -76,29 +77,32 @@ The frontend follows a strict **Model → Controller → View** pattern. No fram
   ```
 
 ### Controller (`Javascript/controller.js`)
+
 - The only file that imports both the model and views
 - Wires DOM events (from views) to data operations (in the model)
 - All async operations (`await model.loadMenuItems()`, etc.) live here
 - `init()` entry point: checks auth session → loads all data → wires event handlers
 
 ### Views (`Javascript/Views/`)
+
 Each view is a class that extends the base `View`. It owns one DOM element and follows a consistent pattern:
 
-| File | What it renders |
-|---|---|
-| `authView.js` | Login / sign-up overlay |
-| `newOrderView.js` | Active order / cart |
-| `newOrderItemView.js` | Item picker + variant selector modal |
-| `orderCheckoutView.js` | Payment screen, receipt, adjustments |
-| `menuListView.js` | Browse all menu items |
-| `newMenuItemView.js` | Add new item form |
-| `menuEditView.js` | Edit existing item form |
-| `settingsView.js` | Categories + adjustment templates |
-| `view.js` | Base class (render, spinner, success modal) |
+| File                   | What it renders                             |
+| ---------------------- | ------------------------------------------- |
+| `authView.js`          | Login / sign-up overlay                     |
+| `newOrderView.js`      | Active order / cart                         |
+| `newOrderItemView.js`  | Item picker + variant selector modal        |
+| `orderCheckoutView.js` | Payment screen, receipt, adjustments        |
+| `menuListView.js`      | Browse all menu items                       |
+| `newMenuItemView.js`   | Add new item form                           |
+| `menuEditView.js`      | Edit existing item form                     |
+| `settingsView.js`      | Categories + adjustment templates           |
+| `view.js`              | Base class (render, spinner, success modal) |
 
 **Rule:** Views never talk to the model directly. They only fire handler callbacks that the controller provided.
 
 ### Supabase Client (`Javascript/supabase.js`)
+
 Initializes and exports the Supabase JS client using environment variables (`.env`). Imported by both `model.js` (data) and `controller.js` (auth).
 
 ---
@@ -108,6 +112,7 @@ Initializes and exports the Supabase JS client using environment variables (`.en
 Supabase provides three services used by Pointy:
 
 ### 1. Authentication
+
 - Email + password sign-up and sign-in
 - JWT tokens stored in `localStorage`, automatically refreshed
 - `supabase.auth.getSession()` on app load — if a valid session exists, the user goes straight to the app; otherwise the login screen is shown
@@ -118,6 +123,7 @@ Supabase provides three services used by Pointy:
 Five tables, all scoped to a `user_id` so data is fully isolated per account:
 
 **`menu_items`**
+
 ```
 id, user_id, item_name, price, category, image_url,
 stock, has_variants, variants (JSONB), description,
@@ -125,18 +131,21 @@ status, created_at
 ```
 
 **`menu_categories`**
+
 ```
 id, user_id, name, created_at
 unique(user_id, name)
 ```
 
 **`adjustments`** — fee/discount templates configured in Settings
+
 ```
 id, user_id, name, type (fee|discount),
 calculation (fixed|percentage), value, enabled, created_at
 ```
 
 **`sales`** — completed transaction records
+
 ```
 id, user_id, subtotal, total_price, customer_payment,
 customer_change, items (JSONB), adjustments (JSONB),
@@ -144,6 +153,7 @@ sale_date
 ```
 
 **`employees`**
+
 ```
 id, user_id, name, role, system_role, created_at
 ```
@@ -151,6 +161,7 @@ id, user_id, name, role, system_role, created_at
 > `items` and `adjustments` in the sales table are **JSONB snapshots** — a frozen copy of exactly what was in the cart at the time of sale. This means historical records are never affected by future edits to menu items.
 
 ### 3. Storage
+
 - Bucket: `item-images`
 - Images are uploaded per-user under a folder named after their `user_id`
 - Bucket is public (images are viewable without auth)
@@ -280,13 +291,13 @@ Speed. Writing every cart change to the database would add latency to every tap.
 
 ## What's Not Built Yet
 
-| Feature | Status |
-|---|---|
-| Reports / Z-Report screen | UI button exists, no implementation |
-| Refunds | UI button exists, no implementation |
-| Employee management UI | Data model exists in DB, no UI |
-| Multi-user (cashier accounts under one business) | Planned |
-| Custom email (branded confirmation emails) | Needs custom SMTP at launch |
-| Onboarding flow (business info after sign-up) | Planned post-launch |
-| Drawer operations | UI button exists, no implementation |
-| Scan item (barcode) | UI button exists, no implementation |
+| Feature                                          | Status                              |
+| ------------------------------------------------ | ----------------------------------- |
+| Reports / Z-Report screen                        | UI button exists, no implementation |
+| Refunds                                          | UI button exists, no implementation |
+| Employee management UI                           | Data model exists in DB, no UI      |
+| Multi-user (cashier accounts under one business) | Planned                             |
+| Custom email (branded confirmation emails)       | Needs custom SMTP at launch         |
+| Onboarding flow (business info after sign-up)    | Planned post-launch                 |
+| Drawer operations                                | UI button exists, no implementation |
+| Scan item (barcode)                              | UI button exists, no implementation |

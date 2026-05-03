@@ -14,6 +14,9 @@ class NewOrderItemView extends View {
       e.preventDefault();
       const item = e.target.closest(".item-card");
       if (!item) return;
+      item.classList.remove("pulse");
+      void item.offsetWidth; // force reflow so animation restarts
+      item.classList.add("pulse");
       handler(item.dataset.id);
       this._itemModal.classList.toggle("hidden");
     });
@@ -80,7 +83,13 @@ class NewOrderItemView extends View {
 
   _closeItemModal() {
     this._itemModalCloseBtn.addEventListener("click", function (e) {
-      document.querySelector(".item-modal-overlay").classList.toggle("hidden");
+      const overlay = document.querySelector(".item-modal-overlay");
+      const inner = overlay.querySelector(".modal-content");
+      if (inner) inner.classList.add("modal-exiting");
+      setTimeout(() => {
+        if (inner) inner.classList.remove("modal-exiting");
+        overlay.classList.add("hidden");
+      }, 220);
     });
   }
 
@@ -91,12 +100,15 @@ class NewOrderItemView extends View {
       if (btn) {
         this._findSelectedVariants();
         handler();
-        document
-          .querySelector(".item-modal-overlay")
-          .classList.toggle("hidden");
-
-        this._qty = 1;
-        document.getElementById("item-qty").textContent = this._qty;
+        const overlay = document.querySelector(".item-modal-overlay");
+        const inner = overlay.querySelector(".modal-content");
+        if (inner) inner.classList.add("modal-exiting");
+        setTimeout(() => {
+          if (inner) inner.classList.remove("modal-exiting");
+          overlay.classList.add("hidden");
+          this._qty = 1;
+          document.getElementById("item-qty").textContent = this._qty;
+        }, 220);
       } else if (!btn) {
         return;
       }

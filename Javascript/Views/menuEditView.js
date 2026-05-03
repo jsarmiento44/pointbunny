@@ -11,7 +11,9 @@ class MenuEditView extends View {
       e.preventDefault();
       const card = e.target.closest(".card");
       if (!card) return;
-
+      card.classList.remove("pulse");
+      void card.offsetWidth;
+      card.classList.add("pulse");
       handler(card.dataset.id);
     });
   }
@@ -540,9 +542,11 @@ class MenuEditView extends View {
     this._formDiv.addEventListener("click", (e) => {
       const btn = e.target.closest(".modal-close-btn");
       if (!btn) return;
-
       const backdrop = btn.closest(".modal-backdrop");
-      if (backdrop) backdrop.remove();
+      if (!backdrop) return;
+      const inner = backdrop.querySelector(".modal-container");
+      if (inner) inner.classList.add("modal-exiting");
+      setTimeout(() => backdrop.remove(), 220);
     });
   }
 

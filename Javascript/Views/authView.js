@@ -37,7 +37,11 @@ class AuthView {
 
   setLoading(bool) {
     this._signInBtn.disabled = bool;
-    this._signInBtn.textContent = bool ? 'Signing in…' : 'Sign In';
+    if (bool) {
+      this._signInBtn.innerHTML = '<span class="btn-spinner"></span>Signing in…';
+    } else {
+      this._signInBtn.textContent = 'Sign In';
+    }
   }
 
   setSignUpLoading(bool) {
@@ -93,6 +97,32 @@ class AuthView {
       if (password !== confirm) { this._signUpErrorEl.textContent = 'Passwords do not match.'; return; }
 
       handler({ firstName, lastName, email, password });
+    });
+  }
+
+  // ── Sign-in success animation ─────────────────────────────────────────────
+
+  playSignInSuccess() {
+    return new Promise(resolve => {
+      const card = this._overlay.querySelector('.auth-card');
+      card.classList.add('auth-card--animating', 'auth-card--signing-in');
+
+      const sweep = document.createElement('div');
+      sweep.className = 'auth-sweep auth-sweep--forward';
+      card.appendChild(sweep);
+      requestAnimationFrame(() => requestAnimationFrame(() => sweep.classList.add('auth-sweep--active')));
+
+      setTimeout(() => {
+        this._overlay.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        this._overlay.style.opacity = '0';
+        this._overlay.style.transform = 'scale(0.97)';
+        setTimeout(() => {
+          this._overlay.classList.add('hidden');
+          this._overlay.style.cssText = '';
+          card.classList.remove('auth-card--animating', 'auth-card--signing-in');
+          resolve();
+        }, 320);
+      }, 460);
     });
   }
 

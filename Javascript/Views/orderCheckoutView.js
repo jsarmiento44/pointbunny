@@ -21,10 +21,7 @@ class OrderCheckOutView extends View {
               <span>${item.itemName} x${item.quantity}</span>
               <span style="font-size:0.85rem; opacity:0.7;">${allVariants.join(", ")}</span>
             </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span>&#8369;${item.totalPrice}</span>
-              <button class="checkout-cart-delete-btn" data-cart-index="${index}" type="button">&times;</button>
-            </div>
+            <span>&#8369;${item.totalPrice}</span>
           </div>`;
         },
       )

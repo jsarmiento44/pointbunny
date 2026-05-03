@@ -30,11 +30,16 @@ class NewMenuItemView extends View {
 
   _toggleModalClose() {
     this._closeBtn.addEventListener("click", (e) => {
-      this._parentElement.classList.toggle("hidden");
-      document.getElementById("newCategoryInput").classList.add("hidden");
-      document.querySelector(".new-category-button").classList.add("hidden");
-
-      this._formReset();
+      const overlay = this._parentElement;
+      const inner = overlay.querySelector(".modal-content");
+      if (inner) inner.classList.add("modal-exiting");
+      setTimeout(() => {
+        if (inner) inner.classList.remove("modal-exiting");
+        overlay.classList.add("hidden");
+        document.getElementById("newCategoryInput").classList.add("hidden");
+        document.querySelector(".new-category-button").classList.add("hidden");
+        this._formReset();
+      }, 220);
     });
   }
 
@@ -164,7 +169,13 @@ class NewMenuItemView extends View {
     this._parentElement.addEventListener("click", function (e) {
       const btn = e.target.closest(".variant-close");
       if (!btn) return;
-      document.querySelector(".variant-modal").classList.add("hidden");
+      const overlay = document.querySelector(".variant-modal");
+      const inner = overlay.querySelector(".variant-content");
+      if (inner) inner.classList.add("modal-exiting");
+      setTimeout(() => {
+        if (inner) inner.classList.remove("modal-exiting");
+        overlay.classList.add("hidden");
+      }, 220);
     });
   }
 

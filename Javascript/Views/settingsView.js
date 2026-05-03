@@ -8,6 +8,7 @@ class SettingsView {
   _categoryList = document.getElementById("categoryList");
   _categoryInput = document.getElementById("categoryInput");
   _addCategoryBtn = document.getElementById("addCategoryBtn");
+  _pendingFlash = false;
 
   // ── Open / Close ─────────────────────────────────────────────────────────────
 
@@ -26,8 +27,13 @@ class SettingsView {
   }
 
   _close() {
-    this._modal.classList.add("hidden");
-    this._removeForm();
+    const inner = this._modal.querySelector(".modal-container");
+    if (inner) inner.classList.add("modal-exiting");
+    setTimeout(() => {
+      if (inner) inner.classList.remove("modal-exiting");
+      this._modal.classList.add("hidden");
+      this._removeForm();
+    }, 220);
   }
 
   // ── Category List ────────────────────────────────────────────────────────────
@@ -47,17 +53,29 @@ class SettingsView {
         </li>`,
       )
       .join("");
+
+    if (this._pendingFlash) {
+      this._pendingFlash = false;
+      const items = this._categoryList.querySelectorAll(".category-item");
+      const last = items[items.length - 1];
+      if (last) {
+        requestAnimationFrame(() => last.classList.add("entering"));
+        setTimeout(() => last.classList.remove("entering"), 800);
+      }
+    }
   }
 
   _addHandlerAddCategory(handler) {
-    this._addCategoryBtn.addEventListener("click", () => {
+    const submit = () => {
+      if (!this._categoryInput.value.trim()) return;
+      this._pendingFlash = true;
       handler(this._categoryInput.value);
       this._categoryInput.value = "";
-    });
+    };
+    this._addCategoryBtn.addEventListener("click", submit);
     this._categoryInput.addEventListener("keydown", (e) => {
       if (e.key !== "Enter") return;
-      handler(this._categoryInput.value);
-      this._categoryInput.value = "";
+      submit();
     });
   }
 

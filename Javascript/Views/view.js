@@ -59,4 +59,23 @@ export default class View {
     const overlay = document.querySelector(".success-overlay");
     if (overlay) overlay.remove();
   }
+
+  showConfirmModal({ message, confirmLabel = 'Discard & close', onConfirm, onCancel }) {
+    if (document.querySelector('.confirm-overlay')) return;
+    const el = document.createElement('div');
+    el.className = 'confirm-overlay';
+    el.innerHTML = `
+      <div class="confirm-card">
+        <p class="confirm-msg">${message}</p>
+        <div class="confirm-actions">
+          <button class="btn confirm-cancel-btn" type="button">Keep editing</button>
+          <button class="btn primary confirm-ok-btn" type="button">${confirmLabel}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(el);
+    el.querySelector('.confirm-ok-btn').addEventListener('click', () => { el.remove(); onConfirm?.(); });
+    el.querySelector('.confirm-cancel-btn').addEventListener('click', () => { el.remove(); onCancel?.(); });
+    el.addEventListener('click', (e) => { if (e.target === el) { el.remove(); onCancel?.(); } });
+  }
 }

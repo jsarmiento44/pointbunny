@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm start *)"
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Kelly\\\\Desktop\\\\Pointy\\\\Pointy Project\" -Recurse -File -Filter \"*.css\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(xargs grep *)"
     ]
   }
 }
