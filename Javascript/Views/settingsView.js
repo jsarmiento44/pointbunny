@@ -5,6 +5,8 @@ class SettingsView {
   _addBtn = document.getElementById("addAdjustmentBtn");
   _list = document.getElementById("adjustmentList");
   _showRemovedToggle = document.getElementById("showRemovedToggle");
+  _printingToggle = document.getElementById("printingToggle");
+  _confirmPrintToggle = document.getElementById("confirmPrintToggle");
   _categoryList = document.getElementById("categoryList");
   _categoryInput = document.getElementById("categoryInput");
   _addCategoryBtn = document.getElementById("addCategoryBtn");
@@ -295,6 +297,26 @@ class SettingsView {
 
   syncShowRemovedToggle(value) {
     this._showRemovedToggle.checked = value;
+  }
+
+  _addHandlerTogglePrinting(handler) {
+    this._printingToggle.addEventListener("change", () => {
+      handler(this._printingToggle.checked);
+    });
+  }
+
+  syncPrintingToggle(value) {
+    this._printingToggle.checked = value;
+  }
+
+  _addHandlerToggleConfirmPrint(handler) {
+    this._confirmPrintToggle.addEventListener("change", () => {
+      handler(this._confirmPrintToggle.checked);
+    });
+  }
+
+  syncConfirmPrintToggle(value) {
+    this._confirmPrintToggle.checked = value;
   }
 }
 

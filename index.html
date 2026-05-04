@@ -134,6 +134,32 @@
             <section class="settings-section">
               <div class="settings-toggle-row">
                 <div>
+                  <p class="settings-toggle-label">Receipt Printing</p>
+                  <p class="settings-toggle-hint">When on, the checkout will print a receipt before recording the sale.</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="printingToggle" checked />
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </section>
+
+            <section class="settings-section">
+              <div class="settings-toggle-row">
+                <div>
+                  <p class="settings-toggle-label">Confirm after printing</p>
+                  <p class="settings-toggle-hint">After the print dialog closes, ask "Did the receipt print?" before recording the sale. Turn this on if your printer is unreliable — it gives you a chance to reprint before the transaction is saved.</p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="confirmPrintToggle" checked />
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </section>
+
+            <section class="settings-section">
+              <div class="settings-toggle-row">
+                <div>
                   <p class="settings-toggle-label">Show removed adjustments on receipt</p>
                   <p class="settings-toggle-hint">When on, removed line items appear crossed out on the receipt.</p>
                 </div>

@@ -26,7 +26,7 @@ export default class View {
     this._parentElement.innerHTML = "";
   }
 
-  _showSuccess() {
+  _showSuccess(note = null) {
     const markup = `
     <div class="modal-overlay success-overlay">
       <div class="modal-content success-modal">
@@ -39,6 +39,7 @@ export default class View {
             </svg>
           </div>
           <h2 class="success-title">Success</h2>
+          ${note ? `<p class="success-note">${note}</p>` : ''}
         </div>
       </div>
     </div>
@@ -60,7 +61,7 @@ export default class View {
     if (overlay) overlay.remove();
   }
 
-  showConfirmModal({ message, confirmLabel = 'Discard & close', onConfirm, onCancel }) {
+  showConfirmModal({ message, confirmLabel = 'Discard & close', cancelLabel = 'Keep editing', onConfirm, onCancel }) {
     if (document.querySelector('.confirm-overlay')) return;
     const el = document.createElement('div');
     el.className = 'confirm-overlay';
@@ -68,7 +69,7 @@ export default class View {
       <div class="confirm-card">
         <p class="confirm-msg">${message}</p>
         <div class="confirm-actions">
-          <button class="btn confirm-cancel-btn" type="button">Keep editing</button>
+          <button class="btn confirm-cancel-btn" type="button">${cancelLabel}</button>
           <button class="btn primary confirm-ok-btn" type="button">${confirmLabel}</button>
         </div>
       </div>

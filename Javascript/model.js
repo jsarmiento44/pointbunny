@@ -18,6 +18,8 @@ export const state = {
   settings: {
     adjustments: [],
     showRemovedAdjustments: true,
+    printingEnabled: localStorage.getItem('pointy_printing_enabled') !== 'false',
+    confirmPrint: localStorage.getItem('pointy_confirm_print') !== 'false',
   },
   currentReceiptAdjustments: [],
 };

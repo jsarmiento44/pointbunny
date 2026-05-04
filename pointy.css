@@ -787,7 +787,11 @@ footer {
   box-shadow: var(--shadow-lg);
   padding: 32px;
   gap: 32px;
-  transition: all 0.3s ease;
+  animation: modal-card-enter 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.modal-content.modal-exiting {
+  animation: modal-card-exit 0.22s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .price-label {
@@ -1710,6 +1714,27 @@ footer {
   box-shadow: var(--shadow-sm);
 }
 
+#printReceiptBtn.print-receipt-btn--off {
+  background: transparent;
+  color: var(--text);
+  border: 1.5px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+#printReceiptBtn.print-receipt-btn--off:hover {
+  background: var(--panel);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.print-off-note {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
 /* ======================== Variants Section ======================== */
 .variants-section {
   display: flex;
@@ -2082,6 +2107,11 @@ footer {
   flex-direction: column;
   gap: 20px;
   box-sizing: border-box;
+  animation: modal-card-enter 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.variant-content.modal-exiting {
+  animation: modal-card-exit 0.22s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .variant-content > button:last-of-type {
@@ -2573,6 +2603,15 @@ footer {
   }
 }
 
+@keyframes modal-card-enter {
+  from { opacity: 0; transform: scale(0.94) translateY(10px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+@keyframes modal-card-exit {
+  from { opacity: 1; transform: scale(1)    translateY(0); }
+  to   { opacity: 0; transform: scale(0.94) translateY(10px); }
+}
+
 /* MODAL */
 .modal-container {
   background: var(--panel-strong);
@@ -2587,6 +2626,11 @@ footer {
   position: relative;
   display: flex;
   flex-direction: column;
+  animation: modal-card-enter 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.modal-container.modal-exiting {
+  animation: modal-card-exit 0.22s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .modal-container .modal-close-btn {
@@ -3108,6 +3152,9 @@ kbd {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+.settings-toggle-row .switch {
+  flex-shrink: 0;
 }
 
 .settings-toggle-label {
@@ -3705,4 +3752,14 @@ body[data-theme="dark"] .receipt-manual-overlay {
   letter-spacing: 0.03em;
   opacity: 0;
   animation: exit-label-fade 0.25s ease 0.28s forwards;
+}
+
+/* ── Success note (shown when printing is off) ────────────────────────────── */
+.success-note {
+  font-size: 0.8rem;
+  color: var(--muted);
+  max-width: 28ch;
+  text-align: center;
+  line-height: 1.55;
+  margin-top: -4px;
 }

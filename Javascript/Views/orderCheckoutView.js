@@ -142,7 +142,12 @@ class OrderCheckOutView extends View {
         <div id="changeAmount" class="change-box">&#8369;0.00</div>
       </label>
 
-      <button class="print-receipt-btn hidden" id="printReceiptBtn">Print Receipt</button>
+      ${(() => {
+        const printingOn = this._data.settings?.printingEnabled ?? true;
+        return `<button class="print-receipt-btn${printingOn ? '' : ' print-receipt-btn--off'} hidden" id="printReceiptBtn">
+          ${printingOn ? 'Print Receipt' : 'Record Sale<span class="print-off-note">Printing is off · Enable in Settings</span>'}
+        </button>`;
+      })()}
     </div>
   </div>
 </div>

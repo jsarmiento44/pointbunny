@@ -9,6 +9,7 @@ import OrderCheckOutView from "./Views/orderCheckoutView.js";
 import newMenuItemView from "./Views/newMenuItemView.js";
 import MenuEditView from "./Views/menuEditView.js";
 import SettingsView from "./Views/settingsView.js";
+import ReceiptView from "./Views/receiptView.js";
 
 const modelState = model.state;
 let item;
@@ -213,52 +214,90 @@ const controlOrderCheckout = function () {
   }
 };
 
+const _buildSale = function () {
+  return {
+    items: [...modelState.cart],
+    subtotal: OrderCheckOutView._subtotal ?? OrderCheckOutView._totalPrice,
+    adjustments: OrderCheckOutView._adjResult?.lineItems ?? [],
+    removedAdjustments: model.state.currentReceiptAdjustments.filter((a) => a.removed),
+    showRemovedAdjustments: model.state.settings.showRemovedAdjustments,
+    totalPrice: OrderCheckOutView._totalPrice,
+    customerPayment: OrderCheckOutView._customerPayment,
+    customerChange: OrderCheckOutView._customerChange,
+    storeName: model.state.username,
+    date: Date.now(),
+  };
+};
+
+const _finaliseSale = async function (sale, note = null) {
+  modelState.salesBasket.push(sale);
+  await supabase.from('sales').insert({
+    user_id: model.state.userId,
+    subtotal: sale.subtotal,
+    total_price: sale.totalPrice,
+    customer_payment: sale.customerPayment,
+    customer_change: sale.customerChange,
+    items: sale.items,
+    adjustments: sale.adjustments,
+  });
+  clearCart();
+  model.clearReceiptAdjustments();
+  OrderCheckOutView._showSuccess(note);
+  const successOverlay = document.querySelector('.success-overlay');
+  const autoCloseTimer = setTimeout(() => {
+    OrderCheckOutView._hideModal();
+    successOverlay?.remove();
+  }, 3500);
+  const successCloseBtn = successOverlay?.querySelector('.modal-close');
+  if (successCloseBtn) {
+    successCloseBtn.addEventListener('click', () => {
+      clearTimeout(autoCloseTimer);
+      OrderCheckOutView._hideModal();
+      successOverlay.remove();
+    });
+  }
+};
+
 const controlConcludeTransaction = async function () {
   const printBtn = document.getElementById('printReceiptBtn');
   if (printBtn) printBtn.disabled = true;
   try {
-    if (modelState.cart.length <= 0) throw `Cart is empty!`;
+    if (modelState.cart.length <= 0) throw 'Cart is empty!';
+    const sale = _buildSale();
 
-    const sale = {
-      items: [...modelState.cart],
-      subtotal: OrderCheckOutView._subtotal ?? OrderCheckOutView._totalPrice,
-      adjustments: [...model.state.currentReceiptAdjustments],
-      totalPrice: OrderCheckOutView._totalPrice,
-      customerPayment: OrderCheckOutView._customerPayment,
-      customerChange: OrderCheckOutView._customerChange,
-      date: Date.now(),
-    };
+    if (!model.state.settings.printingEnabled) {
+      await _finaliseSale(sale, 'Transaction saved — no receipt was printed. You can enable printing in Settings.');
+      return;
+    }
 
-    modelState.salesBasket.push(sale);
+    const printPromise = ReceiptView.print(sale);
+    if (!printPromise) {
+      showToast('Popup was blocked. Allow popups for this site and try again.', 'error');
+      if (printBtn) printBtn.disabled = false;
+      return;
+    }
 
-    await supabase.from('sales').insert({
-      user_id: model.state.userId,
-      subtotal: sale.subtotal,
-      total_price: sale.totalPrice,
-      customer_payment: sale.customerPayment,
-      customer_change: sale.customerChange,
-      items: sale.items,
-      adjustments: sale.adjustments,
-    });
+    await printPromise;
 
-    clearCart();
-    model.clearReceiptAdjustments();
-
-    OrderCheckOutView._showSuccess();
-
-    const successOverlay = document.querySelector('.success-overlay');
-    const autoCloseTimer = setTimeout(() => {
-      OrderCheckOutView._hideModal();
-      successOverlay?.remove();
-    }, 2000);
-
-    const successCloseBtn = successOverlay?.querySelector('.modal-close');
-    if (successCloseBtn) {
-      successCloseBtn.addEventListener('click', () => {
-        clearTimeout(autoCloseTimer);
-        OrderCheckOutView._hideModal();
-        successOverlay.remove();
+    if (model.state.settings.confirmPrint) {
+      OrderCheckOutView.showConfirmModal({
+        message: 'Did the receipt print successfully?',
+        confirmLabel: 'Yes, Record Sale',
+        cancelLabel: 'No, Go Back',
+        onConfirm: async () => {
+          try {
+            await _finaliseSale(sale);
+          } catch (err) {
+            showToast(err.message ?? err);
+            if (printBtn) printBtn.disabled = false;
+          }
+        },
+        onCancel: () => {
+          if (printBtn) printBtn.disabled = false;
+        },
       });
+    } else {
+      await _finaliseSale(sale);
     }
   } catch (err) {
     showToast(err.message ?? err);
@@ -285,6 +324,18 @@ const controlOpenSettings = function () {
   SettingsView.renderCategories(model.state.menuCategories);
   SettingsView.renderAdjustments(model.state.settings.adjustments);
   SettingsView.syncShowRemovedToggle(model.state.settings.showRemovedAdjustments);
+  SettingsView.syncPrintingToggle(model.state.settings.printingEnabled);
+  SettingsView.syncConfirmPrintToggle(model.state.settings.confirmPrint);
+};
+
+const controlTogglePrinting = function (value) {
+  model.state.settings.printingEnabled = value;
+  localStorage.setItem('pointy_printing_enabled', value);
+};
+
+const controlToggleConfirmPrint = function (value) {
+  model.state.settings.confirmPrint = value;
+  localStorage.setItem('pointy_confirm_print', value);
 };
 
 const _refreshCategoryDropdowns = function () {
@@ -528,6 +579,8 @@ const _wireApp = function () {
   SettingsView._addHandlerDelete(controlDeleteAdjustment);
   SettingsView._addHandlerToggle(controlToggleAdjustment);
   SettingsView._addHandlerShowRemoved(controlShowRemoved);
+  SettingsView._addHandlerTogglePrinting(controlTogglePrinting);
+  SettingsView._addHandlerToggleConfirmPrint(controlToggleConfirmPrint);
 
   //NewOrder
   NewOrderView._addHandlerShowMenuModal(controlNewOrder);
