@@ -10,6 +10,7 @@ import newMenuItemView from "./Views/newMenuItemView.js";
 import MenuEditView from "./Views/menuEditView.js";
 import SettingsView from "./Views/settingsView.js";
 import ReceiptView from "./Views/receiptView.js";
+import CashflowView from "./Views/cashflowView.js";
 
 const modelState = model.state;
 let item;
@@ -239,9 +240,13 @@ const _finaliseSale = async function (sale, note = null) {
     customer_change: sale.customerChange,
     items: sale.items,
     adjustments: sale.adjustments,
+    sale_date: new Date(sale.date).toISOString(),
+    is_manual: false,
+    added_by: null,
   });
   clearCart();
   model.clearReceiptAdjustments();
+  refreshTodaySalesDisplay();
   OrderCheckOutView._showSuccess(note);
   const successOverlay = document.querySelector('.success-overlay');
   const autoCloseTimer = setTimeout(() => {
@@ -491,6 +496,55 @@ const controlNewOrderModals = async function () {
   NewOrderView._addHandlerCloseModal(controlCloseOrderModal);
 };
 
+const _animateSalesTotal = function (el, fromVal, toVal) {
+  const fmt = (n) =>
+    "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const card = el.closest(".stat-card");
+  if (card) {
+    card.classList.remove("stat-card--updating");
+    void card.offsetWidth;
+    card.classList.add("stat-card--updating");
+    card.addEventListener("animationend", () => card.classList.remove("stat-card--updating"), { once: true });
+  }
+
+  const duration = 900;
+  const start = performance.now();
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+  const tick = (now) => {
+    const progress = Math.min((now - start) / duration, 1);
+    el.textContent = fmt(fromVal + (toVal - fromVal) * easeOut(progress));
+    if (progress < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+};
+
+const refreshTodaySalesDisplay = async function () {
+  try {
+    const el = document.getElementById("totalStr");
+    if (!el) return;
+
+    const currentVal = parseFloat(el.textContent.replace(/[$,]/g, "")) || 0;
+    const newVal = await model.loadTodaySalesTotal();
+
+    if (newVal === currentVal) return;
+
+    // If a success overlay is on screen, wait for it to be removed first
+    const overlay = document.querySelector(".success-overlay");
+    if (overlay) {
+      const observer = new MutationObserver(() => {
+        if (!document.querySelector(".success-overlay")) {
+          observer.disconnect();
+          _animateSalesTotal(el, currentVal, newVal);
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    } else {
+      _animateSalesTotal(el, currentVal, newVal);
+    }
+  } catch (_) {}
+};
+
 const initApp = async function (user) {
   model.state.userId = user.id;
   model.state.username = user.user_metadata?.display_name ?? user.user_metadata?.business_name ?? user.email;
@@ -499,6 +553,7 @@ const initApp = async function (user) {
   await model.loadMenuCategories();
   await model.loadAdjustments();
   await model.loadEmployees();
+  await refreshTodaySalesDisplay();
 };
 
 const controlSignIn = async function (email, password) {
@@ -546,6 +601,197 @@ const controlSignOut = async function () {
   setTimeout(() => window.location.reload(), 500);
 };
 
+// ── Cashflow ──────────────────────────────────────────────────────────────────
+
+const _getCashflowRange = function (period, from, to) {
+  const now = new Date();
+  const ymd = (d) => d.toISOString().slice(0, 10);
+  const fmt = (d) =>
+    d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const fmtShort = (d) =>
+    d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+  if (period === "today") {
+    const start = new Date(now); start.setHours(0, 0, 0, 0);
+    const end   = new Date(now); end.setHours(23, 59, 59, 999);
+    return { startISO: start.toISOString(), endISO: end.toISOString(), label: fmt(now) };
+  }
+
+  if (period === "week") {
+    const day = now.getDay();
+    const diffToMon = day === 0 ? -6 : 1 - day;
+    const monday = new Date(now); monday.setDate(now.getDate() + diffToMon); monday.setHours(0, 0, 0, 0);
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); sunday.setHours(23, 59, 59, 999);
+    return { startISO: monday.toISOString(), endISO: sunday.toISOString(), label: `${fmtShort(monday)} – ${fmtShort(sunday)}` };
+  }
+
+  if (period === "month") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { startISO: start.toISOString(), endISO: end.toISOString(), label: now.toLocaleDateString("en-US", { month: "long", year: "numeric" }) };
+  }
+
+  if (period === "year") {
+    const start = new Date(now.getFullYear(), 0, 1);
+    const end   = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    return { startISO: start.toISOString(), endISO: end.toISOString(), label: String(now.getFullYear()) };
+  }
+
+  // custom
+  const start = new Date(from); start.setHours(0, 0, 0, 0);
+  const end   = new Date(to);   end.setHours(23, 59, 59, 999);
+  return { startISO: start.toISOString(), endISO: end.toISOString(), label: `${fmtShort(start)} – ${fmtShort(end)}` };
+};
+
+const _cashflowSummary = () => {
+  const gross    = modelState.cashflowSales.reduce((s, r) => s + Number(r.total_price), 0);
+  const expenses = modelState.expenses.reduce((s, e) => s + e.amount, 0);
+  return { gross, expenses, net: gross - expenses };
+};
+
+let _currentCashflowPeriod = { period: "today" };
+
+const controlOpenCashflow = async function () {
+  CashflowView.open();
+  CashflowView.renderLoading();
+  CashflowView.setLoading(true);
+  try {
+    _currentCashflowPeriod = { period: "today" };
+    const { startISO, endISO, label } = _getCashflowRange("today");
+    await model.fetchCashflowData(startISO, endISO);
+    CashflowView.setPeriodLabel(label);
+    CashflowView.renderSummary(_cashflowSummary());
+    CashflowView.renderSalesList(modelState.cashflowSales);
+    CashflowView.renderExpensesList(modelState.expenses);
+  } catch (err) {
+    showToast(err.message ?? err);
+  } finally {
+    CashflowView.setLoading(false);
+  }
+};
+
+const controlCloseCashflow = function () {
+  CashflowView.close();
+};
+
+const controlChangePeriod = async function ({ period, from, to }) {
+  CashflowView.renderLoading();
+  CashflowView.setLoading(true);
+  try {
+    _currentCashflowPeriod = { period, from, to };
+    const { startISO, endISO, label } = _getCashflowRange(period, from, to);
+    await model.fetchCashflowData(startISO, endISO);
+    CashflowView.setPeriodLabel(label);
+    CashflowView.renderSummary(_cashflowSummary());
+    CashflowView.renderSalesList(modelState.cashflowSales);
+    CashflowView.renderExpensesList(modelState.expenses);
+  } catch (err) {
+    showToast(err.message ?? err);
+  } finally {
+    CashflowView.setLoading(false);
+  }
+};
+
+const controlAddExpense = async function (data) {
+  try {
+    CashflowView.setSubmitting(true);
+    await model.addExpense(data);
+    CashflowView.hideExpenseModal();
+    CashflowView.renderSummary(_cashflowSummary());
+    CashflowView.renderExpensesList(modelState.expenses);
+    CashflowView.scrollExpensesToTop();
+    showToast("Expense added.", "success");
+  } catch (err) {
+    showToast(err.message ?? err);
+  } finally {
+    CashflowView.setSubmitting(false);
+  }
+};
+
+const _generateAndDownloadCSV = function () {
+  const periodLabel = document.querySelector("#cashflowPeriodLabel")?.textContent ?? "cashflow";
+  const safeLabel = periodLabel.replace(/[^a-z0-9]/gi, "-").toLowerCase();
+
+  const fmtDate = (iso) =>
+    new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+  const fmtTime = (iso) =>
+    new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+  const escape = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
+
+  const salesRows = (modelState.cashflowSales ?? []).map((s) => ({
+    date: s.sale_date,
+    row: [
+      fmtDate(s.sale_date), fmtTime(s.sale_date), "Sale",
+      (s.items ?? []).map((i) => `${i.itemName} x${i.quantity}`).join("; "),
+      "", `+${Number(s.total_price).toFixed(2)}`,
+      s.is_manual ? "Yes" : "No",
+      s.added_by ?? "",
+    ],
+  }));
+
+  const expenseRows = (modelState.expenses ?? []).map((e) => ({
+    date: e.expenseDate,
+    row: [fmtDate(e.expenseDate), fmtTime(e.expenseDate), "Expense", e.description, e.category ?? "", `-${e.amount.toFixed(2)}`, "No", e.createdBy],
+  }));
+
+  const allRows = [...salesRows, ...expenseRows]
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .map((r) => r.row);
+
+  const header = ["Date", "Time", "Type", "Description", "Category", "Amount", "Manual Entry", "Added By"];
+  const csv = [header, ...allRows].map((row) => row.map(escape).join(",")).join("\n");
+
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `cashflow-${safeLabel}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+const controlExportCSV = function () {
+  const sales = modelState.cashflowSales ?? [];
+  const expenses = modelState.expenses ?? [];
+  const periodLabel = document.querySelector("#cashflowPeriodLabel")?.textContent ?? "this period";
+
+  if (!sales.length && !expenses.length) {
+    showToast("No data to export for this period.", "info");
+    return;
+  }
+
+  const salesLine = sales.length ? `${sales.length} sale${sales.length !== 1 ? "s" : ""}` : "";
+  const expenseLine = expenses.length ? `${expenses.length} expense${expenses.length !== 1 ? "s" : ""}` : "";
+  const summary = [salesLine, expenseLine].filter(Boolean).join(" and ");
+
+  CashflowView.showConfirmModal({
+    message: `Export ${summary} for "${periodLabel}" as a CSV file?`,
+    confirmLabel: "Download CSV",
+    cancelLabel: "Cancel",
+    onConfirm: _generateAndDownloadCSV,
+  });
+};
+
+const controlOpenSaleReceipt = function (id) {
+  const sale = modelState.cashflowSales.find((s) => s.id === id);
+  if (sale) CashflowView.showSaleReceipt(sale);
+};
+
+const controlDeleteExpense = async function (id) {
+  try {
+    await model.deleteExpense(id);
+    CashflowView.renderSummary(_cashflowSummary());
+    CashflowView.renderExpensesList(modelState.expenses);
+    showToast("Expense deleted.", "success");
+  } catch (err) {
+    showToast(err.message ?? err);
+  }
+};
+
 const _wireApp = function () {
   //MenuList
   MenuListView._addHandlerShowModal(controlMenuList);
@@ -589,6 +835,17 @@ const _wireApp = function () {
   NewOrderItemView._pushToCart(controlPushToModelCart);
   NewOrderItemView._adjustQuantity();
   NewOrderView._addHandlerDeleteCartItem(controlDeleteCartItemInOrder);
+
+  // Cashflow
+  CashflowView._addHandlerOpen(controlOpenCashflow);
+  CashflowView._addHandlerClose(controlCloseCashflow);
+  CashflowView._addHandlerPeriodChange(controlChangePeriod);
+  CashflowView._addHandlerCustomRange(controlChangePeriod);
+  CashflowView._addHandlerOpenAddExpense();
+  CashflowView._addHandlerSubmitExpense(controlAddExpense);
+  CashflowView._addHandlerDeleteExpense(controlDeleteExpense);
+  CashflowView._addHandlerOpenSaleReceipt(controlOpenSaleReceipt);
+  CashflowView._addHandlerExport(controlExportCSV);
 
   //New Order Check Out
   OrderCheckOutView._addHandlerShowCheckout(controlOrderCheckout);

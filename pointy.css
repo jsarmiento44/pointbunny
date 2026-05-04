@@ -2830,6 +2830,28 @@ footer {
   color: transparent;
 }
 
+/* ====== Today's Sales update animation ====== */
+@keyframes stat-card-update {
+  0%   { transform: scale(1);    box-shadow: var(--shadow-sm); }
+  20%  { transform: scale(1.04); box-shadow: var(--shadow-lg), 0 0 0 4px rgba(34, 197, 94, 0.28), 0 0 48px rgba(34, 197, 94, 0.14); }
+  60%  { transform: scale(1.02); box-shadow: var(--shadow-lg), 0 0 0 2px rgba(34, 197, 94, 0.14); }
+  100% { transform: scale(1);    box-shadow: var(--shadow-sm); }
+}
+
+@keyframes stat-value-shimmer {
+  0%   { filter: brightness(1); }
+  30%  { filter: brightness(1.4); }
+  100% { filter: brightness(1); }
+}
+
+.stat-card--updating {
+  animation: stat-card-update 0.9s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.stat-card--updating .stat-value {
+  animation: stat-value-shimmer 0.9s ease both;
+}
+
 /* ====== Featured (New Order) Card ====== */
 .card.card--featured {
   grid-column: 1 / -1;
@@ -3762,4 +3784,643 @@ body[data-theme="dark"] .receipt-manual-overlay {
   text-align: center;
   line-height: 1.55;
   margin-top: -4px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CASHFLOW PANEL
+══════════════════════════════════════════════════════════════════════════════ */
+
+@keyframes cashflow-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes cashflow-exit {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(12px); }
+}
+
+.cashflow-panel {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 8500;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: cashflow-enter 0.22s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.cashflow-panel.hidden       { display: none; }
+.cashflow-panel.cashflow-exiting { animation: cashflow-exit 0.22s cubic-bezier(0.4, 0, 0.2, 1) both; }
+
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+
+.cashflow-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 64px;
+  background: var(--panel-strong);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+  gap: 16px;
+}
+
+.cashflow-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--tr-fast), transform var(--tr-fast);
+}
+.cashflow-back:hover { background: var(--panel-strong); transform: scale(1.06); }
+
+.cashflow-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cashflow-export-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.83rem;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  transition: background var(--tr-fast), border-color var(--tr-fast);
+}
+.cashflow-export-btn:hover {
+  background: var(--panel-strong);
+  border-color: var(--brand-1);
+  color: var(--brand-1);
+}
+.cashflow-export-btn:hover svg { stroke: var(--brand-1); }
+
+.cashflow-header-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.cashflow-title {
+  font-size: 1.1rem;
+  font-weight: 900;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.cashflow-period-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1;
+}
+
+/* ── Period strip ────────────────────────────────────────────────────────────── */
+
+.cashflow-period-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 24px;
+  background: var(--panel-strong);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.cashflow-period-bar::-webkit-scrollbar { display: none; }
+
+.period-btn {
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background var(--tr-fast), color var(--tr-fast), border-color var(--tr-fast);
+}
+.period-btn:hover { background: rgba(34, 197, 94, 0.07); border-color: var(--brand-1); }
+.period-btn.active {
+  background: var(--brand-1);
+  color: #fff;
+  border-color: var(--brand-1);
+}
+
+.cashflow-custom-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+.cashflow-custom-range.hidden { display: none; }
+
+.cashflow-custom-range input[type="date"] {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--tr-fast);
+}
+.cashflow-custom-range input[type="date"]:focus { border-color: var(--brand-1); }
+
+.cashflow-range-sep {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* ── Summary cards ───────────────────────────────────────────────────────────── */
+
+.cashflow-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 20px 24px;
+  flex-shrink: 0;
+}
+
+.summary-card {
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--tr-fast), box-shadow var(--tr-fast);
+}
+.summary-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+
+.summary-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}
+
+.summary-amount {
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.summary-gross .summary-amount {
+  background: linear-gradient(90deg, var(--brand-2), var(--brand-1));
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.summary-expenses .summary-amount { color: #f59e0b; }
+
+.summary-amount--positive { color: var(--brand-2) !important; }
+.summary-amount--negative { color: #ef4444 !important; }
+
+/* ── Two-column body ─────────────────────────────────────────────────────────── */
+
+.cashflow-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 0 24px 24px;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.cashflow-col {
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cashflow-col-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--line);
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.cashflow-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+/* ── Rows ────────────────────────────────────────────────────────────────────── */
+
+.cashflow-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  transition: background var(--tr-fast);
+}
+.cashflow-row:hover { background: rgba(34, 197, 94, 0.04); }
+
+.cashflow-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.cashflow-row-desc {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cashflow-row-date {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.cashflow-manual-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  font-size: 0.68rem;
+  font-weight: 700;
+  margin-left: 6px;
+  vertical-align: middle;
+  letter-spacing: 0.03em;
+}
+
+.sr-manual-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.cashflow-category-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--brand-2);
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-top: 2px;
+  width: fit-content;
+}
+
+.cashflow-row-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.cashflow-row-amount {
+  font-size: 0.95rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.cashflow-row-amount--sale    { color: var(--brand-2); }
+.cashflow-row-amount--expense { color: #ef4444; }
+
+.cashflow-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--tr-fast), background var(--tr-fast), color var(--tr-fast), border-color var(--tr-fast);
+}
+.cashflow-row:hover .cashflow-delete-btn { opacity: 1; }
+.cashflow-delete-btn:hover {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+/* ── Empty & loading states ──────────────────────────────────────────────────── */
+
+.cashflow-empty {
+  font-size: 0.88rem;
+  color: var(--muted);
+  text-align: center;
+  padding: 32px 20px;
+  margin: 0;
+}
+
+.cashflow-spinner {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
+}
+
+/* ── Add Expense Modal ───────────────────────────────────────────────────────── */
+
+.expense-modal-container {
+  max-width: 440px;
+}
+
+.expense-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 4px;
+}
+
+.expense-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.expense-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.expense-label input {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--tr-fast), box-shadow var(--tr-fast);
+}
+.expense-label input:focus {
+  border-color: var(--brand-1);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+}
+
+.expense-label-hint {
+  font-weight: 500;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.expense-submit-btn {
+  width: 100%;
+  height: 46px;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+.expense-submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Clickable sale rows ─────────────────────────────────────────────────────── */
+
+.cashflow-row--clickable { cursor: pointer; }
+
+.cashflow-row-expand {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity var(--tr-fast), transform var(--tr-fast), color var(--tr-fast);
+  flex-shrink: 0;
+}
+.cashflow-row--clickable:hover .cashflow-row-expand {
+  opacity: 1;
+  transform: translateX(2px);
+  color: var(--brand-1);
+}
+
+/* ── Order Receipt Modal ─────────────────────────────────────────────────────── */
+
+.sale-receipt-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  padding: 24px;
+}
+
+.sale-receipt-card {
+  background: var(--panel-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 440px;
+  max-height: 85vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: modal-card-enter 0.22s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.sale-receipt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sale-receipt-title {
+  font-size: 1rem;
+  font-weight: 900;
+  margin: 0;
+}
+
+.sale-receipt-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--tr-fast);
+}
+.sale-receipt-close:hover { background: var(--panel-strong); }
+
+.sale-receipt-date {
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding: 8px 24px 0;
+  margin: 0;
+}
+
+.sr-items {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 24px;
+  gap: 10px;
+}
+
+.sr-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sr-item-info { flex: 1; min-width: 0; }
+
+.sr-item-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: block;
+}
+
+.sr-item-variants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+.sr-variant {
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.sr-item-qty {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.sr-item-price {
+  font-size: 0.9rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  min-width: 80px;
+  text-align: right;
+}
+
+.sr-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 4px 0;
+}
+
+.sr-summary, .sr-payment {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 24px;
+}
+
+.sr-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.sr-adj.discount span:last-child { color: var(--brand-2); }
+.sr-adj.fee      span:last-child { color: #f59e0b; }
+
+.sr-total {
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--text);
+  padding-top: 4px;
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .cashflow-summary {
+    grid-template-columns: 1fr;
+    padding: 16px;
+    gap: 10px;
+  }
+
+  .summary-amount { font-size: 1.3rem; }
+
+  .cashflow-body {
+    grid-template-columns: 1fr;
+    padding: 0 16px 16px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    gap: 12px;
+  }
+
+  .cashflow-col {
+    min-height: 240px;
+    max-height: 380px;
+  }
+
+  .cashflow-header { padding: 0 16px; }
+  .cashflow-period-bar { padding: 10px 16px; }
 }

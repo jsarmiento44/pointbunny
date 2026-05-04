@@ -15,6 +15,8 @@ export const state = {
   employees: [],
   cart: [],
   salesBasket: [],
+  cashflowSales: [],
+  expenses: [],
   settings: {
     adjustments: [],
     showRemovedAdjustments: true,
@@ -46,6 +48,18 @@ const dbToEmployee = (row) => ({
   name: row.name,
   role: row.role ?? "",
   systemRole: row.system_role ?? "",
+});
+
+// ── DB ↔ app shape mapping (expenses) ────────────────────────────────────────
+
+const dbToExpense = (row) => ({
+  id: row.id,
+  amount: Number(row.amount),
+  description: row.description,
+  category: row.category ?? "",
+  expenseDate: row.expense_date,
+  createdAt: row.created_at,
+  createdBy: row.created_by,
 });
 
 // ── Loaders (called once at app init) ────────────────────────────────────────
@@ -362,6 +376,78 @@ export const calculateAdjustments = function (subtotal, adjustments) {
     lineItems,
     finalTotal: Math.max(0, runningTotal),
   };
+};
+
+// ── Today's sales total ───────────────────────────────────────────────────────
+
+export const loadTodaySalesTotal = async function () {
+  const now = new Date();
+  const start = new Date(now); start.setHours(0, 0, 0, 0);
+  const end   = new Date(now); end.setHours(23, 59, 59, 999);
+  const { data, error } = await supabase
+    .from("sales")
+    .select("total_price")
+    .eq("user_id", state.userId)
+    .gte("sale_date", start.toISOString())
+    .lte("sale_date", end.toISOString());
+  if (error) throw error;
+  return data.reduce((sum, r) => sum + Number(r.total_price), 0);
+};
+
+// ── Cashflow ──────────────────────────────────────────────────────────────────
+
+export const fetchCashflowData = async function (startISO, endISO) {
+  const [salesResult, expensesResult] = await Promise.all([
+    supabase
+      .from("sales")
+      .select("id, total_price, subtotal, customer_payment, customer_change, adjustments, sale_date, items, is_manual, added_by")
+      .eq("user_id", state.userId)
+      .gte("sale_date", startISO)
+      .lte("sale_date", endISO)
+      .order("sale_date", { ascending: false }),
+    supabase
+      .from("expenses")
+      .select("*")
+      .eq("user_id", state.userId)
+      .gte("expense_date", startISO)
+      .lte("expense_date", endISO)
+      .order("expense_date", { ascending: false }),
+  ]);
+  if (salesResult.error) throw salesResult.error;
+  if (expensesResult.error) throw expensesResult.error;
+  state.cashflowSales = salesResult.data;
+  state.expenses = expensesResult.data.map(dbToExpense);
+};
+
+export const addExpense = async function ({ amount, description, category, expense_date }) {
+  const { data, error } = await supabase
+    .from("expenses")
+    .insert({
+      user_id: state.userId,
+      store_name: state.username,
+      amount: Number(amount),
+      description,
+      category: category || null,
+      expense_date,
+      created_by: state.username,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  const expense = dbToExpense(data);
+  state.expenses.unshift(expense);
+  return expense;
+};
+
+export const deleteExpense = async function (id) {
+  const { error } = await supabase
+    .from("expenses")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", state.userId);
+  if (error) throw error;
+  const index = state.expenses.findIndex((e) => e.id === id);
+  if (index !== -1) state.expenses.splice(index, 1);
 };
 
 function parseVariants(raw) {

@@ -531,14 +531,12 @@
         </article>
 
         <!-- Cash Flow -->
-        <article class="card card--locked" tabindex="-1" aria-disabled="true">
+        <article class="card" tabindex="0">
           <span class="ring" aria-hidden="true"></span>
-          <span class="coming-soon-badge" aria-hidden="true">Soon</span>
           <button
             class="btn-main"
             data-action="cash-flow"
             aria-label="View cash flow"
-            tabindex="-1"
           >
             <span class="card-icon" aria-hidden="true">
               <svg
@@ -620,6 +618,110 @@
     <div id="appLoadingOverlay" class="app-loading-overlay hidden">
       <div class="spinner">
         <div></div><div></div><div></div><div></div>
+      </div>
+    </div>
+
+    <!-- Cash Flow Panel -->
+    <div id="cashflowPanel" class="cashflow-panel hidden">
+      <div class="cashflow-header">
+        <button class="cashflow-back" aria-label="Go back">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
+          </svg>
+        </button>
+        <div class="cashflow-header-center">
+          <h2 class="cashflow-title">Cash Flow</h2>
+          <span class="cashflow-period-label" id="cashflowPeriodLabel">Today</span>
+        </div>
+        <div class="cashflow-header-actions">
+          <button class="cashflow-export-btn" id="exportCsvBtn" type="button" title="Export current view to CSV">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+          <button class="btn primary" id="addExpenseBtn" type="button">+ Add Expense</button>
+        </div>
+      </div>
+
+      <div class="cashflow-period-bar">
+        <button class="period-btn active" data-period="today">Today</button>
+        <button class="period-btn" data-period="week">This Week</button>
+        <button class="period-btn" data-period="month">This Month</button>
+        <button class="period-btn" data-period="year">This Year</button>
+        <button class="period-btn" data-period="custom">Custom</button>
+        <div class="cashflow-custom-range hidden" id="cashflowCustomRange">
+          <input type="date" id="cashflowFrom" aria-label="From date" />
+          <span class="cashflow-range-sep">–</span>
+          <input type="date" id="cashflowTo" aria-label="To date" />
+          <button class="btn primary" id="applyRangeBtn" type="button">Apply</button>
+        </div>
+      </div>
+
+      <div class="cashflow-summary">
+        <div class="summary-card summary-gross">
+          <span class="summary-label">Gross Revenue</span>
+          <span class="summary-amount" id="cashflowGross">$0.00</span>
+        </div>
+        <div class="summary-card summary-expenses">
+          <span class="summary-label">Total Expenses</span>
+          <span class="summary-amount" id="cashflowExpensesTotal">$0.00</span>
+        </div>
+        <div class="summary-card summary-net">
+          <span class="summary-label">Net Income</span>
+          <span class="summary-amount" id="cashflowNet">$0.00</span>
+        </div>
+      </div>
+
+      <div class="cashflow-body">
+        <div class="cashflow-col">
+          <h3 class="cashflow-col-title">Sales</h3>
+          <div class="cashflow-list" id="cashflowSalesList"></div>
+        </div>
+        <div class="cashflow-col">
+          <h3 class="cashflow-col-title">Expenses</h3>
+          <div class="cashflow-list" id="cashflowExpensesList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Expense Modal -->
+    <div class="modal-backdrop hidden" id="addExpenseModal">
+      <div class="modal-container expense-modal-container">
+        <button class="modal-close-btn" id="expenseModalCloseBtn">&times;</button>
+        <h2 class="edit-form-title">Add Expense</h2>
+
+        <form id="addExpenseForm" class="expense-form" novalidate>
+          <div class="expense-form-fields">
+            <label class="expense-label">
+              Amount
+              <input type="number" id="expenseAmount" name="amount" placeholder="0.00" step="0.01" min="0.01" required />
+            </label>
+
+            <label class="expense-label">
+              Description
+              <input type="text" id="expenseDescription" name="description" placeholder="e.g. Supplier payment" required />
+            </label>
+
+            <label class="expense-label">
+              Category <span class="expense-label-hint">(optional)</span>
+              <input type="text" id="expenseCategory" name="category" placeholder="e.g. Supplies" list="expenseCategoryList" autocomplete="off" />
+              <datalist id="expenseCategoryList">
+                <option value="Supplies"></option>
+                <option value="Utilities"></option>
+                <option value="Wages"></option>
+                <option value="Rent"></option>
+                <option value="Other"></option>
+              </datalist>
+            </label>
+
+            <label class="expense-label">
+              Date &amp; Time
+              <input type="datetime-local" id="expenseDate" name="expense_date" required />
+            </label>
+          </div>
+
+          <button type="submit" class="btn primary expense-submit-btn" id="expenseSubmitBtn">Add Expense</button>
+        </form>
       </div>
     </div>
 
