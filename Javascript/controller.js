@@ -11,6 +11,7 @@ import MenuEditView from "./Views/menuEditView.js";
 import SettingsView from "./Views/settingsView.js";
 import ReceiptView from "./Views/receiptView.js";
 import CashflowView from "./Views/cashflowView.js";
+import DiscountView from "./Views/discountView.js";
 
 const modelState = model.state;
 let item;
@@ -225,6 +226,7 @@ const _buildSale = function () {
     totalPrice: OrderCheckOutView._totalPrice,
     customerPayment: OrderCheckOutView._customerPayment,
     customerChange: OrderCheckOutView._customerChange,
+    promoCode: model.state.currentPromoCode ?? null,
     storeName: model.state.username,
     date: Date.now(),
   };
@@ -240,10 +242,14 @@ const _finaliseSale = async function (sale, note = null) {
     customer_change: sale.customerChange,
     items: sale.items,
     adjustments: sale.adjustments,
+    promo_code: sale.promoCode?.code ?? null,
     sale_date: new Date(sale.date).toISOString(),
     is_manual: false,
     added_by: null,
   });
+  if (sale.promoCode) {
+    await model.redeemDiscountCode(sale.promoCode.discountCodeId);
+  }
   clearCart();
   model.clearReceiptAdjustments();
   refreshTodaySalesDisplay();
@@ -432,6 +438,7 @@ const _refreshCheckoutAdj = function () {
     model.state.currentReceiptAdjustments,
     adjResult,
     model.state.settings.showRemovedAdjustments,
+    model.state.currentPromoCode,
   );
 };
 
@@ -552,6 +559,7 @@ const initApp = async function (user) {
   await model.loadMenuItems();
   await model.loadMenuCategories();
   await model.loadAdjustments();
+  await model.loadDiscountCodes();
   await model.loadEmployees();
   await refreshTodaySalesDisplay();
 };
@@ -792,6 +800,80 @@ const controlDeleteExpense = async function (id) {
   }
 };
 
+// ── Discounts ─────────────────────────────────────────────────────────────────
+
+const controlOpenDiscounts = function () {
+  DiscountView.open();
+  DiscountView.render(model.state.discountCodes);
+};
+
+const controlCloseDiscounts = function () {
+  DiscountView.close();
+};
+
+const controlNewDiscountCode = function () {
+  DiscountView.showForm();
+};
+
+const controlSaveDiscountCode = async function (data) {
+  try {
+    if (data.id) {
+      await model.updateDiscountCode(data.id, data);
+    } else {
+      await model.createDiscountCode(data);
+    }
+    DiscountView.closeForm();
+    DiscountView.render(model.state.discountCodes);
+    showToast(data.id ? "Code updated." : "Code created.", "success");
+  } catch (err) {
+    showToast(err.message ?? err);
+  }
+};
+
+const controlEditDiscountCode = function (id) {
+  const dc = model.state.discountCodes.find((d) => d.id === id);
+  if (!dc) return;
+  DiscountView.showForm(dc);
+};
+
+const controlDeleteDiscountCode = async function (id) {
+  if (!confirm("Delete this promo code? This cannot be undone.")) return;
+  try {
+    await model.deleteDiscountCode(id);
+    DiscountView.render(model.state.discountCodes);
+    showToast("Code deleted.", "success");
+  } catch (err) {
+    showToast(err.message ?? err);
+  }
+};
+
+const controlToggleDiscountStatus = async function (id) {
+  try {
+    await model.toggleDiscountCodeStatus(id);
+    DiscountView.render(model.state.discountCodes);
+  } catch (err) {
+    showToast(err.message ?? err);
+  }
+};
+
+// ── Promo code at checkout ────────────────────────────────────────────────────
+
+const controlApplyPromoCode = function (code) {
+  try {
+    if (model.state.currentPromoCode) model.removePromoCodeFromReceipt();
+    const dc = model.validateDiscountCode(code);
+    model.applyPromoCodeToReceipt(dc);
+    _refreshCheckoutAdj();
+  } catch (err) {
+    showToast(err.message ?? err, "error");
+  }
+};
+
+const controlRemovePromoCode = function () {
+  model.removePromoCodeFromReceipt();
+  _refreshCheckoutAdj();
+};
+
 const _wireApp = function () {
   //MenuList
   MenuListView._addHandlerShowModal(controlMenuList);
@@ -858,6 +940,17 @@ const _wireApp = function () {
   OrderCheckOutView._addHandlerReceiptAddManual(controlShowReceiptAddManualForm);
   OrderCheckOutView._addHandlerReceiptSaveOverride(controlSaveReceiptOverride);
   OrderCheckOutView._addHandlerReceiptSaveManual(controlSaveManualReceiptAdj);
+  OrderCheckOutView._addHandlerApplyPromo(controlApplyPromoCode);
+  OrderCheckOutView._addHandlerRemovePromo(controlRemovePromoCode);
+
+  // Discounts
+  DiscountView._addHandlerOpen(controlOpenDiscounts);
+  DiscountView._addHandlerClose(controlCloseDiscounts);
+  DiscountView._addHandlerNewCode(controlNewDiscountCode);
+  DiscountView._addHandlerSave(controlSaveDiscountCode);
+  DiscountView._addHandlerEdit(controlEditDiscountCode);
+  DiscountView._addHandlerDelete(controlDeleteDiscountCode);
+  DiscountView._addHandlerToggleStatus(controlToggleDiscountStatus);
 };
 
 const initAuth = async function () {

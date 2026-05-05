@@ -17,6 +17,8 @@ export const state = {
   salesBasket: [],
   cashflowSales: [],
   expenses: [],
+  discountCodes: [],
+  currentPromoCode: null,
   settings: {
     adjustments: [],
     showRemovedAdjustments: true,
@@ -298,6 +300,7 @@ export const toggleAdjustment = async function (id) {
 // ── Per-receipt adjustments ───────────────────────────────────────────────────
 
 export const initReceiptAdjustments = function () {
+  state.currentPromoCode = null;
   state.currentReceiptAdjustments = state.settings.adjustments
     .filter((a) => a.enabled)
     .map((a) => ({
@@ -341,6 +344,7 @@ export const addManualReceiptAdjustment = function (data) {
 
 export const clearReceiptAdjustments = function () {
   state.currentReceiptAdjustments = [];
+  state.currentPromoCode = null;
 };
 
 // ── Calculation ───────────────────────────────────────────────────────────────
@@ -448,6 +452,159 @@ export const deleteExpense = async function (id) {
   if (error) throw error;
   const index = state.expenses.findIndex((e) => e.id === id);
   if (index !== -1) state.expenses.splice(index, 1);
+};
+
+// ── Discount Codes ────────────────────────────────────────────────────────────
+
+const dbToDiscountCode = (row) => ({
+  id: row.id,
+  title: row.title,
+  code: row.code,
+  description: row.description ?? "",
+  type: row.type,
+  value: Number(row.value),
+  usageLimit: row.usage_limit,
+  usageCount: row.usage_count,
+  status: row.status,
+  createdAt: row.created_at,
+});
+
+export const loadDiscountCodes = async function () {
+  const { data, error } = await supabase
+    .from("discount_codes")
+    .select("*")
+    .eq("user_id", state.userId)
+    .order("created_at");
+  if (error) {
+    state.discountCodes = [];
+    return;
+  }
+  state.discountCodes = data.map(dbToDiscountCode);
+};
+
+export const createDiscountCode = async function (data) {
+  const code = data.code.toUpperCase().trim();
+  const { data: row, error } = await supabase
+    .from("discount_codes")
+    .insert({
+      user_id: state.userId,
+      title: data.title,
+      code,
+      description: data.description || null,
+      type: data.type,
+      value: Number(data.value),
+      usage_limit: data.usageLimit ?? null,
+      usage_count: 0,
+      status: "active",
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  const dc = dbToDiscountCode(row);
+  state.discountCodes.push(dc);
+  return dc;
+};
+
+export const updateDiscountCode = async function (id, data) {
+  const code = data.code.toUpperCase().trim();
+  const { error } = await supabase
+    .from("discount_codes")
+    .update({
+      title: data.title,
+      code,
+      description: data.description || null,
+      type: data.type,
+      value: Number(data.value),
+      usage_limit: data.usageLimit ?? null,
+    })
+    .eq("id", id)
+    .eq("user_id", state.userId);
+  if (error) throw error;
+  const dc = state.discountCodes.find((d) => d.id === id);
+  if (dc) {
+    dc.title = data.title;
+    dc.code = code;
+    dc.description = data.description || "";
+    dc.type = data.type;
+    dc.value = Number(data.value);
+    dc.usageLimit = data.usageLimit ?? null;
+  }
+};
+
+export const deleteDiscountCode = async function (id) {
+  const { error } = await supabase
+    .from("discount_codes")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", state.userId);
+  if (error) throw error;
+  const index = state.discountCodes.findIndex((d) => d.id === id);
+  if (index !== -1) state.discountCodes.splice(index, 1);
+};
+
+export const toggleDiscountCodeStatus = async function (id) {
+  const dc = state.discountCodes.find((d) => d.id === id);
+  if (!dc) throw new Error("Code not found");
+  const newStatus = dc.status === "active" ? "paused" : "active";
+  const { error } = await supabase
+    .from("discount_codes")
+    .update({ status: newStatus })
+    .eq("id", id)
+    .eq("user_id", state.userId);
+  if (error) throw error;
+  dc.status = newStatus;
+};
+
+export const validateDiscountCode = function (code) {
+  const normalized = code.toUpperCase().trim();
+  const dc = state.discountCodes.find((d) => d.code === normalized);
+  if (!dc) throw new Error("Invalid promo code");
+  if (dc.status !== "active") throw new Error("This code is currently inactive");
+  if (dc.usageLimit !== null && dc.usageCount >= dc.usageLimit)
+    throw new Error("This code has reached its usage limit");
+  return dc;
+};
+
+export const applyPromoCodeToReceipt = function (dc) {
+  const adj = {
+    id: generateAdjustmentId(),
+    name: `${dc.title} (${dc.code})`,
+    type: "discount",
+    calculation: dc.type === "percentage" ? "percentage" : "fixed",
+    value: dc.value,
+    appliedValue: dc.value,
+    removed: false,
+    source: "promo-code",
+  };
+  state.currentReceiptAdjustments.push(adj);
+  state.currentPromoCode = {
+    discountCodeId: dc.id,
+    adjId: adj.id,
+    code: dc.code,
+    title: dc.title,
+    type: dc.type,
+    value: dc.value,
+  };
+  return adj;
+};
+
+export const removePromoCodeFromReceipt = function () {
+  if (!state.currentPromoCode) return;
+  const { adjId } = state.currentPromoCode;
+  const index = state.currentReceiptAdjustments.findIndex((a) => a.id === adjId);
+  if (index !== -1) state.currentReceiptAdjustments.splice(index, 1);
+  state.currentPromoCode = null;
+};
+
+export const redeemDiscountCode = async function (id) {
+  const dc = state.discountCodes.find((d) => d.id === id);
+  if (!dc) return;
+  const { error } = await supabase
+    .from("discount_codes")
+    .update({ usage_count: dc.usageCount + 1 })
+    .eq("id", id)
+    .eq("user_id", state.userId);
+  if (!error) dc.usageCount += 1;
 };
 
 function parseVariants(raw) {

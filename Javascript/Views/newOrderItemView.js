@@ -1,4 +1,4 @@
-import View from "./view.js";
+﻿import View from "./view.js";
 
 class NewOrderItemView extends View {
   _parentElement = document.querySelector(".modal-parent");
@@ -27,7 +27,7 @@ class NewOrderItemView extends View {
 
     this._itemModal.querySelector(".title").textContent = item.itemName;
     this._itemModal.querySelector(".hint").textContent = item.category;
-    this._itemModal.querySelector(".item-price").textContent = `₱${item.price}`;
+    this._itemModal.querySelector(".item-price").textContent = `$${item.price}`;
 
     const imgEl = this._itemModal.querySelector(".item-image");
     if (imgEl) {
@@ -48,7 +48,7 @@ class NewOrderItemView extends View {
                   (option) => `
                   <div class="variant-chip" data-value="${option.optionName}" data-price="${option.optionPrice}">
                     ${option.optionName !== "" ? option.optionName : `Unnamed option`}
-                    <span>${option.optionPrice === "0" ? "" : `₱${option.optionPrice}`}</span>
+                    <span>${option.optionPrice === "0" ? "" : `$${option.optionPrice}`}</span>
                   </div>
                   `,
                 )

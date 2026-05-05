@@ -1,4 +1,4 @@
-import View from "./view.js";
+﻿import View from "./view.js";
 
 class MenuListView extends View {
   _parentElement = document.querySelector(".modal-parent");
@@ -30,7 +30,7 @@ class MenuListView extends View {
                     <img src="${item.imageURL}" alt="${item.itemName}" />
                     <div>
                       <div class="title">${item.itemName}</div>
-                      <div class="hint">₱${item.price}</div>
+                      <div class="hint">$${item.price}</div>
                     </div>
                   </div>
                 </div>

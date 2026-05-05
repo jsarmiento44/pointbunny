@@ -4424,3 +4424,281 @@ body[data-theme="dark"] .receipt-manual-overlay {
   .cashflow-header { padding: 0 16px; }
   .cashflow-period-bar { padding: 10px 16px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DISCOUNTS PANEL
+═══════════════════════════════════════════════════════════════════════════ */
+
+.discount-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+}
+
+.discount-code-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.discount-empty {
+  color: var(--text-muted, #888);
+  font-size: 0.9rem;
+  padding: 24px 0;
+  text-align: center;
+}
+
+/* ── Code item ─────────────────────────────────────────────────────────────── */
+
+.discount-code-item {
+  background: var(--panel-strong);
+  border: 1px solid var(--border, rgba(0,0,0,0.08));
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: opacity 0.2s;
+}
+
+.discount-code-item--paused {
+  opacity: 0.55;
+}
+
+.discount-code-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.discount-code-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.discount-code-badge {
+  font-family: monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: var(--accent, #2d7a4f);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 8px;
+}
+
+.discount-status-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.discount-status-badge--active {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+}
+
+.discount-status-badge--paused {
+  background: rgba(234, 179, 8, 0.15);
+  color: #a16207;
+}
+
+.discount-code-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.discount-toggle-btn,
+.discount-edit-btn,
+.discount-delete-btn {
+  font-size: 0.82rem;
+  padding: 5px 12px;
+  border-radius: 8px;
+}
+
+.discount-delete-btn {
+  color: var(--danger, #d43f3f);
+  border-color: var(--danger, #d43f3f);
+}
+
+.discount-code-details {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 0.88rem;
+}
+
+.discount-code-title {
+  font-weight: 600;
+}
+
+.discount-value-tag {
+  background: rgba(var(--accent-rgb, 45,122,79), 0.1);
+  color: var(--accent, #2d7a4f);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+.discount-usage-text {
+  color: var(--text-muted, #888);
+  font-size: 0.82rem;
+}
+
+.discount-code-desc {
+  color: var(--text-muted, #888);
+  font-size: 0.82rem;
+  font-style: italic;
+}
+
+/* ── Discount code form modal ──────────────────────────────────────────────── */
+
+.discount-code-form-container {
+  max-width: 480px;
+}
+
+.field-optional {
+  font-size: 0.8em;
+  opacity: 0.6;
+  font-weight: 400;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROMO CODE SECTION (checkout)
+═══════════════════════════════════════════════════════════════════════════ */
+
+.promo-code-section {
+  margin-bottom: 10px;
+}
+
+.promo-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.promo-input-row input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border, rgba(0,0,0,0.15));
+  border-radius: 10px;
+  background: var(--input-bg, transparent);
+  font-size: 0.88rem;
+  font-family: monospace;
+  letter-spacing: 0.05em;
+  color: inherit;
+}
+
+.promo-input-row button {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--accent, #2d7a4f);
+  background: transparent;
+  color: var(--accent, #2d7a4f);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.promo-input-row button:hover {
+  background: var(--accent, #2d7a4f);
+  color: #fff;
+}
+
+/* Applied state */
+.promo-code-section--applied {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.promo-applied-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.promo-code-badge-sm {
+  font-family: monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: var(--accent, #2d7a4f);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.promo-applied-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted, #555);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.promo-applied-amount {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #16a34a;
+  white-space: nowrap;
+}
+
+.promo-remove-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted, #888);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.promo-remove-btn:hover {
+  color: var(--danger, #d43f3f);
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .discount-panel-body {
+    padding: 16px;
+  }
+
+  .discount-code-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .discount-code-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

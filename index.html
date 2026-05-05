@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -69,7 +69,7 @@
       <section class="stats-bar fade-up" aria-label="Today overview">
         <div class="stat-card stat-card--accent">
           <span class="stat-label">Today's Sales</span>
-          <span class="stat-value" id="totalStr">₱0.00</span>
+          <span class="stat-value" id="totalStr">$0.00</span>
         </div>
         <div class="stat-card">
           <span class="stat-label">Date</span>
@@ -135,7 +135,7 @@
               <div class="settings-toggle-row">
                 <div>
                   <p class="settings-toggle-label">Receipt Printing</p>
-                  <p class="settings-toggle-hint">When on, the checkout will print a receipt before recording the sale.</p>
+                  <p class="settings-toggle-hint">When on, the checkout will print a receipt before recording the sale. Turn this off to push transactions through without printing.</p>
                 </div>
                 <label class="switch">
                   <input type="checkbox" id="printingToggle" checked />
@@ -207,7 +207,7 @@
                   <input
                     type="number"
                     name="price"
-                    placeholder="₱0.00"
+                    placeholder="$0.00"
                     step="1"
                     min="0"
                     value=""
@@ -325,7 +325,7 @@
                       <input
                         type="number"
                         name="option-price"
-                        placeholder="₱0.00"
+                        placeholder="$0.00"
                         step="1"
                         min="0"
                       />
@@ -374,7 +374,7 @@
             </p>
 
             <div class="item-price" style="font-weight: 900; margin-top: 12px">
-              ₱${item.price}
+              $${item.price}
             </div>
 
             <div class="quantity-wrapper">
@@ -464,14 +464,12 @@
         </article>
 
         <!-- Discounts -->
-        <article class="card card--locked" tabindex="-1" aria-disabled="true">
+        <article class="card" tabindex="0">
           <span class="ring" aria-hidden="true"></span>
-          <span class="coming-soon-badge" aria-hidden="true">Soon</span>
           <button
             class="btn-main"
             data-action="discounts"
-            aria-label="Apply discounts"
-            tabindex="-1"
+            aria-label="Manage discounts"
           >
             <span class="card-icon" aria-hidden="true">
               <svg
@@ -682,6 +680,34 @@
           <div class="cashflow-list" id="cashflowExpensesList"></div>
         </div>
       </div>
+    </div>
+
+    <!-- Discounts Panel -->
+    <div id="discountPanel" class="cashflow-panel hidden">
+      <div class="cashflow-header">
+        <button class="discount-back cashflow-back" aria-label="Go back">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" width="20" height="20">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
+          </svg>
+        </button>
+        <div class="cashflow-header-center">
+          <h2 class="cashflow-title">Offers &amp; Discounts</h2>
+        </div>
+        <div class="cashflow-header-actions">
+          <button class="btn primary" id="newDiscountCodeBtn" type="button">+ New Code</button>
+        </div>
+      </div>
+      <div class="discount-panel-body">
+        <ul class="discount-code-list" id="discountCodeList"></ul>
+      </div>
+    </div>
+
+    <!-- Discount Code Form Modal -->
+    <div class="modal-backdrop hidden" id="discountCodeModal">
+      <div class="modal-container discount-code-form-container" id="discountCodeForm"></div>
     </div>
 
     <!-- Add Expense Modal -->

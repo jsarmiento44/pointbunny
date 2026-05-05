@@ -1,4 +1,4 @@
-import View from "./view.js";
+﻿import View from "./view.js";
 
 class OrderCheckOutView extends View {
   _parentElement = document.querySelector(".modal-parent");
@@ -21,7 +21,7 @@ class OrderCheckOutView extends View {
               <span>${item.itemName} x${item.quantity}</span>
               <span style="font-size:0.85rem; opacity:0.7;">${allVariants.join(", ")}</span>
             </div>
-            <span>&#8369;${item.totalPrice}</span>
+            <span>$${item.totalPrice}</span>
           </div>`;
         },
       )
@@ -33,22 +33,60 @@ class OrderCheckOutView extends View {
     if (el) el.innerHTML = this._generateCartItemsMarkup(cart);
   }
 
+  // ── Promo code section ────────────────────────────────────────────────────────
+
+  _generatePromoSection(promoCode, adjResult) {
+    if (promoCode) {
+      const promoLine = adjResult.lineItems.find((li) => li.source === "promo-code");
+      const amtText = promoLine
+        ? `−$${Math.abs(promoLine.computedAmount).toFixed(2)}`
+        : promoCode.type === "percentage"
+        ? `${promoCode.value}% off`
+        : `$${promoCode.value.toFixed(2)} off`;
+
+      return `
+        <div class="promo-code-section promo-code-section--applied">
+          <div class="promo-applied-info">
+            <span class="promo-code-badge-sm">${promoCode.code}</span>
+            <span class="promo-applied-name">${promoCode.title}</span>
+            <span class="promo-applied-amount">${amtText}</span>
+          </div>
+          <button type="button" class="promo-remove-btn" id="removePromoBtn">Remove</button>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="promo-code-section">
+        <div class="promo-input-row">
+          <input type="text" id="promoCodeInput" placeholder="Promo code"
+            autocomplete="off" spellcheck="false" style="text-transform:uppercase;" />
+          <button type="button" id="applyPromoBtn">Apply</button>
+        </div>
+      </div>
+    `;
+  }
+
   // ── Adj section markup (reused by both initial render and in-place refresh) ──
 
-  _generateAdjSectionMarkup(subtotal, allAdj, adjResult, showRemoved) {
+  _generateAdjSectionMarkup(subtotal, allAdj, adjResult, showRemoved, promoCode = null) {
     const activeLines = adjResult.lineItems;
     const removedLines = allAdj.filter((a) => a.removed);
-    const hasVisible =
-      activeLines.length > 0 || (showRemoved && removedLines.length > 0);
 
-    const activeHtml = activeLines
+    const nonPromoLines = activeLines.filter((li) => li.source !== "promo-code");
+    const hasVisible =
+      nonPromoLines.length > 0 ||
+      promoCode ||
+      (showRemoved && removedLines.length > 0);
+
+    const activeHtml = nonPromoLines
       .map(
         (adj) => `
         <div class="receipt-adj-item" data-adj-id="${adj.id}">
           <div class="receipt-adj-info">
             <span>${adj.name}${adj.calculation === "percentage" ? ` (${adj.appliedValue}%)` : ""}</span>
             <span class="receipt-adj-amount ${adj.type}">
-              ${adj.computedAmount >= 0 ? "+" : ""}&#8369;${adj.computedAmount.toFixed(2)}
+              ${adj.computedAmount >= 0 ? "+" : ""}$${adj.computedAmount.toFixed(2)}
             </span>
           </div>
           <div class="receipt-adj-controls">
@@ -67,7 +105,7 @@ class OrderCheckOutView extends View {
           <div class="receipt-adj-item receipt-adj-item--removed">
             <div class="receipt-adj-info">
               <span>${adj.name}${adj.calculation === "percentage" ? ` (${adj.appliedValue}%)` : ""} <em>(removed)</em></span>
-              <span>&#8369;0.00</span>
+              <span>$0.00</span>
             </div>
           </div>
         `,
@@ -76,17 +114,19 @@ class OrderCheckOutView extends View {
       : "";
 
     return `
+      ${this._generatePromoSection(promoCode, adjResult)}
       ${
         hasVisible
           ? `
         <div class="cart-subtotal">
           <span>Subtotal</span>
-          <span>&#8369;${subtotal.toFixed(2)}</span>
+          <span>$${subtotal.toFixed(2)}</span>
         </div>
-        <div class="receipt-adj-list">
-          ${activeHtml}
-          ${removedHtml}
-        </div>
+        ${
+          activeHtml || removedHtml
+            ? `<div class="receipt-adj-list">${activeHtml}${removedHtml}</div>`
+            : ""
+        }
         <div class="adj-line-divider"></div>
       `
           : ""
@@ -128,7 +168,7 @@ class OrderCheckOutView extends View {
 
       <div class="cart-total">
         <span>Total:</span>
-        <span id="cartTotal">&#8369;${this._totalPrice.toFixed(2)}</span>
+        <span id="cartTotal">$${this._totalPrice.toFixed(2)}</span>
       </div>
 
       <div class="receive-container" style="display:flex; gap:8px; align-items:center;">
@@ -139,7 +179,7 @@ class OrderCheckOutView extends View {
 
       <label>
         Change:
-        <div id="changeAmount" class="change-box">&#8369;0.00</div>
+        <div id="changeAmount" class="change-box">$0.00</div>
       </label>
 
       ${(() => {
@@ -156,7 +196,7 @@ class OrderCheckOutView extends View {
 
   // ── In-place refresh (does not reset the payment input) ───────────────────────
 
-  _refreshAdjustments(subtotal, allAdj, adjResult, showRemoved) {
+  _refreshAdjustments(subtotal, allAdj, adjResult, showRemoved, promoCode = null) {
     this._subtotal = subtotal;
     this._adjResult = adjResult;
     this._totalPrice = adjResult.finalTotal;
@@ -168,16 +208,17 @@ class OrderCheckOutView extends View {
         allAdj,
         adjResult,
         showRemoved,
+        promoCode,
       );
     }
 
     const totalEl = this._parentElement.querySelector("#cartTotal");
-    if (totalEl) totalEl.textContent = `₱${adjResult.finalTotal.toFixed(2)}`;
+    if (totalEl) totalEl.textContent = `$${adjResult.finalTotal.toFixed(2)}`;
 
     // Total changed — reset payment validation state
     const changeBox = this._parentElement.querySelector("#changeAmount");
     if (changeBox) {
-      changeBox.textContent = "₱0.00";
+      changeBox.textContent = "$0.00";
       changeBox.classList.remove("ok");
     }
     this._parentElement
@@ -197,7 +238,7 @@ class OrderCheckOutView extends View {
     const html = `
       <div class="receipt-edit-form" id="receiptEditForm">
         <label class="adj-form-sublabel">
-          New value (${adj.calculation === "percentage" ? "%" : "&#8369;"})
+          New value (${adj.calculation === "percentage" ? "%" : "$"})
         </label>
         <input type="number" id="receiptEditValue" value="${adj.appliedValue}" min="0" step="0.01" />
         <div class="adj-form-actions" style="margin-top:6px;">
@@ -237,7 +278,7 @@ class OrderCheckOutView extends View {
 
         <p class="adj-form-sublabel">Calculation</p>
         <div class="adj-selector" id="receiptManualCalcSelector">
-          <button type="button" class="adj-selector-btn active" data-value="fixed">Fixed (&#8369;)</button>
+          <button type="button" class="adj-selector-btn active" data-value="fixed">Fixed ($)</button>
           <button type="button" class="adj-selector-btn" data-value="percentage">
             Percentage (%)
             <span class="adj-info-tip">i</span>
@@ -246,7 +287,7 @@ class OrderCheckOutView extends View {
         <input type="hidden" id="receiptManualCalc" value="fixed" />
 
         <div class="edit-field">
-          <label id="receiptManualValueLabel">Value (&#8369;)</label>
+          <label id="receiptManualValueLabel">Value ($)</label>
           <input type="number" id="receiptManualValue" min="0" step="0.01" placeholder="0" />
         </div>
 
@@ -272,7 +313,7 @@ class OrderCheckOutView extends View {
           if (group.id === "receiptManualCalcSelector") {
             document.getElementById("receiptManualCalc").value = btn.dataset.value;
             document.getElementById("receiptManualValueLabel").textContent =
-              btn.dataset.value === "percentage" ? "Value (%)" : "Value (₱)";
+              btn.dataset.value === "percentage" ? "Value (%)" : "Value ($)";
           } else {
             document.getElementById("receiptManualType").value = btn.dataset.value;
           }
@@ -411,6 +452,23 @@ class OrderCheckOutView extends View {
       }
       handler({ name, type, calculation, value });
       this._removeReceiptForms();
+    });
+  }
+
+  _addHandlerApplyPromo(handler) {
+    this._parentElement.addEventListener("click", (e) => {
+      if (!e.target.closest("#applyPromoBtn")) return;
+      const input = this._parentElement.querySelector("#promoCodeInput");
+      const code = input?.value.trim();
+      if (!code) return;
+      handler(code);
+    });
+  }
+
+  _addHandlerRemovePromo(handler) {
+    this._parentElement.addEventListener("click", (e) => {
+      if (!e.target.closest("#removePromoBtn")) return;
+      handler();
     });
   }
 

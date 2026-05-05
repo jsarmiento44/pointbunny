@@ -40,7 +40,7 @@ class MenuEditView extends View {
                 alt="Item Image"
                 class="edit-image-preview"
               />
-              <input type="file" class="edit-image-input" name="image" style="display:none;" />
+              <input type="file" class="edit-image-input" name="image" accept="image/*" style="display:none;" />
               <span class="edit-image-overlay">Click to change image</span>
             </div>
 
@@ -252,6 +252,11 @@ class MenuEditView extends View {
 
       const file = input.files[0];
       if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        input.value = "";
+        return;
+      }
 
       const preview = input
         .closest(".file-upload-preview-wrapper")

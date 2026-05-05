@@ -1,4 +1,4 @@
-import View from "./view.js";
+﻿import View from "./view.js";
 
 class NewMenuItemView extends View {
   _parentElement = document.querySelector("#addMenuModal");
@@ -190,7 +190,7 @@ class NewMenuItemView extends View {
             <input
               type="number"
               name="option-price"
-              placeholder="₱0.00"
+              placeholder="$0.00"
               step="1"
               min="0"
             />
@@ -282,13 +282,20 @@ class NewMenuItemView extends View {
     const fileNameSpan = this._parentElement.querySelector(".file-upload-name");
 
     fileInput.addEventListener("change", () => {
-      if (fileInput.files && fileInput.files.length > 0) {
-        fileNameSpan.textContent = fileInput.files[0].name;
-        fileNameSpan.style.color = "green";
-      } else {
+      const file = fileInput.files?.[0];
+      if (!file) {
         fileNameSpan.textContent = "No file chosen";
         fileNameSpan.style.color = "";
+        return;
       }
+      if (!file.type.startsWith("image/")) {
+        fileInput.value = "";
+        fileNameSpan.textContent = "Please select an image file";
+        fileNameSpan.style.color = "red";
+        return;
+      }
+      fileNameSpan.textContent = file.name;
+      fileNameSpan.style.color = "green";
     });
   }
 }

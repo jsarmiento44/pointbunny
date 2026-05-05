@@ -1,4 +1,4 @@
-class SettingsView {
+﻿class SettingsView {
   _modal = document.getElementById("settingsModal");
   _openBtn = document.getElementById("settingsBtn");
   _closeBtn = document.getElementById("settingsCloseBtn");
@@ -110,7 +110,7 @@ class SettingsView {
             <div class="adjustment-item-name">${adj.name}</div>
             <div class="adjustment-item-meta">
               ${adj.type === "fee" ? "Fee" : "Discount"} &middot;
-              ${adj.calculation === "fixed" ? "&#8369;" + adj.value.toFixed(2) : adj.value + "%"}
+              ${adj.calculation === "fixed" ? "$" + adj.value.toFixed(2) : adj.value + "%"}
             </div>
           </div>
           <div class="adjustment-item-controls">
@@ -148,7 +148,7 @@ class SettingsView {
 
         <p class="adj-form-sublabel">Calculation</p>
         <div class="adj-selector" id="adjCalcSelector">
-          <button type="button" class="adj-selector-btn ${!isEdit || adjustment.calculation === "fixed" ? "active" : ""}" data-value="fixed">Fixed (&#8369;)</button>
+          <button type="button" class="adj-selector-btn ${!isEdit || adjustment.calculation === "fixed" ? "active" : ""}" data-value="fixed">Fixed ($)</button>
           <button type="button" class="adj-selector-btn ${isEdit && adjustment.calculation === "percentage" ? "active" : ""}" data-value="percentage">
             Percentage (%)
             <span class="adj-info-tip">i</span>
@@ -158,7 +158,7 @@ class SettingsView {
 
         <div class="edit-field">
           <label for="adjValue" id="adjValueLabel">
-            ${isEdit && adjustment.calculation === "percentage" ? "Value (%)" : "Value (&#8369;)"}
+            ${isEdit && adjustment.calculation === "percentage" ? "Value (%)" : "Value ($)"}
           </label>
           <input type="number" id="adjValue" min="0" step="0.01" placeholder="0"
             value="${isEdit ? adjustment.value : ""}" />
@@ -189,7 +189,7 @@ class SettingsView {
         if (group.id === "adjCalcSelector") {
           document.getElementById("adjCalc").value = btn.dataset.value;
           document.getElementById("adjValueLabel").textContent =
-            btn.dataset.value === "percentage" ? "Value (%)" : "Value (₱)";
+            btn.dataset.value === "percentage" ? "Value (%)" : "Value ($)";
         } else {
           document.getElementById("adjType").value = btn.dataset.value;
         }

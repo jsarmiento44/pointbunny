@@ -1,4 +1,4 @@
-import View from "./view.js";
+﻿import View from "./view.js";
 
 class ReceiptView extends View {
   _generateReceiptHTML(sale) {
@@ -30,7 +30,7 @@ class ReceiptView extends View {
         return `
         <tr>
           <td style="padding:2px 4px 2px 0;vertical-align:top;">${item.itemName} x${item.quantity}</td>
-          <td style="padding:2px 0;text-align:right;vertical-align:top;white-space:nowrap;">&#8369;${Number(item.totalPrice).toFixed(2)}</td>
+          <td style="padding:2px 0;text-align:right;vertical-align:top;white-space:nowrap;">$${Number(item.totalPrice).toFixed(2)}</td>
         </tr>
         ${variants ? `<tr><td colspan="2" style="font-size:10px;color:#555;padding:0 0 4px 0;">${variants}</td></tr>` : ""}
       `;
@@ -44,14 +44,14 @@ class ReceiptView extends View {
       <table>
         <tr>
           <td style="padding:2px 4px 2px 0;font-size:11px;">Subtotal</td>
-          <td style="text-align:right;font-size:11px;">&#8369;${Number(sale.subtotal ?? sale.totalPrice).toFixed(2)}</td>
+          <td style="text-align:right;font-size:11px;">$${Number(sale.subtotal ?? sale.totalPrice).toFixed(2)}</td>
         </tr>
         ${activeAdj
           .map(
             (adj) => `
           <tr>
             <td style="padding:1px 4px 1px 0;font-size:11px;">${adj.name}${adj.calculation === "percentage" ? ` (${adj.appliedValue}%)` : ""}</td>
-            <td style="text-align:right;font-size:11px;">${adj.computedAmount >= 0 ? "+" : ""}&#8369;${Number(adj.computedAmount).toFixed(2)}</td>
+            <td style="text-align:right;font-size:11px;">${adj.computedAmount >= 0 ? "+" : ""}$${Number(adj.computedAmount).toFixed(2)}</td>
           </tr>
         `,
           )
@@ -104,15 +104,15 @@ class ReceiptView extends View {
   <table>
     <tr>
       <td style="font-weight:bold;font-size:13px;padding:3px 4px 3px 0;">TOTAL</td>
-      <td style="font-weight:bold;font-size:13px;text-align:right;">&#8369;${Number(sale.totalPrice).toFixed(2)}</td>
+      <td style="font-weight:bold;font-size:13px;text-align:right;">$${Number(sale.totalPrice).toFixed(2)}</td>
     </tr>
     <tr>
       <td style="font-size:11px;padding:3px 4px 2px 0;">Cash Tendered</td>
-      <td style="font-size:11px;text-align:right;">&#8369;${Number(sale.customerPayment).toFixed(2)}</td>
+      <td style="font-size:11px;text-align:right;">$${Number(sale.customerPayment).toFixed(2)}</td>
     </tr>
     <tr>
       <td style="font-size:11px;font-weight:bold;padding:2px 4px 2px 0;">Change</td>
-      <td style="font-size:11px;font-weight:bold;text-align:right;">&#8369;${Number(sale.customerChange).toFixed(2)}</td>
+      <td style="font-size:11px;font-weight:bold;text-align:right;">$${Number(sale.customerChange).toFixed(2)}</td>
     </tr>
   </table>
   <hr class="divider">

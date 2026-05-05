@@ -1,4 +1,4 @@
-import View from "./view.js";
+﻿import View from "./view.js";
 
 class NewOrderView extends View {
   _parentElement = document.querySelector(".modal-parent");
@@ -34,7 +34,7 @@ class NewOrderView extends View {
                             <img src="${item.imageURL}" alt="${item.itemName}" />
                             <div>
                               <div class="title">${item.itemName}</div>
-                              <div class="hint">₱${item.price}</div>
+                              <div class="hint">$${item.price}</div>
                             </div>
                           </div>
                         </div>
@@ -65,7 +65,7 @@ class NewOrderView extends View {
                 <span style="font-size:0.85rem; opacity:0.7;">${allVariants.join(", ")}</span>
               </div>
               <div style="display:flex; align-items:center; gap:8px;">
-                <span>₱${item.totalPrice}</span>
+                <span>$${item.totalPrice}</span>
                 <button class="cart-item-delete-btn" data-cart-index="${index}" type="button">&times;</button>
               </div>
             </div>`;
@@ -80,7 +80,7 @@ class NewOrderView extends View {
       >
         <span>Total:</span>
         <span>
-          ₱${this._data.cart.reduce((acc, item) => acc + item.totalPrice, 0)}
+          $${this._data.cart.reduce((acc, item) => acc + item.totalPrice, 0)}
         </span>
       </div>
 
