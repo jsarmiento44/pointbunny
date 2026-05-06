@@ -46,10 +46,28 @@
               ✦
             </button>
           </div>
-          <button class="btn icon-btn" type="button" id="settingsBtn" aria-label="Settings" title="Settings">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+          <button
+            class="btn icon-btn"
+            type="button"
+            id="settingsBtn"
+            aria-label="Settings"
+            title="Settings"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              width="20"
+              height="20"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"
+              />
             </svg>
           </button>
           <button class="btn" type="button" id="logoutBtn">Log Out</button>
@@ -98,19 +116,27 @@
           <h2 class="edit-form-title">Settings</h2>
 
           <div class="settings-body">
-
             <!-- Menu Categories -->
             <section class="settings-section">
               <div class="settings-section-header">
                 <div>
                   <h3 class="settings-section-title">Menu Categories</h3>
-                  <p class="settings-section-hint">Add or remove categories used when creating menu items.</p>
+                  <p class="settings-section-hint">
+                    Add or remove categories used when creating menu items.
+                  </p>
                 </div>
               </div>
               <ul class="category-list" id="categoryList"></ul>
               <div class="category-add-row">
-                <input type="text" id="categoryInput" placeholder="New category name" class="category-input" />
-                <button class="btn primary" id="addCategoryBtn" type="button">+ Add</button>
+                <input
+                  type="text"
+                  id="categoryInput"
+                  placeholder="New category name"
+                  class="category-input"
+                />
+                <button class="btn primary" id="addCategoryBtn" type="button">
+                  + Add
+                </button>
               </div>
             </section>
 
@@ -118,10 +144,16 @@
             <section class="settings-section">
               <div class="settings-section-header">
                 <div>
-                  <h3 class="settings-section-title">Receipt Adjustments</h3>
-                  <p class="settings-section-hint">Auto-applied to every new receipt. Fees and discounts.</p>
+                  <h3 class="settings-section-title">
+                    Automatic Receipt Adjustments
+                  </h3>
+                  <p class="settings-section-hint">
+                    Auto-applied to every new receipt. Fees and discounts.
+                  </p>
                 </div>
-                <button class="btn primary" id="addAdjustmentBtn" type="button">+ Add</button>
+                <button class="btn primary" id="addAdjustmentBtn" type="button">
+                  + Add
+                </button>
               </div>
 
               <!-- Populated by settingsView.js -->
@@ -135,7 +167,11 @@
               <div class="settings-toggle-row">
                 <div>
                   <p class="settings-toggle-label">Receipt Printing</p>
-                  <p class="settings-toggle-hint">When on, the checkout will print a receipt before recording the sale. Turn this off to push transactions through without printing.</p>
+                  <p class="settings-toggle-hint">
+                    When on, the checkout will print a receipt before recording
+                    the sale. Turn this off to push transactions through without
+                    printing.
+                  </p>
                 </div>
                 <label class="switch">
                   <input type="checkbox" id="printingToggle" checked />
@@ -148,7 +184,12 @@
               <div class="settings-toggle-row">
                 <div>
                   <p class="settings-toggle-label">Confirm after printing</p>
-                  <p class="settings-toggle-hint">After the print dialog closes, ask "Did the receipt print?" before recording the sale. Turn this on if your printer is unreliable — it gives you a chance to reprint before the transaction is saved.</p>
+                  <p class="settings-toggle-hint">
+                    After the print dialog closes, ask "Did the receipt print?"
+                    before recording the sale. Turn this on if your printer is
+                    unreliable — it gives you a chance to reprint before the
+                    transaction is saved.
+                  </p>
                 </div>
                 <label class="switch">
                   <input type="checkbox" id="confirmPrintToggle" checked />
@@ -160,8 +201,13 @@
             <section class="settings-section">
               <div class="settings-toggle-row">
                 <div>
-                  <p class="settings-toggle-label">Show removed adjustments on receipt</p>
-                  <p class="settings-toggle-hint">When on, removed line items appear crossed out on the receipt.</p>
+                  <p class="settings-toggle-label">
+                    Show removed adjustments on receipt
+                  </p>
+                  <p class="settings-toggle-hint">
+                    When on, removed line items appear crossed out on the
+                    receipt.
+                  </p>
                 </div>
                 <label class="switch">
                   <input type="checkbox" id="showRemovedToggle" checked />
@@ -170,6 +216,37 @@
               </div>
             </section>
 
+            <!-- Order Queue Timer Settings -->
+            <section class="settings-section">
+              <div class="settings-section-header">
+                <div>
+                  <h3 class="settings-section-title">Order Queue Timers</h3>
+                  <p class="settings-section-hint">
+                    Set when order cards change color and auto-complete. Values are in seconds.
+                  </p>
+                </div>
+              </div>
+              <div class="kds-threshold-fields">
+                <div class="kds-threshold-row">
+                  <p class="settings-toggle-label">Yellow warning (sec)</p>
+                  <input type="number" id="kdsYellowInput" min="1" value="180" class="kds-threshold-input" />
+                </div>
+                <div class="kds-threshold-row">
+                  <p class="settings-toggle-label">Red urgent (sec)</p>
+                  <input type="number" id="kdsRedInput" min="1" value="300" class="kds-threshold-input" />
+                </div>
+                <div class="kds-threshold-row">
+                  <div>
+                    <p class="settings-toggle-label">Auto-remove order (sec)</p>
+                    <p class="settings-toggle-hint">
+                      If an order is still in the queue after this many seconds,
+                      it will be automatically marked done and removed.
+                    </p>
+                  </div>
+                  <input type="number" id="kdsAutoInput" min="1" value="900" class="kds-threshold-input" />
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -236,10 +313,9 @@
                         placeholder="New category name"
                         class="new-category-field"
                       />
-                      <button
-                        class="new-category-button"
-                        type="button"
-                      >+ Add</button>
+                      <button class="new-category-button" type="button">
+                        + Add
+                      </button>
                     </div>
                   </div>
                 </label>
@@ -494,6 +570,33 @@
           </button>
         </article>
 
+        <!-- Order Queue -->
+        <article class="card" tabindex="0">
+          <span class="ring" aria-hidden="true"></span>
+          <button
+            class="btn-main"
+            data-action="order-queue"
+            aria-label="View order queue"
+            id="kdsOpenBtn"
+          >
+            <span class="card-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6"/>
+                <line x1="8" y1="12" x2="21" y2="12"/>
+                <line x1="8" y1="18" x2="21" y2="18"/>
+                <circle cx="3" cy="6" r="1" fill="currentColor"/>
+                <circle cx="3" cy="12" r="1" fill="currentColor"/>
+                <circle cx="3" cy="18" r="1" fill="currentColor"/>
+              </svg>
+            </span>
+            <div>
+              <div class="title">Order Queue</div>
+              <div class="hint">Kitchen display</div>
+            </div>
+            <div class="chev" aria-hidden="true">→</div>
+          </button>
+        </article>
+
         <!-- Summary -->
         <article class="card card--locked" tabindex="-1" aria-disabled="true">
           <span class="ring" aria-hidden="true"></span>
@@ -615,7 +718,10 @@
     <!-- App loading overlay — shown while initApp runs after login/session restore -->
     <div id="appLoadingOverlay" class="app-loading-overlay hidden">
       <div class="spinner">
-        <div></div><div></div><div></div><div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
       </div>
     </div>
 
@@ -623,21 +729,54 @@
     <div id="cashflowPanel" class="cashflow-panel hidden">
       <div class="cashflow-header">
         <button class="cashflow-back" aria-label="Go back">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
-            <line x1="19" y1="12" x2="5" y2="12"/>
-            <polyline points="12 19 5 12 12 5"/>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            width="20"
+            height="20"
+          >
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
           </svg>
         </button>
         <div class="cashflow-header-center">
           <h2 class="cashflow-title">Cash Flow</h2>
-          <span class="cashflow-period-label" id="cashflowPeriodLabel">Today</span>
+          <span class="cashflow-period-label" id="cashflowPeriodLabel"
+            >Today</span
+          >
         </div>
         <div class="cashflow-header-actions">
-          <button class="cashflow-export-btn" id="exportCsvBtn" type="button" title="Export current view to CSV">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <button
+            class="cashflow-export-btn"
+            id="exportCsvBtn"
+            type="button"
+            title="Export current view to CSV"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              width="16"
+              height="16"
+            >
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
             Export CSV
           </button>
-          <button class="btn primary" id="addExpenseBtn" type="button">+ Add Expense</button>
+          <button class="btn primary" id="addExpenseBtn" type="button">
+            + Add Expense
+          </button>
         </div>
       </div>
 
@@ -651,7 +790,9 @@
           <input type="date" id="cashflowFrom" aria-label="From date" />
           <span class="cashflow-range-sep">–</span>
           <input type="date" id="cashflowTo" aria-label="To date" />
-          <button class="btn primary" id="applyRangeBtn" type="button">Apply</button>
+          <button class="btn primary" id="applyRangeBtn" type="button">
+            Apply
+          </button>
         </div>
       </div>
 
@@ -682,22 +823,53 @@
       </div>
     </div>
 
+    <!-- Order Queue (KDS) Panel -->
+    <div id="kdsPanel" class="cashflow-panel hidden">
+      <div class="cashflow-header">
+        <button class="cashflow-back" id="kdsCloseBtn" aria-label="Go back">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+          </svg>
+        </button>
+        <div class="cashflow-header-center">
+          <h2 class="cashflow-title">Order Queue</h2>
+        </div>
+        <div class="cashflow-header-actions">
+          <span class="kds-queue-count" id="kdsQueueCount"></span>
+        </div>
+      </div>
+      <div class="kds-grid" id="kdsGrid">
+        <p class="kds-empty">No active orders.</p>
+      </div>
+    </div>
+
     <!-- Discounts Panel -->
     <div id="discountPanel" class="cashflow-panel hidden">
       <div class="cashflow-header">
         <button class="discount-back cashflow-back" aria-label="Go back">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round"
-            stroke-linejoin="round" width="20" height="20">
-            <line x1="19" y1="12" x2="5" y2="12"/>
-            <polyline points="12 19 5 12 12 5"/>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            width="20"
+            height="20"
+          >
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
           </svg>
         </button>
         <div class="cashflow-header-center">
           <h2 class="cashflow-title">Offers &amp; Discounts</h2>
         </div>
         <div class="cashflow-header-actions">
-          <button class="btn primary" id="newDiscountCodeBtn" type="button">+ New Code</button>
+          <button class="btn primary" id="newDiscountCodeBtn" type="button">
+            + New Code
+          </button>
         </div>
       </div>
       <div class="discount-panel-body">
@@ -707,30 +879,56 @@
 
     <!-- Discount Code Form Modal -->
     <div class="modal-backdrop hidden" id="discountCodeModal">
-      <div class="modal-container discount-code-form-container" id="discountCodeForm"></div>
+      <div
+        class="modal-container discount-code-form-container"
+        id="discountCodeForm"
+      ></div>
     </div>
 
     <!-- Add Expense Modal -->
     <div class="modal-backdrop hidden" id="addExpenseModal">
       <div class="modal-container expense-modal-container">
-        <button class="modal-close-btn" id="expenseModalCloseBtn">&times;</button>
+        <button class="modal-close-btn" id="expenseModalCloseBtn">
+          &times;
+        </button>
         <h2 class="edit-form-title">Add Expense</h2>
 
         <form id="addExpenseForm" class="expense-form" novalidate>
           <div class="expense-form-fields">
             <label class="expense-label">
               Amount
-              <input type="number" id="expenseAmount" name="amount" placeholder="0.00" step="0.01" min="0.01" required />
+              <input
+                type="number"
+                id="expenseAmount"
+                name="amount"
+                placeholder="0.00"
+                step="0.01"
+                min="0.01"
+                required
+              />
             </label>
 
             <label class="expense-label">
               Description
-              <input type="text" id="expenseDescription" name="description" placeholder="e.g. Supplier payment" required />
+              <input
+                type="text"
+                id="expenseDescription"
+                name="description"
+                placeholder="e.g. Supplier payment"
+                required
+              />
             </label>
 
             <label class="expense-label">
               Category <span class="expense-label-hint">(optional)</span>
-              <input type="text" id="expenseCategory" name="category" placeholder="e.g. Supplies" list="expenseCategoryList" autocomplete="off" />
+              <input
+                type="text"
+                id="expenseCategory"
+                name="category"
+                placeholder="e.g. Supplies"
+                list="expenseCategoryList"
+                autocomplete="off"
+              />
               <datalist id="expenseCategoryList">
                 <option value="Supplies"></option>
                 <option value="Utilities"></option>
@@ -742,11 +940,22 @@
 
             <label class="expense-label">
               Date &amp; Time
-              <input type="datetime-local" id="expenseDate" name="expense_date" required />
+              <input
+                type="datetime-local"
+                id="expenseDate"
+                name="expense_date"
+                required
+              />
             </label>
           </div>
 
-          <button type="submit" class="btn primary expense-submit-btn" id="expenseSubmitBtn">Add Expense</button>
+          <button
+            type="submit"
+            class="btn primary expense-submit-btn"
+            id="expenseSubmitBtn"
+          >
+            Add Expense
+          </button>
         </form>
       </div>
     </div>
@@ -759,57 +968,113 @@
 
         <!-- Forms wrapper — slides horizontally for the transition -->
         <div class="auth-forms-wrapper" id="authFormsWrapper">
-
           <!-- Sign-in form -->
           <form id="loginForm" class="auth-form" novalidate>
             <div class="auth-field">
               <label for="loginEmail">Email</label>
-              <input type="email" id="loginEmail" placeholder="you@example.com" required autocomplete="email" />
+              <input
+                type="email"
+                id="loginEmail"
+                placeholder="you@example.com"
+                required
+                autocomplete="email"
+              />
             </div>
             <div class="auth-field">
               <label for="loginPassword">Password</label>
-              <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password" />
+              <input
+                type="password"
+                id="loginPassword"
+                placeholder="••••••••"
+                required
+                autocomplete="current-password"
+              />
             </div>
             <p id="loginError" class="auth-error"></p>
-            <button type="submit" id="signInBtn" class="btn primary auth-submit">Sign In</button>
-            <p class="auth-switch">No account? <a href="#" id="showSignUpLink">Create one</a></p>
+            <button
+              type="submit"
+              id="signInBtn"
+              class="btn primary auth-submit"
+            >
+              Sign In
+            </button>
+            <p class="auth-switch">
+              No account? <a href="#" id="showSignUpLink">Create one</a>
+            </p>
           </form>
 
           <!-- Sign-up form -->
           <form id="signUpForm" class="auth-form hidden" novalidate>
-
             <div class="auth-col-pair">
               <div class="auth-field">
                 <label for="signUpFirstName">First name</label>
-                <input type="text" id="signUpFirstName" placeholder="Maria" required autocomplete="given-name" />
+                <input
+                  type="text"
+                  id="signUpFirstName"
+                  placeholder="Maria"
+                  required
+                  autocomplete="given-name"
+                />
               </div>
               <div class="auth-field">
                 <label for="signUpLastName">Last name</label>
-                <input type="text" id="signUpLastName" placeholder="Santos" required autocomplete="family-name" />
+                <input
+                  type="text"
+                  id="signUpLastName"
+                  placeholder="Santos"
+                  required
+                  autocomplete="family-name"
+                />
               </div>
             </div>
 
             <div class="auth-field">
               <label for="signUpEmail">Email</label>
-              <input type="email" id="signUpEmail" placeholder="you@example.com" required autocomplete="email" />
+              <input
+                type="email"
+                id="signUpEmail"
+                placeholder="you@example.com"
+                required
+                autocomplete="email"
+              />
             </div>
 
             <div class="auth-col-pair">
               <div class="auth-field">
                 <label for="signUpPassword">Password</label>
-                <input type="password" id="signUpPassword" placeholder="Min. 6 characters" required autocomplete="new-password" />
+                <input
+                  type="password"
+                  id="signUpPassword"
+                  placeholder="Min. 6 characters"
+                  required
+                  autocomplete="new-password"
+                />
               </div>
               <div class="auth-field">
                 <label for="signUpConfirm">Confirm password</label>
-                <input type="password" id="signUpConfirm" placeholder="••••••••" required autocomplete="new-password" />
+                <input
+                  type="password"
+                  id="signUpConfirm"
+                  placeholder="••••••••"
+                  required
+                  autocomplete="new-password"
+                />
               </div>
             </div>
 
             <p id="signUpError" class="auth-error"></p>
-            <button type="submit" id="signUpBtn" class="btn primary auth-submit">Create Account</button>
-            <p class="auth-switch">Already have an account? <a href="#" id="showSignInLink">Sign in</a></p>
+            <button
+              type="submit"
+              id="signUpBtn"
+              class="btn primary auth-submit"
+            >
+              Create Account
+            </button>
+            <p class="auth-switch">
+              Already have an account?
+              <a href="#" id="showSignInLink">Sign in</a>
+            </p>
           </form>
-
         </div>
       </div>
     </div>

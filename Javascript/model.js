@@ -14,6 +14,7 @@ export const state = {
   menuCategories: [],
   employees: [],
   cart: [],
+  orderQueue: [],
   salesBasket: [],
   cashflowSales: [],
   expenses: [],
@@ -24,6 +25,9 @@ export const state = {
     showRemovedAdjustments: true,
     printingEnabled: localStorage.getItem('pointy_printing_enabled') !== 'false',
     confirmPrint: localStorage.getItem('pointy_confirm_print') !== 'false',
+    kdsYellowThreshold: parseInt(localStorage.getItem('pointy_kds_yellow') || '180'),
+    kdsRedThreshold: parseInt(localStorage.getItem('pointy_kds_red') || '300'),
+    kdsAutoCompleteThreshold: parseInt(localStorage.getItem('pointy_kds_auto') || '900'),
   },
   currentReceiptAdjustments: [],
 };
@@ -605,6 +609,18 @@ export const redeemDiscountCode = async function (id) {
     .eq("id", id)
     .eq("user_id", state.userId);
   if (!error) dc.usageCount += 1;
+};
+
+export const recordServeTime = async function (saleDate, timedOut) {
+  const { error } = await supabase
+    .from('sales')
+    .update({
+      prepared_at: new Date().toISOString(),
+      timed_out: timedOut,
+    })
+    .eq('sale_date', saleDate)
+    .eq('user_id', state.userId);
+  if (error) throw error;
 };
 
 function parseVariants(raw) {

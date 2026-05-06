@@ -10,6 +10,9 @@
   _categoryList = document.getElementById("categoryList");
   _categoryInput = document.getElementById("categoryInput");
   _addCategoryBtn = document.getElementById("addCategoryBtn");
+  _kdsYellowInput = document.getElementById("kdsYellowInput");
+  _kdsRedInput = document.getElementById("kdsRedInput");
+  _kdsAutoInput = document.getElementById("kdsAutoInput");
   _pendingFlash = false;
 
   // ── Open / Close ─────────────────────────────────────────────────────────────
@@ -317,6 +320,23 @@
 
   syncConfirmPrintToggle(value) {
     this._confirmPrintToggle.checked = value;
+  }
+
+  syncKDSThresholds(yellow, red, auto) {
+    this._kdsYellowInput.value = yellow;
+    this._kdsRedInput.value = red;
+    this._kdsAutoInput.value = auto;
+  }
+
+  _addHandlerKDSThresholds(handler) {
+    [this._kdsYellowInput, this._kdsRedInput, this._kdsAutoInput].forEach(input => {
+      input.addEventListener('change', () => {
+        const yellow = parseInt(this._kdsYellowInput.value) || 180;
+        const red = parseInt(this._kdsRedInput.value) || 300;
+        const auto = parseInt(this._kdsAutoInput.value) || 900;
+        handler({ yellow, red, auto });
+      });
+    });
   }
 }
 

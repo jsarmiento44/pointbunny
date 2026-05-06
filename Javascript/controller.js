@@ -12,6 +12,7 @@ import SettingsView from "./Views/settingsView.js";
 import ReceiptView from "./Views/receiptView.js";
 import CashflowView from "./Views/cashflowView.js";
 import DiscountView from "./Views/discountView.js";
+import KDSView from "./Views/kdsView.js";
 
 const modelState = model.state;
 let item;
@@ -218,6 +219,7 @@ const controlOrderCheckout = function () {
 
 const _buildSale = function () {
   return {
+    id: crypto.randomUUID(),
     items: [...modelState.cart],
     subtotal: OrderCheckOutView._subtotal ?? OrderCheckOutView._totalPrice,
     adjustments: OrderCheckOutView._adjResult?.lineItems ?? [],
@@ -232,9 +234,69 @@ const _buildSale = function () {
   };
 };
 
+// ── Order Queue (KDS) ─────────────────────────────────────────────────────────
+
+let _kdsInterval = null;
+
+const _ensureKDSTick = function () {
+  if (_kdsInterval) return;
+  _kdsInterval = setInterval(_tickKDS, 1000);
+};
+
+const _stopKDSTick = function () {
+  clearInterval(_kdsInterval);
+  _kdsInterval = null;
+};
+
+const _tickKDS = function () {
+  if (modelState.orderQueue.length === 0) { _stopKDSTick(); return; }
+  const now = Date.now();
+  const { kdsYellowThreshold, kdsRedThreshold, kdsAutoCompleteThreshold } = model.state.settings;
+  const expired = modelState.orderQueue.filter(
+    o => Math.floor((now - o.startedAt) / 1000) >= kdsAutoCompleteThreshold
+  );
+  expired.forEach(o => controlMarkOrderDone(o.id, true));
+  if (expired.length === 0) {
+    KDSView.updateTimers(modelState.orderQueue, now, kdsYellowThreshold, kdsRedThreshold);
+  }
+};
+
+const controlMarkOrderDone = async function (id, timedOut = false) {
+  const idx = modelState.orderQueue.findIndex(o => o.id === id);
+  if (idx === -1) return;
+  const order = modelState.orderQueue[idx];
+  modelState.orderQueue.splice(idx, 1);
+  KDSView.renderQueue(modelState.orderQueue);
+  if (modelState.orderQueue.length === 0) _stopKDSTick();
+  try {
+    await model.recordServeTime(order.saleDate, timedOut);
+  } catch (_) {
+    // recordServeTime requires prepared_at + timed_out columns and an UPDATE RLS policy on sales
+  }
+};
+
+const controlOpenKDS = function () {
+  KDSView.open(modelState.orderQueue);
+};
+
+const controlCloseKDS = function () {
+  KDSView.close();
+};
+
+const controlSaveKDSThresholds = function ({ yellow, red, auto }) {
+  model.state.settings.kdsYellowThreshold = yellow;
+  model.state.settings.kdsRedThreshold = red;
+  model.state.settings.kdsAutoCompleteThreshold = auto;
+  localStorage.setItem('pointy_kds_yellow', yellow);
+  localStorage.setItem('pointy_kds_red', red);
+  localStorage.setItem('pointy_kds_auto', auto);
+};
+
+// ── Sale finalisation ─────────────────────────────────────────────────────────
+
 const _finaliseSale = async function (sale, note = null) {
   modelState.salesBasket.push(sale);
-  await supabase.from('sales').insert({
+  const { error: insertError } = await supabase.from('sales').insert({
     user_id: model.state.userId,
     subtotal: sale.subtotal,
     total_price: sale.totalPrice,
@@ -247,9 +309,20 @@ const _finaliseSale = async function (sale, note = null) {
     is_manual: false,
     added_by: null,
   });
+  if (insertError) throw insertError;
   if (sale.promoCode) {
     await model.redeemDiscountCode(sale.promoCode.discountCodeId);
   }
+  modelState.orderQueue.push({
+    id: sale.id,
+    saleDate: new Date(sale.date).toISOString(),
+    items: sale.items,
+    startedAt: sale.date,
+    totalPrice: sale.totalPrice,
+  });
+  _ensureKDSTick();
+  KDSView.renderQueue(modelState.orderQueue);
+  KDSView.playNewOrderSound();
   clearCart();
   model.clearReceiptAdjustments();
   refreshTodaySalesDisplay();
@@ -337,6 +410,11 @@ const controlOpenSettings = function () {
   SettingsView.syncShowRemovedToggle(model.state.settings.showRemovedAdjustments);
   SettingsView.syncPrintingToggle(model.state.settings.printingEnabled);
   SettingsView.syncConfirmPrintToggle(model.state.settings.confirmPrint);
+  SettingsView.syncKDSThresholds(
+    model.state.settings.kdsYellowThreshold,
+    model.state.settings.kdsRedThreshold,
+    model.state.settings.kdsAutoCompleteThreshold,
+  );
 };
 
 const controlTogglePrinting = function (value) {
@@ -942,6 +1020,12 @@ const _wireApp = function () {
   OrderCheckOutView._addHandlerReceiptSaveManual(controlSaveManualReceiptAdj);
   OrderCheckOutView._addHandlerApplyPromo(controlApplyPromoCode);
   OrderCheckOutView._addHandlerRemovePromo(controlRemovePromoCode);
+
+  // Order Queue (KDS)
+  KDSView._addHandlerOpen(controlOpenKDS);
+  KDSView._addHandlerClose(controlCloseKDS);
+  KDSView._addHandlerDone(controlMarkOrderDone);
+  SettingsView._addHandlerKDSThresholds(controlSaveKDSThresholds);
 
   // Discounts
   DiscountView._addHandlerOpen(controlOpenDiscounts);
