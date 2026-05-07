@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Customer Display — Pointy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="pointy.css" />
+    <link rel="stylesheet" href="customer-display.css" />
+  </head>
+  <body>
+    <header class="cfd-header">
+      <span class="cfd-store-name" id="cfdStoreName">Pointy POS</span>
+      <div class="cfd-header-right">
+        <span class="cfd-brand">Powered by Pointy</span>
+        <button class="display-theme-toggle" id="displayThemeToggle" title="Toggle theme">☀︎</button>
+      </div>
+    </header>
+
+    <div class="cfd-body">
+      <!-- Active cart view -->
+      <div class="cfd-cart" id="cfdCart">
+        <p class="cfd-cart-empty" id="cfdIdle">Waiting for order…</p>
+      </div>
+
+      <!-- Total bar — hidden when cart is empty -->
+      <div class="cfd-total-bar hidden" id="cfdTotalBar">
+        <span class="cfd-total-label">Total</span>
+        <span class="cfd-total-amount" id="cfdTotalAmount">$0.00</span>
+      </div>
+
+      <!-- Thank-you screen — shown briefly after sale completes -->
+      <div class="cfd-thankyou" id="cfdThankyou">
+        <div class="cfd-thankyou-icon">✓</div>
+        <div class="cfd-thankyou-text">Thank you!</div>
+        <div class="cfd-thankyou-sub">Your transaction is complete.</div>
+      </div>
+
+      <!-- Advertisement image — shown when ad is configured -->
+      <div class="cfd-ad hidden" id="cfdAd">
+        <img id="cfdAdImg" alt="Advertisement" />
+      </div>
+    </div>
+
+    <script type="module" src="/Javascript/customer-display.js"></script>
+  </body>
+</html>

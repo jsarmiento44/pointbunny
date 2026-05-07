@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kitchen Display — Pointy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="pointy.css" />
+    <link rel="stylesheet" href="kds-display.css" />
+  </head>
+  <body>
+    <header class="kds-win-header">
+      <span class="kds-win-brand">Pointy POS</span>
+      <span class="kds-win-title">Kitchen Display</span>
+      <div class="kds-win-header-right">
+        <span class="kds-win-count" id="kdsWinCount"></span>
+        <button class="display-theme-toggle" id="displayThemeToggle" title="Toggle theme">☀︎</button>
+      </div>
+    </header>
+
+    <div class="kds-grid" id="kdsWinGrid">
+      <p class="kds-empty">Waiting for orders…</p>
+    </div>
+
+    <script type="module" src="/Javascript/kds-display.js"></script>
+  </body>
+</html>

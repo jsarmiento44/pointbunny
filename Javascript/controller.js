@@ -13,6 +13,8 @@ import ReceiptView from "./Views/receiptView.js";
 import CashflowView from "./Views/cashflowView.js";
 import DiscountView from "./Views/discountView.js";
 import KDSView from "./Views/kdsView.js";
+import channel, { MSG } from "./channel.js";
+import { init as initAnalytics, destroy as destroyAnalytics } from "./analytics.js";
 
 const modelState = model.state;
 let item;
@@ -189,6 +191,7 @@ const controlPushToModelCart = function () {
   NewOrderItemView._basket.totalPrice = (basePrice + variantsTotal) * quantity;
 
   model.state.cart.push(NewOrderItemView._basket);
+  _broadcastCart();
   NewOrderView.render(modelState);
   const cartItemsEl = document.getElementById('cartItems');
   if (cartItemsEl) cartItemsEl.scrollTop = cartItemsEl.scrollHeight;
@@ -268,6 +271,14 @@ const controlMarkOrderDone = async function (id, timedOut = false) {
   modelState.orderQueue.splice(idx, 1);
   KDSView.renderQueue(modelState.orderQueue);
   if (modelState.orderQueue.length === 0) _stopKDSTick();
+  channel.postMessage({
+    type: MSG.KDS_QUEUE_SYNC,
+    queue: modelState.orderQueue,
+    thresholds: {
+      yellow: model.state.settings.kdsYellowThreshold,
+      red: model.state.settings.kdsRedThreshold,
+    },
+  });
   try {
     await model.recordServeTime(order.saleDate, timedOut);
   } catch (_) {
@@ -281,6 +292,52 @@ const controlOpenKDS = function () {
 
 const controlCloseKDS = function () {
   KDSView.close();
+};
+
+const controlOpenKDSWindow = function () {
+  const { width, height } = model.state.settings.kdsWindowSize;
+  const win = window.open('kds-display.html', 'pointy-kds', `width=${width},height=${height},menubar=no,toolbar=no,location=no`);
+  if (!win) showToast('Popup was blocked. Allow popups for this site to open the Kitchen Display.', 'error');
+  else win.focus();
+};
+
+const controlOpenCFDWindow = function () {
+  const { width, height } = model.state.settings.cfdWindowSize;
+  const win = window.open('customer-display.html', 'pointy-cfd', `width=${width},height=${height},menubar=no,toolbar=no,location=no`);
+  if (!win) showToast('Popup was blocked. Allow popups for this site to open the Customer Display.', 'error');
+  else win.focus();
+};
+
+const _broadcastCart = function () {
+  const cart = modelState.cart;
+  channel.postMessage({
+    type: MSG.CFD_CART_UPDATE,
+    cart,
+    total: cart.reduce((s, i) => s + i.totalPrice, 0),
+  });
+};
+
+const controlSaveKDSWindowSize = function (size) {
+  model.state.settings.kdsWindowSize = size;
+  localStorage.setItem('pointy_kds_window_size', JSON.stringify(size));
+};
+
+const controlSaveCFDWindowSize = function (size) {
+  model.state.settings.cfdWindowSize = size;
+  localStorage.setItem('pointy_cfd_window_size', JSON.stringify(size));
+};
+
+const controlUploadCFDAd = async function (file) {
+  try {
+    const url = await model.uploadCFDAdImage(file);
+    SettingsView.showCFDAdPreview(url);
+  } catch (err) {
+    showToast(err.message ?? err);
+  }
+};
+
+const controlRemoveCFDAd = function () {
+  model.removeCFDAdImage();
 };
 
 const controlSaveKDSThresholds = function ({ yellow, red, auto }) {
@@ -323,7 +380,16 @@ const _finaliseSale = async function (sale, note = null) {
   _ensureKDSTick();
   KDSView.renderQueue(modelState.orderQueue);
   KDSView.playNewOrderSound();
+  channel.postMessage({
+    type: MSG.KDS_QUEUE_SYNC,
+    queue: modelState.orderQueue,
+    thresholds: {
+      yellow: model.state.settings.kdsYellowThreshold,
+      red: model.state.settings.kdsRedThreshold,
+    },
+  });
   clearCart();
+  channel.postMessage({ type: MSG.CFD_SALE_COMPLETE });
   model.clearReceiptAdjustments();
   refreshTodaySalesDisplay();
   OrderCheckOutView._showSuccess(note);
@@ -414,6 +480,10 @@ const controlOpenSettings = function () {
     model.state.settings.kdsYellowThreshold,
     model.state.settings.kdsRedThreshold,
     model.state.settings.kdsAutoCompleteThreshold,
+  );
+  SettingsView.syncDisplaySizes(
+    model.state.settings.kdsWindowSize,
+    model.state.settings.cfdWindowSize,
   );
 };
 
@@ -552,11 +622,13 @@ const controlGoBackToOrder = function () {
 
 const controlDeleteCartItemInOrder = function (index) {
   model.deleteCartItem(index);
+  _broadcastCart();
   NewOrderView.render(modelState);
 };
 
 const controlDeleteCartItemInCheckout = function (index) {
   model.deleteCartItem(index);
+  _broadcastCart();
 
   if (model.state.cart.length === 0) {
     NewOrderView.render(modelState);
@@ -634,12 +706,14 @@ const initApp = async function (user) {
   model.state.userId = user.id;
   model.state.username = user.user_metadata?.display_name ?? user.user_metadata?.business_name ?? user.email;
   document.querySelector('.company-name').textContent = model.state.username;
+  localStorage.setItem('pointy_store_name', model.state.username);
   await model.loadMenuItems();
   await model.loadMenuCategories();
   await model.loadAdjustments();
   await model.loadDiscountCodes();
   await model.loadEmployees();
   await refreshTodaySalesDisplay();
+  initAnalytics(user.id);
 };
 
 const controlSignIn = async function (email, password) {
@@ -683,6 +757,7 @@ const controlSignOut = async function () {
   sweepEl.className = 'app-exit-sweep';
   sweepEl.innerHTML = '<span class="app-exit-label">Signing out…</span>';
   document.body.appendChild(sweepEl);
+  await destroyAnalytics();
   await supabase.auth.signOut();
   setTimeout(() => window.location.reload(), 500);
 };
@@ -1026,6 +1101,15 @@ const _wireApp = function () {
   KDSView._addHandlerClose(controlCloseKDS);
   KDSView._addHandlerDone(controlMarkOrderDone);
   SettingsView._addHandlerKDSThresholds(controlSaveKDSThresholds);
+  SettingsView._addHandlerDisplaySizes(controlSaveKDSWindowSize, controlSaveCFDWindowSize);
+  SettingsView._addHandlerCFDAdUpload(controlUploadCFDAd);
+  SettingsView._addHandlerCFDAdRemove(controlRemoveCFDAd);
+  const kdsWindowBtn = document.getElementById('kdsWindowBtn');
+  const cfdWindowBtn = document.getElementById('cfdWindowBtn');
+  kdsWindowBtn?.classList.remove('hidden');
+  cfdWindowBtn?.classList.remove('hidden');
+  kdsWindowBtn?.addEventListener('click', controlOpenKDSWindow);
+  cfdWindowBtn?.addEventListener('click', controlOpenCFDWindow);
 
   // Discounts
   DiscountView._addHandlerOpen(controlOpenDiscounts);
@@ -1050,6 +1134,33 @@ const initAuth = async function () {
     _wireApp();
   } else {
     AuthView.show();
+  }
+};
+
+// ── BroadcastChannel incoming messages ────────────────────────────────────────
+
+channel.onmessage = function ({ data }) {
+  switch (data.type) {
+    case MSG.KDS_REQUEST_SYNC:
+      channel.postMessage({
+        type: MSG.KDS_QUEUE_SYNC,
+        queue: modelState.orderQueue,
+        thresholds: {
+          yellow: model.state.settings.kdsYellowThreshold,
+          red: model.state.settings.kdsRedThreshold,
+        },
+      });
+      break;
+    case MSG.KDS_ORDER_DONE:
+      controlMarkOrderDone(data.id);
+      break;
+    case MSG.CFD_REQUEST_SYNC:
+      channel.postMessage({
+        type: MSG.CFD_CART_UPDATE,
+        cart: modelState.cart,
+        total: modelState.cart.reduce((s, i) => s + i.totalPrice, 0),
+      });
+      break;
   }
 };
 

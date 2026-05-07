@@ -322,6 +322,107 @@
     this._confirmPrintToggle.checked = value;
   }
 
+  // ── Display window size ───────────────────────────────────────────────────────
+
+  _sizeToOption(size) {
+    const key = `${size.width}x${size.height}`;
+    return ['1024x768', '1280x720', '1920x1080'].includes(key) ? key : 'custom';
+  }
+
+  syncDisplaySizes(kdsSize, cfdSize) {
+    const kdsSelect = document.getElementById('kdsWindowSizeSelect');
+    const cfdSelect = document.getElementById('cfdWindowSizeSelect');
+
+    const kdsOpt = this._sizeToOption(kdsSize);
+    kdsSelect.value = kdsOpt;
+    if (kdsOpt === 'custom') {
+      document.getElementById('kdsCustomSize').classList.remove('hidden');
+      document.getElementById('kdsCustomW').value = kdsSize.width;
+      document.getElementById('kdsCustomH').value = kdsSize.height;
+    }
+
+    const cfdOpt = this._sizeToOption(cfdSize);
+    cfdSelect.value = cfdOpt;
+    if (cfdOpt === 'custom') {
+      document.getElementById('cfdCustomSize').classList.remove('hidden');
+      document.getElementById('cfdCustomW').value = cfdSize.width;
+      document.getElementById('cfdCustomH').value = cfdSize.height;
+    }
+
+    // Sync ad preview
+    const adUrl = localStorage.getItem('pointy_cfd_ad');
+    if (adUrl) {
+      document.getElementById('cfdAdPreview').classList.remove('hidden');
+      document.getElementById('cfdAdPreviewImg').src = adUrl;
+      document.getElementById('cfdAdRemoveBtn').classList.remove('hidden');
+    }
+  }
+
+  _addHandlerDisplaySizes(kdsHandler, cfdHandler) {
+    const kdsSelect  = document.getElementById('kdsWindowSizeSelect');
+    const cfdSelect  = document.getElementById('cfdWindowSizeSelect');
+    const kdsCustom  = document.getElementById('kdsCustomSize');
+    const cfdCustom  = document.getElementById('cfdCustomSize');
+
+    const readSize = (select, customEl) => {
+      if (select.value === 'custom') {
+        const w = parseInt(customEl.querySelector('[id$="CustomW"]').value) || 1920;
+        const h = parseInt(customEl.querySelector('[id$="CustomH"]').value) || 1080;
+        return { width: w, height: h };
+      }
+      const [w, h] = select.value.split('x').map(Number);
+      return { width: w, height: h };
+    };
+
+    kdsSelect.addEventListener('change', () => {
+      kdsCustom.classList.toggle('hidden', kdsSelect.value !== 'custom');
+      if (kdsSelect.value !== 'custom') kdsHandler(readSize(kdsSelect, kdsCustom));
+    });
+
+    cfdSelect.addEventListener('change', () => {
+      cfdCustom.classList.toggle('hidden', cfdSelect.value !== 'custom');
+      if (cfdSelect.value !== 'custom') cfdHandler(readSize(cfdSelect, cfdCustom));
+    });
+
+    [document.getElementById('kdsCustomW'), document.getElementById('kdsCustomH')].forEach(input => {
+      input.addEventListener('change', () => kdsHandler(readSize(kdsSelect, kdsCustom)));
+    });
+
+    [document.getElementById('cfdCustomW'), document.getElementById('cfdCustomH')].forEach(input => {
+      input.addEventListener('change', () => cfdHandler(readSize(cfdSelect, cfdCustom)));
+    });
+  }
+
+  // ── CFD ad image ──────────────────────────────────────────────────────────────
+
+  _addHandlerCFDAdUpload(handler) {
+    const input      = document.getElementById('cfdAdInput');
+    const fileNameEl = document.getElementById('cfdAdFileName');
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (!file) return;
+      fileNameEl.textContent = file.name;
+      handler(file);
+    });
+  }
+
+  showCFDAdPreview(url) {
+    document.getElementById('cfdAdPreview').classList.remove('hidden');
+    document.getElementById('cfdAdPreviewImg').src = url;
+    document.getElementById('cfdAdRemoveBtn').classList.remove('hidden');
+  }
+
+  _addHandlerCFDAdRemove(handler) {
+    document.getElementById('cfdAdRemoveBtn').addEventListener('click', () => {
+      document.getElementById('cfdAdPreview').classList.add('hidden');
+      document.getElementById('cfdAdPreviewImg').src = '';
+      document.getElementById('cfdAdRemoveBtn').classList.add('hidden');
+      document.getElementById('cfdAdFileName').textContent = 'No file chosen';
+      document.getElementById('cfdAdInput').value = '';
+      handler();
+    });
+  }
+
   syncKDSThresholds(yellow, red, auto) {
     this._kdsYellowInput.value = yellow;
     this._kdsRedInput.value = red;

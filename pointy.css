@@ -329,6 +329,24 @@ header {
   gap: 10px;
 }
 
+.nav-display-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 7px 12px;
+  color: var(--muted);
+}
+
+.nav-display-btn:hover {
+  color: var(--text);
+}
+
+.nav-display-label {
+  line-height: 1;
+}
+
 /* Search */
 .search {
   position: relative;
@@ -4823,6 +4841,104 @@ body[data-theme="dark"] .receipt-manual-overlay {
   font-weight: 500;
 }
 
+/* ── Settings: Display windows ────────────────────────────────────────────── */
+
+.display-settings-group {
+  padding: 4px 0;
+}
+
+.display-size-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.display-size-select {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.display-size-select:focus {
+  outline: none;
+  border-color: var(--brand-1);
+}
+
+.display-custom-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.display-custom-input {
+  width: 90px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+.display-custom-input:focus {
+  outline: none;
+  border-color: var(--brand-1);
+  box-shadow: inset 0 0 0 2px var(--brand-1);
+}
+
+.display-custom-sep {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.display-ad-section {
+  margin-top: 4px;
+}
+
+.display-ad-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.display-ad-upload {
+  flex: 1;
+  min-width: 0;
+}
+
+.display-ad-remove {
+  flex-shrink: 0;
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+.display-ad-remove:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.display-ad-preview {
+  margin-top: 12px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  max-height: 120px;
+}
+
+.display-ad-preview img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  display: block;
+}
+
 /* ── Settings: KDS thresholds ──────────────────────────────────────────────── */
 
 .kds-threshold-fields {
@@ -4868,4 +4984,56 @@ body[data-theme="dark"] .receipt-manual-overlay {
 
 @media (max-width: 480px) {
   .kds-grid { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Display Windows — Nav buttons & polish
+   Appended last so nothing above overrides these.
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* Nav display buttons slide in when revealed after login */
+@keyframes nav-btn-appear {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.nav-display-btn:not(.hidden) {
+  animation: nav-btn-appear 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.nav-display-btn:nth-of-type(2):not(.hidden) {
+  animation-delay: 60ms;
+}
+
+/* Subtle active press feedback */
+.nav-display-btn:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+/* Display size select in settings — consistent with other selects */
+.display-size-select:hover {
+  border-color: var(--brand-1);
+  transition: border-color 0.2s ease;
+}
+
+/* Ad preview image — soft reveal */
+@keyframes ad-preview-reveal {
+  from { opacity: 0; transform: scaleY(0.92); }
+  to   { opacity: 1; transform: scaleY(1); }
+}
+
+.display-ad-preview:not(.hidden) {
+  animation: ad-preview-reveal 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: top;
+}
+
+/* Custom size inputs slide open smoothly */
+@keyframes custom-inputs-slide {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.display-custom-inputs:not(.hidden) {
+  animation: custom-inputs-slide 0.25s ease both;
 }

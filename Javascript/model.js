@@ -28,6 +28,8 @@ export const state = {
     kdsYellowThreshold: parseInt(localStorage.getItem('pointy_kds_yellow') || '180'),
     kdsRedThreshold: parseInt(localStorage.getItem('pointy_kds_red') || '300'),
     kdsAutoCompleteThreshold: parseInt(localStorage.getItem('pointy_kds_auto') || '900'),
+    kdsWindowSize: JSON.parse(localStorage.getItem('pointy_kds_window_size') || '{"width":1920,"height":1080}'),
+    cfdWindowSize: JSON.parse(localStorage.getItem('pointy_cfd_window_size') || '{"width":1920,"height":1080}'),
   },
   currentReceiptAdjustments: [],
 };
@@ -609,6 +611,16 @@ export const redeemDiscountCode = async function (id) {
     .eq("id", id)
     .eq("user_id", state.userId);
   if (!error) dc.usageCount += 1;
+};
+
+export const uploadCFDAdImage = async function (file) {
+  const url = await uploadImage(file);
+  localStorage.setItem('pointy_cfd_ad', url);
+  return url;
+};
+
+export const removeCFDAdImage = function () {
+  localStorage.removeItem('pointy_cfd_ad');
 };
 
 export const recordServeTime = async function (saleDate, timedOut) {
