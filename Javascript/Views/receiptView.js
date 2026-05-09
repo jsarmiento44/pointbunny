@@ -93,7 +93,8 @@ class ReceiptView extends View {
 </head>
 <body>
   <div class="center brand">${storeName}</div>
-  <div class="center" style="margin:2px 0 4px;font-size:11px;">${dateStr} &nbsp; ${timeStr}</div>
+  <div class="center" style="margin:2px 0 2px;font-size:11px;">${dateStr} &nbsp; ${timeStr}</div>
+  ${sale.cashierName ? `<div class="center" style="font-size:10px;color:#555;margin:0 0 4px;">Cashier: ${sale.cashierName}</div>` : ''}
   <hr class="divider">
 
   <table>${itemsHtml}</table>

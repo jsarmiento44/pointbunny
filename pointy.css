@@ -2870,6 +2870,120 @@ footer {
   animation: stat-value-shimmer 0.9s ease both;
 }
 
+.stat-card--btn {
+  cursor: pointer;
+  user-select: none;
+}
+
+.stat-card--btn:hover {
+  background: var(--panel-strong);
+  transform: translateY(-2px);
+  border-color: var(--green);
+}
+
+.stat-card--btn:active {
+  transform: translateY(0);
+}
+
+/* ── Cashier picker ────────────────────────────────────────────────────────── */
+
+.cashier-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cashier-picker-card {
+  background: var(--panel);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 24px;
+  width: min(380px, 90vw);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.cashier-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.cashier-picker-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.cashier-picker-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cashier-picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--panel-strong);
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.cashier-picker-item:hover {
+  border-color: var(--green);
+}
+
+.cashier-picker-item--active {
+  border-color: var(--green);
+}
+
+.cashier-picker-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cashier-picker-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.cashier-picker-role {
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+.cashier-picker-check {
+  color: var(--green);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.cashier-picker-empty {
+  text-align: center;
+  opacity: 0.6;
+  padding: 20px;
+  font-size: 0.9rem;
+}
+
+/* ── Sale receipt cashier line ─────────────────────────────────────────────── */
+
+.sale-receipt-cashier {
+  font-size: 0.82rem;
+  opacity: 0.65;
+  margin-top: 2px;
+  margin-bottom: 4px;
+}
+
 /* ====== Featured (New Order) Card ====== */
 .card.card--featured {
   grid-column: 1 / -1;
@@ -3705,6 +3819,12 @@ body[data-theme="dark"] .receipt-manual-overlay {
   font-weight: 500;
   line-height: 1.55;
   text-align: center;
+}
+.confirm-note {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: -10px;
 }
 .confirm-actions {
   display: flex;
@@ -4579,6 +4699,107 @@ body[data-theme="dark"] .receipt-manual-overlay {
   color: var(--text-muted, #888);
   font-size: 0.82rem;
   font-style: italic;
+}
+
+/* ── Role-based permissions ────────────────────────────────────────────────── */
+
+body.role-cashier [data-min-role="manager"],
+body.role-cashier [data-min-role="admin"],
+body.role-manager [data-min-role="admin"] {
+  display: none !important;
+}
+
+/* ── Staff panel ───────────────────────────────────────────────────────────── */
+
+.staff-panel-body {
+  padding: 24px 32px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.staff-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.staff-empty {
+  color: var(--muted);
+  font-size: 0.95rem;
+  padding: 32px 0;
+  text-align: center;
+}
+
+.staff-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--panel);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+}
+
+.staff-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.staff-item-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.staff-item-email {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.staff-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.staff-role-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: var(--brand-1-soft, rgba(34,197,94,0.12));
+  color: var(--brand-1);
+}
+
+.staff-status-badge {
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 99px;
+}
+
+.staff-status-badge--active {
+  background: rgba(34,197,94,0.1);
+  color: #16a34a;
+}
+
+.staff-status-badge--pending {
+  background: rgba(234,179,8,0.12);
+  color: #a16207;
+}
+
+.staff-remove-btn {
+  font-size: 0.8rem;
+  padding: 5px 12px;
+  flex-shrink: 0;
 }
 
 /* ── Discount code form modal ──────────────────────────────────────────────── */

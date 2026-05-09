@@ -12,6 +12,7 @@ import SettingsView from "./Views/settingsView.js";
 import ReceiptView from "./Views/receiptView.js";
 import CashflowView from "./Views/cashflowView.js";
 import DiscountView from "./Views/discountView.js";
+import StaffView from "./Views/staffView.js";
 import KDSView from "./Views/kdsView.js";
 import channel, { MSG } from "./channel.js";
 import { init as initAnalytics, destroy as destroyAnalytics } from "./analytics.js";
@@ -221,6 +222,8 @@ const controlOrderCheckout = function () {
 };
 
 const _buildSale = function () {
+  const cashierName =
+    _cashierDisplayName(model.state.currentCashier) || model.state.username || '';
   return {
     id: crypto.randomUUID(),
     items: [...modelState.cart],
@@ -233,6 +236,7 @@ const _buildSale = function () {
     customerChange: OrderCheckOutView._customerChange,
     promoCode: model.state.currentPromoCode ?? null,
     storeName: model.state.username,
+    cashierName,
     date: Date.now(),
   };
 };
@@ -280,7 +284,7 @@ const controlMarkOrderDone = async function (id, timedOut = false) {
     },
   });
   try {
-    await model.recordServeTime(order.saleDate, timedOut);
+    await model.recordServeTime(order.id, timedOut);
   } catch (_) {
     // recordServeTime requires prepared_at + timed_out columns and an UPDATE RLS policy on sales
   }
@@ -353,8 +357,8 @@ const controlSaveKDSThresholds = function ({ yellow, red, auto }) {
 
 const _finaliseSale = async function (sale, note = null) {
   modelState.salesBasket.push(sale);
-  const { error: insertError } = await supabase.from('sales').insert({
-    user_id: model.state.userId,
+  const { data: newSale, error: insertError } = await supabase.from('sales').insert({
+    user_id: model.state.businessId,
     subtotal: sale.subtotal,
     total_price: sale.totalPrice,
     customer_payment: sale.customerPayment,
@@ -364,14 +368,14 @@ const _finaliseSale = async function (sale, note = null) {
     promo_code: sale.promoCode?.code ?? null,
     sale_date: new Date(sale.date).toISOString(),
     is_manual: false,
-    added_by: null,
-  });
+    added_by: sale.cashierName || null,
+  }).select('id').single();
   if (insertError) throw insertError;
   if (sale.promoCode) {
     await model.redeemDiscountCode(sale.promoCode.discountCodeId);
   }
   modelState.orderQueue.push({
-    id: sale.id,
+    id: newSale.id,
     saleDate: new Date(sale.date).toISOString(),
     items: sale.items,
     startedAt: sale.date,
@@ -432,6 +436,7 @@ const controlConcludeTransaction = async function () {
     if (model.state.settings.confirmPrint) {
       OrderCheckOutView.showConfirmModal({
         message: 'Did the receipt print successfully?',
+        note: 'You can turn this prompt off in Settings → Printing.',
         confirmLabel: 'Yes, Record Sale',
         cancelLabel: 'No, Go Back',
         onConfirm: async () => {
@@ -676,6 +681,68 @@ const _animateSalesTotal = function (el, fromVal, toVal) {
   requestAnimationFrame(tick);
 };
 
+const _cashierDisplayName = (c) => {
+  if (!c) return null;
+  return `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || null;
+};
+
+const _updateCashierDisplay = function () {
+  const el = document.getElementById('shiftStr');
+  if (!el) return;
+  const name = _cashierDisplayName(model.state.currentCashier) || model.state.username || '—';
+  el.textContent = name.split(' ')[0];
+};
+
+const controlSwitchCashier = async function () {
+  if (!model.state.staff.length) {
+    try { await model.loadStaff(); } catch (_) {}
+  }
+  const activeStaff = model.state.staff.filter(s => !s.isPending);
+
+  const existing = document.getElementById('cashierPickerOverlay');
+  if (existing) { existing.remove(); return; }
+
+  const el = document.createElement('div');
+  el.id = 'cashierPickerOverlay';
+  el.className = 'cashier-picker-overlay';
+  el.innerHTML = `
+    <div class="cashier-picker-card">
+      <div class="cashier-picker-header">
+        <h3 class="cashier-picker-title">Switch Cashier</h3>
+        <button class="modal-close-btn" id="cashierPickerCloseBtn" type="button">&times;</button>
+      </div>
+      <ul class="cashier-picker-list">
+        ${activeStaff.length ? activeStaff.map(s => {
+          const name = _cashierDisplayName(s) || s.email || '?';
+          return `
+          <li class="cashier-picker-item${model.state.currentCashier?.id === s.id ? ' cashier-picker-item--active' : ''}"
+              data-id="${s.id}" role="button" tabindex="0">
+            <div class="cashier-picker-info">
+              <span class="cashier-picker-name">${name}</span>
+              <span class="cashier-picker-role">${s.role}</span>
+            </div>
+            ${model.state.currentCashier?.id === s.id ? '<span class="cashier-picker-check">✓</span>' : ''}
+          </li>`;
+        }).join('') : '<li class="cashier-picker-empty">No active staff members yet.</li>'}
+      </ul>
+    </div>
+  `;
+  document.body.appendChild(el);
+  document.getElementById('cashierPickerCloseBtn').addEventListener('click', () => el.remove());
+  el.addEventListener('click', (e) => {
+    if (e.target === el) { el.remove(); return; }
+    const item = e.target.closest('.cashier-picker-item');
+    if (!item?.dataset.id) return;
+    const chosen = activeStaff.find(s => s.id === item.dataset.id);
+    if (chosen) {
+      model.state.currentCashier = chosen;
+      _updateCashierDisplay();
+      showToast(`Cashier: ${_cashierDisplayName(chosen) || chosen.email}`, 'success');
+      el.remove();
+    }
+  });
+};
+
 const refreshTodaySalesDisplay = async function () {
   try {
     const el = document.getElementById("totalStr");
@@ -703,16 +770,28 @@ const refreshTodaySalesDisplay = async function () {
 };
 
 const initApp = async function (user) {
-  model.state.userId = user.id;
-  model.state.username = user.user_metadata?.display_name ?? user.user_metadata?.business_name ?? user.email;
+  await model.loadBusinessContext(user);
+  const s = model.state.currentStaff;
+  model.state.username =
+    (s ? `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim() : null) ||
+    user.user_metadata?.display_name ||
+    user.email;
   document.querySelector('.company-name').textContent = model.state.username;
   localStorage.setItem('pointy_store_name', model.state.username);
+  document.body.classList.remove('role-admin', 'role-manager', 'role-cashier');
+  document.body.classList.add(`role-${model.state.role.toLowerCase()}`);
+  _updateCashierDisplay();
   await model.loadMenuItems();
   await model.loadMenuCategories();
   await model.loadAdjustments();
   await model.loadDiscountCodes();
   await model.loadEmployees();
   await refreshTodaySalesDisplay();
+  await model.loadOrderQueue();
+  if (modelState.orderQueue.length > 0) {
+    KDSView.renderQueue(modelState.orderQueue);
+    _ensureKDSTick();
+  }
   initAnalytics(user.id);
 };
 
@@ -1027,6 +1106,64 @@ const controlRemovePromoCode = function () {
   _refreshCheckoutAdj();
 };
 
+// ── Staff ─────────────────────────────────────────────────────────────────────
+
+const controlOpenStaff = async function () {
+  try {
+    await Promise.all([model.loadStaff(), model.loadRoles()]);
+    StaffView.open();
+    StaffView.render(model.state.staff);
+  } catch (err) {
+    showToast(err.message ?? err);
+  }
+};
+
+const controlCloseStaff = function () {
+  StaffView.close();
+};
+
+const controlShowInviteForm = function () {
+  StaffView.showInviteForm(model.state.roles);
+};
+
+const controlInviteStaff = async function (data) {
+  const email = data.email.toLowerCase();
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showToast('Please enter a valid email address.', 'error');
+    return;
+  }
+  if (email === model.state.currentStaff?.email?.toLowerCase()) {
+    showToast("You can't invite yourself.", 'error');
+    return;
+  }
+  const alreadyOnTeam = model.state.staff.some(s => s.email.toLowerCase() === email);
+  if (alreadyOnTeam) {
+    showToast('This email is already on your staff list.', 'error');
+    return;
+  }
+
+  try {
+    await model.inviteStaff(data);
+    StaffView.closeForm();
+    StaffView.render(model.state.staff);
+    showToast('Staff member added.', 'success');
+  } catch (err) {
+    showToast(err.message ?? err);
+  }
+};
+
+const controlRemoveStaff = async function (id) {
+  if (!confirm('Remove this staff member? They will lose access to the system.')) return;
+  try {
+    await model.removeStaff(id);
+    StaffView.render(model.state.staff);
+    showToast('Staff member removed.', 'success');
+  } catch (err) {
+    showToast(err.message ?? err);
+  }
+};
+
 const _wireApp = function () {
   //MenuList
   MenuListView._addHandlerShowModal(controlMenuList);
@@ -1119,6 +1256,16 @@ const _wireApp = function () {
   DiscountView._addHandlerEdit(controlEditDiscountCode);
   DiscountView._addHandlerDelete(controlDeleteDiscountCode);
   DiscountView._addHandlerToggleStatus(controlToggleDiscountStatus);
+
+  // Cashier switcher
+  document.getElementById('cashierCard')?.addEventListener('click', controlSwitchCashier);
+
+  // Staff
+  StaffView._addHandlerOpen(controlOpenStaff);
+  StaffView._addHandlerClose(controlCloseStaff);
+  StaffView._addHandlerInvite(controlShowInviteForm);
+  StaffView._addHandlerSaveInvite(controlInviteStaff);
+  StaffView._addHandlerRemove(controlRemoveStaff);
 };
 
 const initAuth = async function () {

@@ -84,7 +84,7 @@ class CashflowView extends View {
               ${label}
               ${sale.is_manual ? `<span class="cashflow-manual-badge">Manual</span>` : ""}
             </span>
-            <span class="cashflow-row-date">${fmtDateTime(sale.sale_date)}${sale.is_manual && sale.added_by ? ` · Added by ${sale.added_by}` : ""}</span>
+            <span class="cashflow-row-date">${fmtDateTime(sale.sale_date)}${sale.added_by ? ` · ${sale.is_manual ? 'Added by' : 'Cashier:'} ${sale.added_by}` : ""}</span>
           </div>
           <div class="cashflow-row-right">
             <span class="cashflow-row-amount cashflow-row-amount--sale">${fmt(sale.total_price)}</span>
@@ -209,6 +209,7 @@ class CashflowView extends View {
           ${fmtDateTime(sale.sale_date)}
           ${sale.is_manual ? `<span class="sr-manual-badge">Manually added${sale.added_by ? ` by ${sale.added_by}` : ""}</span>` : ""}
         </p>
+        ${!sale.is_manual && sale.added_by ? `<p class="sale-receipt-cashier">Cashier: ${sale.added_by}</p>` : ""}
         <div class="sr-items">${itemsMarkup}</div>
         <div class="sr-divider"></div>
         <div class="sr-summary">

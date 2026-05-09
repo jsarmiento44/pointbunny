@@ -4,7 +4,13 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Kelly\\\\Desktop\\\\Pointy\\\\Pointy Project\" -Recurse -File -Filter \"*.css\")",
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(xargs grep *)",
-      "Bash(node --input-type=module)"
+      "Bash(node --input-type=module)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Kelly\\\\Desktop\\\\Pointy\\\\Pointy Project\" -Recurse -File -Name)",
+      "Bash(Select-Object -First 50)",
+      "Bash(npm start *)",
+      "Bash(Get-ChildItem -Recurse \"C:\\\\Users\\\\Kelly\\\\Desktop\\\\Pointy\\\\Pointy Project\" -Include \"*.js\", \"*.html\")",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)"
     ]
   }
 }

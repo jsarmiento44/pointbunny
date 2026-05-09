@@ -1,5 +1,29 @@
-const channel = new BroadcastChannel('pointy-displays');
+import { supabase } from './supabase.js';
 
+const BROADCAST_EVENT = 'msg';
+
+class PointyChannel {
+  constructor() {
+    this._handler = null;
+    this._ch = supabase.channel('pointy-displays', {
+      config: { broadcast: { self: false } },
+    });
+    this._ch.on('broadcast', { event: BROADCAST_EVENT }, ({ payload }) => {
+      if (this._handler) this._handler({ data: payload });
+    });
+    this._ch.subscribe();
+  }
+
+  postMessage(data) {
+    this._ch.send({ type: 'broadcast', event: BROADCAST_EVENT, payload: data });
+  }
+
+  set onmessage(fn) {
+    this._handler = fn;
+  }
+}
+
+const channel = new PointyChannel();
 export default channel;
 
 // ── Message types ─────────────────────────────────────────────────────────────

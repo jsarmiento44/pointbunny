@@ -8,8 +8,14 @@ const generateAdjustmentId = function () {
 };
 
 export const state = {
-  userId: null,
+  userId: null,         // logged-in user's own auth ID
+  businessId: null,     // business this session belongs to (owner's user ID)
   username: "Wowa",
+  role: null,           // role name of the logged-in user
+  currentStaff: null,   // logged-in user's staff record
+  currentCashier: null, // staff member actively on the POS (switchable)
+  staff: [],
+  roles: [],
   menuItems: [],
   menuCategories: [],
   employees: [],
@@ -32,6 +38,121 @@ export const state = {
     cfdWindowSize: JSON.parse(localStorage.getItem('pointy_cfd_window_size') || '{"width":1920,"height":1080}'),
   },
   currentReceiptAdjustments: [],
+};
+
+// ── Business context (runs on every login) ────────────────────────────────────
+
+const _initBusiness = async function (user) {
+  const displayName  = user.user_metadata?.display_name ?? '';
+  const firstName    = user.user_metadata?.first_name || displayName.split(' ')[0] || '';
+  const lastName     = user.user_metadata?.last_name  || displayName.split(' ').slice(1).join(' ') || '';
+  const businessName = (user.user_metadata?.business_name ?? `${firstName} ${lastName}`.trim()) || user.email;
+
+  const { error: bizError } = await supabase
+    .from('businesses')
+    .upsert({ id: user.id, name: businessName });
+  if (bizError) throw new Error(`businesses upsert failed: ${bizError.message}`);
+
+  const { data: existingRole } = await supabase
+    .from('roles')
+    .select('id')
+    .eq('business_id', user.id)
+    .eq('name', 'Admin')
+    .maybeSingle();
+
+  let adminRoleId = existingRole?.id;
+  if (!adminRoleId) {
+    const { data: insertedRoles, error: roleError } = await supabase
+      .from('roles')
+      .insert([
+        { business_id: user.id, name: 'Admin',   permissions: { menu: true,  cashflow: true,  settings: 'full',    staff: true,  discounts: true  } },
+        { business_id: user.id, name: 'Manager', permissions: { menu: true,  cashflow: true,  settings: 'full',    staff: false, discounts: true  } },
+        { business_id: user.id, name: 'Cashier', permissions: { menu: false, cashflow: false, settings: 'limited', staff: false, discounts: false } },
+      ])
+      .select('id, name');
+    if (roleError) throw new Error(`roles insert failed: ${roleError.message}`);
+    adminRoleId = insertedRoles.find(r => r.name === 'Admin')?.id;
+  }
+
+  const { data: existingStaff } = await supabase
+    .from('staff')
+    .select('id, first_name, last_name, email')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  let staffRow = existingStaff;
+  if (!staffRow) {
+    const { data: newStaff, error: staffError } = await supabase
+      .from('staff')
+      .insert({
+        business_id: user.id,
+        user_id: user.id,
+        role_id: adminRoleId,
+        first_name: firstName,
+        last_name: lastName,
+        email: user.email,
+        joined_at: new Date().toISOString(),
+      })
+      .select('id, first_name, last_name, email')
+      .single();
+    if (staffError) throw new Error(`staff insert failed: ${staffError.message}`);
+    staffRow = newStaff;
+  }
+
+  state.currentStaff = {
+    id: staffRow.id,
+    firstName: staffRow.first_name,
+    lastName: staffRow.last_name,
+    email: staffRow.email,
+    role: 'Admin',
+  };
+};
+
+export const loadBusinessContext = async function (user) {
+  state.userId = user.id;
+
+  let { data: staffRow } = await supabase
+    .from('staff')
+    .select('id, business_id, first_name, last_name, email, roles(name)')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  // Check for a pending invite by email
+  if (!staffRow) {
+    const { data: pendingRow } = await supabase
+      .from('staff')
+      .select('id, business_id, first_name, last_name, email, roles(name)')
+      .eq('email', user.email)
+      .is('user_id', null)
+      .maybeSingle();
+
+    if (pendingRow) {
+      await supabase
+        .from('staff')
+        .update({ user_id: user.id, joined_at: new Date().toISOString() })
+        .eq('id', pendingRow.id);
+      staffRow = pendingRow;
+    }
+  }
+
+  if (staffRow) {
+    state.businessId   = staffRow.business_id;
+    state.role         = staffRow.roles?.name ?? 'Admin';
+    state.currentStaff = {
+      id:        staffRow.id,
+      firstName: staffRow.first_name,
+      lastName:  staffRow.last_name,
+      email:     staffRow.email,
+      role:      state.role,
+    };
+  } else {
+    state.businessId   = user.id;
+    state.role         = 'Admin';
+    state.currentStaff = null;
+    await _initBusiness(user);
+  }
+
+  state.currentCashier = state.currentStaff;
 };
 
 // ── DB ↔ app shape mapping ────────────────────────────────────────────────────
@@ -76,7 +197,7 @@ export const loadEmployees = async function () {
   const { data, error } = await supabase
     .from("employees")
     .select("*")
-    .eq("user_id", state.userId)
+    .eq("user_id", state.businessId)
     .order("created_at");
   if (error) throw error;
   state.employees = data.map(dbToEmployee);
@@ -86,7 +207,7 @@ export const loadMenuItems = async function () {
   const { data, error } = await supabase
     .from("menu_items")
     .select("*")
-    .eq("user_id", state.userId)
+    .eq("user_id", state.businessId)
     .order("created_at");
   if (error) throw error;
   state.menuItems = data.map(dbToItem);
@@ -96,7 +217,7 @@ export const loadMenuCategories = async function () {
   const { data, error } = await supabase
     .from("menu_categories")
     .select("name")
-    .eq("user_id", state.userId)
+    .eq("user_id", state.businessId)
     .order("created_at");
   if (error) throw error;
   state.menuCategories = data.map((r) => r.name);
@@ -107,7 +228,7 @@ export const loadMenuCategories = async function () {
 const uploadImage = async function (file, existingUrl = null) {
   if (!file || file.size === 0) return existingUrl ?? "../Icons/default image.png";
   const ext = file.name.split(".").pop();
-  const path = `${state.userId}/${Date.now()}.${ext}`;
+  const path = `${state.businessId}/${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from("item-images").upload(path, file);
   if (error) throw error;
   const { data } = supabase.storage.from("item-images").getPublicUrl(path);
@@ -121,7 +242,7 @@ export const uploadNewMenuItem = async function (newItem) {
   const { data, error } = await supabase
     .from("menu_items")
     .insert({
-      user_id: state.userId,
+      user_id: state.businessId,
       item_name: newItem.name,
       price: Number(newItem.price),
       category: newItem.category,
@@ -145,7 +266,7 @@ export const deleteMenuItem = async function (id) {
     .from("menu_items")
     .delete()
     .eq("id", id)
-    .eq("user_id", state.userId);
+    .eq("user_id", state.businessId);
   if (error) throw error;
   const index = state.menuItems.findIndex((item) => item._id === id);
   if (index !== -1) state.menuItems.splice(index, 1);
@@ -178,7 +299,7 @@ export const updateMenuItem = async function (id, rawData) {
       image_url: newImageURL,
     })
     .eq("id", id)
-    .eq("user_id", state.userId);
+    .eq("user_id", state.businessId);
   if (error) throw error;
 
   item.itemName = rawData.itemName || "";
@@ -202,7 +323,7 @@ export const addCategory = async function (name) {
 
   const { error } = await supabase
     .from("menu_categories")
-    .insert({ user_id: state.userId, name: normalized });
+    .insert({ user_id: state.businessId, name: normalized });
   if (error) throw error;
   state.menuCategories.push(normalized);
 };
@@ -211,7 +332,7 @@ export const deleteCategory = async function (name) {
   const { error } = await supabase
     .from("menu_categories")
     .delete()
-    .eq("user_id", state.userId)
+    .eq("user_id", state.businessId)
     .eq("name", name);
   if (error) throw error;
   const index = state.menuCategories.indexOf(name);
@@ -233,7 +354,7 @@ export const loadAdjustments = async function () {
   const { data, error } = await supabase
     .from("adjustments")
     .select("*")
-    .eq("user_id", state.userId)
+    .eq("user_id", state.businessId)
     .order("created_at");
   if (error) throw error;
   state.settings.adjustments = data.map(dbToAdjustment);
@@ -243,7 +364,7 @@ export const addAdjustment = async function (data) {
   const { data: row, error } = await supabase
     .from("adjustments")
     .insert({
-      user_id: state.userId,
+      user_id: state.businessId,
       name: data.name,
       type: data.type,
       calculation: data.calculation,
@@ -268,7 +389,7 @@ export const updateAdjustment = async function (id, data) {
       value: Number(data.value) || 0,
     })
     .eq("id", id)
-    .eq("user_id", state.userId);
+    .eq("user_id", state.businessId);
   if (error) throw error;
   const adj = state.settings.adjustments.find((a) => a.id === id);
   if (adj) {
@@ -284,7 +405,7 @@ export const deleteAdjustment = async function (id) {
     .from("adjustments")
     .delete()
     .eq("id", id)
-    .eq("user_id", state.userId);
+    .eq("user_id", state.businessId);
   if (error) throw error;
   const index = state.settings.adjustments.findIndex((a) => a.id === id);
   if (index !== -1) state.settings.adjustments.splice(index, 1);
@@ -298,7 +419,7 @@ export const toggleAdjustment = async function (id) {
     .from("adjustments")
     .update({ enabled: newEnabled })
     .eq("id", id)
-    .eq("user_id", state.userId);
+    .eq("user_id", state.businessId);
   if (error) throw error;
   adj.enabled = newEnabled;
 };
@@ -397,7 +518,7 @@ export const loadTodaySalesTotal = async function () {
   const { data, error } = await supabase
     .from("sales")
     .select("total_price")
-    .eq("user_id", state.userId)
+    .eq("user_id", state.businessId)
     .gte("sale_date", start.toISOString())
     .lte("sale_date", end.toISOString());
   if (error) throw error;
@@ -411,14 +532,14 @@ export const fetchCashflowData = async function (startISO, endISO) {
     supabase
       .from("sales")
       .select("id, total_price, subtotal, customer_payment, customer_change, adjustments, sale_date, items, is_manual, added_by")
-      .eq("user_id", state.userId)
+      .eq("user_id", state.businessId)
       .gte("sale_date", startISO)
       .lte("sale_date", endISO)
       .order("sale_date", { ascending: false }),
     supabase
       .from("expenses")
       .select("*")
-      .eq("user_id", state.userId)
+      .eq("user_id", state.businessId)
       .gte("expense_date", startISO)
       .lte("expense_date", endISO)
       .order("expense_date", { ascending: false }),
@@ -433,7 +554,7 @@ export const addExpense = async function ({ amount, description, category, expen
   const { data, error } = await supabase
     .from("expenses")
     .insert({
-      user_id: state.userId,
+      user_id: state.businessId,
       store_name: state.username,
       amount: Number(amount),
       description,
@@ -454,7 +575,7 @@ export const deleteExpense = async function (id) {
     .from("expenses")
     .delete()
     .eq("id", id)
-    .eq("user_id", state.userId);
+    .eq("user_id", state.businessId);
   if (error) throw error;
   const index = state.expenses.findIndex((e) => e.id === id);
   if (index !== -1) state.expenses.splice(index, 1);
@@ -479,7 +600,7 @@ export const loadDiscountCodes = async function () {
   const { data, error } = await supabase
     .from("discount_codes")
     .select("*")
-    .eq("user_id", state.userId)
+    .eq("user_id", state.businessId)
     .order("created_at");
   if (error) {
     state.discountCodes = [];
@@ -493,7 +614,7 @@ export const createDiscountCode = async function (data) {
   const { data: row, error } = await supabase
     .from("discount_codes")
     .insert({
-      user_id: state.userId,
+      user_id: state.businessId,
       title: data.title,
       code,
       description: data.description || null,
@@ -524,7 +645,7 @@ export const updateDiscountCode = async function (id, data) {
       usage_limit: data.usageLimit ?? null,
     })
     .eq("id", id)
-    .eq("user_id", state.userId);
+    .eq("user_id", state.businessId);
   if (error) throw error;
   const dc = state.discountCodes.find((d) => d.id === id);
   if (dc) {
@@ -542,7 +663,7 @@ export const deleteDiscountCode = async function (id) {
     .from("discount_codes")
     .delete()
     .eq("id", id)
-    .eq("user_id", state.userId);
+    .eq("user_id", state.businessId);
   if (error) throw error;
   const index = state.discountCodes.findIndex((d) => d.id === id);
   if (index !== -1) state.discountCodes.splice(index, 1);
@@ -556,7 +677,7 @@ export const toggleDiscountCodeStatus = async function (id) {
     .from("discount_codes")
     .update({ status: newStatus })
     .eq("id", id)
-    .eq("user_id", state.userId);
+    .eq("user_id", state.businessId);
   if (error) throw error;
   dc.status = newStatus;
 };
@@ -609,7 +730,7 @@ export const redeemDiscountCode = async function (id) {
     .from("discount_codes")
     .update({ usage_count: dc.usageCount + 1 })
     .eq("id", id)
-    .eq("user_id", state.userId);
+    .eq("user_id", state.businessId);
   if (!error) dc.usageCount += 1;
 };
 
@@ -623,15 +744,37 @@ export const removeCFDAdImage = function () {
   localStorage.removeItem('pointy_cfd_ad');
 };
 
-export const recordServeTime = async function (saleDate, timedOut) {
+export const loadOrderQueue = async function () {
+  const now = new Date();
+  const start = new Date(now); start.setHours(0, 0, 0, 0);
+  const end   = new Date(now); end.setHours(23, 59, 59, 999);
+  const { data, error } = await supabase
+    .from('sales')
+    .select('id, sale_date, items, total_price')
+    .eq('user_id', state.businessId)
+    .gte('sale_date', start.toISOString())
+    .lte('sale_date', end.toISOString())
+    .is('prepared_at', null)
+    .order('sale_date', { ascending: true });
+  if (error) throw error;
+  state.orderQueue = data.map(row => ({
+    id: row.id,
+    saleDate: row.sale_date,
+    items: row.items,
+    startedAt: new Date(row.sale_date).getTime(),
+    totalPrice: Number(row.total_price),
+  }));
+};
+
+export const recordServeTime = async function (id, timedOut) {
   const { error } = await supabase
     .from('sales')
     .update({
       prepared_at: new Date().toISOString(),
       timed_out: timedOut,
     })
-    .eq('sale_date', saleDate)
-    .eq('user_id', state.userId);
+    .eq('id', id)
+    .eq('user_id', state.businessId);
   if (error) throw error;
 };
 
@@ -676,3 +819,80 @@ function parseVariants(raw) {
     ),
   }));
 }
+
+// ── Staff management ──────────────────────────────────────────────────────────
+
+const dbToStaff = (row) => ({
+  id:        row.id,
+  firstName: row.first_name,
+  lastName:  row.last_name,
+  email:     row.email,
+  isActive:  row.is_active,
+  joinedAt:  row.joined_at,
+  isPending: !row.user_id,
+  role:      row.roles?.name ?? 'Staff',
+  roleId:    row.roles?.id ?? null,
+  isSelf:    row.user_id === state.userId,
+});
+
+export const loadStaff = async function () {
+  const { data, error } = await supabase
+    .from('staff')
+    .select('id, first_name, last_name, email, is_active, joined_at, user_id, roles(id, name)')
+    .eq('business_id', state.businessId)
+    .order('invited_at', { ascending: true });
+  if (error) throw error;
+  state.staff = data.map(dbToStaff);
+};
+
+export const loadRoles = async function () {
+  const { data, error } = await supabase
+    .from('roles')
+    .select('id, name')
+    .eq('business_id', state.businessId)
+    .order('created_at');
+  if (error) throw error;
+  state.roles = data;
+};
+
+export const inviteStaff = async function ({ firstName, lastName, email, roleId }) {
+  const { data, error } = await supabase
+    .from('staff')
+    .insert({
+      business_id: state.businessId,
+      first_name:  firstName,
+      last_name:   lastName,
+      email:       email.toLowerCase().trim(),
+      role_id:     roleId,
+    })
+    .select('id, first_name, last_name, email, is_active, joined_at, user_id, roles(id, name)')
+    .single();
+  if (error) throw error;
+  state.staff.push(dbToStaff(data));
+};
+
+export const removeStaff = async function (id) {
+  const { error } = await supabase
+    .from('staff')
+    .delete()
+    .eq('id', id)
+    .eq('business_id', state.businessId);
+  if (error) throw error;
+  const idx = state.staff.findIndex((s) => s.id === id);
+  if (idx !== -1) state.staff.splice(idx, 1);
+};
+
+export const addRole = async function (name) {
+  const { data, error } = await supabase
+    .from('roles')
+    .insert({
+      business_id: state.businessId,
+      name: name.trim(),
+      permissions: {},
+    })
+    .select('id, name')
+    .single();
+  if (error) throw error;
+  state.roles.push(data);
+  return data;
+};

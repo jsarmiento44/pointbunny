@@ -61,13 +61,14 @@ export default class View {
     if (overlay) overlay.remove();
   }
 
-  showConfirmModal({ message, confirmLabel = 'Discard & close', cancelLabel = 'Keep editing', onConfirm, onCancel }) {
+  showConfirmModal({ message, note, confirmLabel = 'Discard & close', cancelLabel = 'Keep editing', onConfirm, onCancel }) {
     if (document.querySelector('.confirm-overlay')) return;
     const el = document.createElement('div');
     el.className = 'confirm-overlay';
     el.innerHTML = `
       <div class="confirm-card">
         <p class="confirm-msg">${message}</p>
+        ${note ? `<p class="confirm-note">${note}</p>` : ''}
         <div class="confirm-actions">
           <button class="btn confirm-cancel-btn" type="button">${cancelLabel}</button>
           <button class="btn primary confirm-ok-btn" type="button">${confirmLabel}</button>

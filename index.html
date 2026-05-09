@@ -113,9 +113,9 @@
           <span class="stat-label">Time</span>
           <span class="stat-value" id="timeStr">--:-- --</span>
         </div>
-        <div class="stat-card">
-          <span class="stat-label">Shift</span>
-          <span class="stat-value" id="shiftStr">A</span>
+        <div class="stat-card stat-card--btn" id="cashierCard" role="button" tabindex="0" title="Switch cashier">
+          <span class="stat-label">Cashier</span>
+          <span class="stat-value" id="shiftStr">—</span>
         </div>
       </section>
 
@@ -133,7 +133,7 @@
 
           <div class="settings-body">
             <!-- Menu Categories -->
-            <section class="settings-section">
+            <section class="settings-section" data-min-role="manager">
               <div class="settings-section-header">
                 <div>
                   <h3 class="settings-section-title">Menu Categories</h3>
@@ -157,7 +157,7 @@
             </section>
 
             <!-- Receipt Adjustments -->
-            <section class="settings-section">
+            <section class="settings-section" data-min-role="manager">
               <div class="settings-section-header">
                 <div>
                   <h3 class="settings-section-title">
@@ -199,10 +199,10 @@
             <section class="settings-section">
               <div class="settings-toggle-row">
                 <div>
-                  <p class="settings-toggle-label">Confirm after printing</p>
+                  <p class="settings-toggle-label">Confirm before finalizing</p>
                   <p class="settings-toggle-hint">
-                    After the print dialog closes, ask "Did the receipt print?"
-                    before recording the sale. Turn this on if your printer is
+                    After printing, ask "Did the receipt print?" before
+                    recording the sale. Turn this on if your printer is
                     unreliable — it gives you a chance to reprint before the
                     transaction is saved.
                   </p>
@@ -281,7 +281,7 @@
                 </div>
 
                 <!-- Ad image upload -->
-                <div class="display-ad-section">
+                <div class="display-ad-section" data-min-role="manager">
                   <p class="settings-toggle-label" style="margin-top: 16px">Advertisement Image</p>
                   <p class="settings-section-hint">Shown below the cart on the customer display. Recommended size: <strong>1920×400px</strong>.</p>
                   <div class="display-ad-row">
@@ -590,7 +590,7 @@
         </article>
 
         <!-- Menu List -->
-        <article class="card" tabindex="0">
+        <article class="card" tabindex="0" data-min-role="manager">
           <span class="ring" aria-hidden="true"></span>
           <button
             class="btn-main"
@@ -623,7 +623,7 @@
         </article>
 
         <!-- Discounts -->
-        <article class="card" tabindex="0">
+        <article class="card" tabindex="0" data-min-role="manager">
           <span class="ring" aria-hidden="true"></span>
           <button
             class="btn-main"
@@ -715,7 +715,7 @@
         </article>
 
         <!-- Cash Flow -->
-        <article class="card" tabindex="0">
+        <article class="card" tabindex="0" data-min-role="manager">
           <span class="ring" aria-hidden="true"></span>
           <button
             class="btn-main"
@@ -745,14 +745,12 @@
         </article>
 
         <!-- Staff Management -->
-        <article class="card card--locked" tabindex="-1" aria-disabled="true">
+        <article class="card" data-min-role="admin">
           <span class="ring" aria-hidden="true"></span>
-          <span class="coming-soon-badge" aria-hidden="true">Soon</span>
           <button
             class="btn-main"
             data-action="staff"
             aria-label="Manage staff"
-            tabindex="-1"
           >
             <span class="card-icon" aria-hidden="true">
               <svg
@@ -772,7 +770,7 @@
             </span>
             <div>
               <div class="title">Staff</div>
-              <div class="hint">Roles &amp; schedules</div>
+              <div class="hint">Roles &amp; members</div>
             </div>
             <div class="chev" aria-hidden="true">→</div>
           </button>
@@ -958,6 +956,34 @@
       <div class="discount-panel-body">
         <ul class="discount-code-list" id="discountCodeList"></ul>
       </div>
+    </div>
+
+    <!-- Staff Panel -->
+    <div id="staffPanel" class="cashflow-panel hidden">
+      <div class="cashflow-header">
+        <button class="staff-back cashflow-back" aria-label="Go back">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" width="20" height="20">
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+          </svg>
+        </button>
+        <div class="cashflow-header-center">
+          <h2 class="cashflow-title">Staff</h2>
+        </div>
+        <div class="cashflow-header-actions">
+          <button class="btn primary" id="inviteStaffBtn" type="button">+ Invite</button>
+        </div>
+      </div>
+      <div class="staff-panel-body">
+        <ul class="staff-list" id="staffList"></ul>
+      </div>
+    </div>
+
+    <!-- Invite Staff Modal -->
+    <div class="modal-backdrop hidden" id="inviteStaffModal">
+      <div class="modal-container discount-code-form-container" id="inviteStaffForm"></div>
     </div>
 
     <!-- Discount Code Form Modal -->
