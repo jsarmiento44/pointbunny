@@ -31,6 +31,7 @@ export const state = {
     showRemovedAdjustments: true,
     printingEnabled: localStorage.getItem('pointy_printing_enabled') !== 'false',
     confirmPrint: localStorage.getItem('pointy_confirm_print') !== 'false',
+    printTwoCopies: localStorage.getItem('pointy_print_two_copies') === 'true',
     kdsYellowThreshold: parseInt(localStorage.getItem('pointy_kds_yellow') || '180'),
     kdsRedThreshold: parseInt(localStorage.getItem('pointy_kds_red') || '300'),
     kdsAutoCompleteThreshold: parseInt(localStorage.getItem('pointy_kds_auto') || '900'),
@@ -329,6 +330,17 @@ export const addCategory = async function (name) {
 };
 
 export const deleteCategory = async function (name) {
+  const affected = state.menuItems.filter((i) => i.category === name);
+  if (affected.length) {
+    const { error: updateError } = await supabase
+      .from("menu_items")
+      .update({ category: "uncategorized" })
+      .eq("user_id", state.businessId)
+      .eq("category", name);
+    if (updateError) throw updateError;
+    affected.forEach((i) => { i.category = "uncategorized"; });
+  }
+
   const { error } = await supabase
     .from("menu_categories")
     .delete()

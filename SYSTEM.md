@@ -120,6 +120,7 @@ state = {
     showRemovedAdjustments,   // bool — whether struck-through removals appear on receipt
     printingEnabled,          // bool
     confirmPrint,             // bool — ask before printing
+    printTwoCopies,           // bool — print customer copy + business copy on every sale
     kdsYellowThreshold,       // seconds before order card turns yellow
     kdsRedThreshold,          // seconds before order card turns red
     kdsAutoCompleteThreshold, // seconds before order auto-completes
@@ -637,23 +638,31 @@ User clicks "Delete" in edit form
 
 #### Add / Delete Category
 
+Category management lives in the **Menu List modal** (not Settings). The category bar shows chips for each category; a text input + "+ Add" button appends new ones.
+
 ```
-User types new category and submits (in Add Item form or Settings)
-  → controlAddNewCategory(name) / controlAddCategoryFromSettings(name)
+User types new category name and clicks "+ Add" (in Menu List or Add Item form)
+  → menuListView._addHandlerAddCategory / newMenuItemView inline handler
+  → controlAddCategoryFromMenuList(name) / controlAddNewCategory(name)
     → model.addCategory(name)
-        → validates uniqueness
+        → validates uniqueness + non-empty
         → supabase.from('menu_categories').insert(...)
         → pushes lowercase name to state.menuCategories
-    → updates all category dropdowns in open forms
+    → menuListView.render(state)  [re-renders chip bar + item groups]
 
-User clicks delete on a category (Settings)
+User clicks × on a category chip (Menu List)
+  → menuListView._addHandlerDeleteCategory
   → controlDeleteCategory(name)
-    → if items exist in that category: shows warning toast, aborts
     → model.deleteCategory(name)
+        → updates all items in that category to category = 'uncategorized'
+            → supabase.from('menu_items').update({ category: 'uncategorized' }).eq('category', name)
+            → mutates category on matching items in state.menuItems
         → supabase.from('menu_categories').delete()
         → removes from state.menuCategories
-    → re-renders settings category list
+    → menuListView.render(state)  [re-renders; items appear in Uncategorized group]
 ```
+
+**Uncategorized items:** Items with `category === 'uncategorized'`, no category, or a category that was deleted appear in a grey-labelled "Uncategorized" group at the bottom of both the Menu List modal and the New Order item picker. The `'uncategorized'` value is virtual — it never appears as a user-deletable chip.
 
 #### Function Reference
 
@@ -692,10 +701,12 @@ User clicks delete on a category (Settings)
 | `controlDeleteMenuItem(id)` | controller.js | Confirms deletion, calls model, re-renders |
 | `model.deleteMenuItem(id)` | model.js | Deletes from DB, splices `state.menuItems` |
 | `controlAddNewCategory(name)` | controller.js | Creates category, updates all open dropdowns |
-| `controlAddCategoryFromSettings(name)` | controller.js | Same as above but triggered from settings panel |
+| `controlAddCategoryFromMenuList(name)` | controller.js | Adds category from Menu List chip bar, re-renders menu list |
 | `model.addCategory(name)` | model.js | Validates uniqueness, inserts to DB, pushes to `state.menuCategories` |
-| `controlDeleteCategory(name)` | controller.js | Blocks if items exist in category, else calls model |
-| `model.deleteCategory(name)` | model.js | Deletes from DB, removes from `state.menuCategories` |
+| `menuListView._addHandlerAddCategory(handler)` | menuListView.js | Listens on `#menuAddCategoryBtn` click and Enter key on `#menuCategoryInput` |
+| `menuListView._addHandlerDeleteCategory(handler)` | menuListView.js | Listens on `.menu-cat-delete` chip button clicks (event-delegated) |
+| `controlDeleteCategory(name)` | controller.js | Calls model to reassign items then delete category, re-renders menu list |
+| `model.deleteCategory(name)` | model.js | Reassigns items to 'uncategorized' in DB + state, then deletes category from DB |
 
 ---
 
@@ -707,16 +718,18 @@ User clicks delete on a category (Settings)
 User clicks settings gear icon
   → settingsView._addHandlerOpen
   → controlOpenSettings()
-    → settingsView renders:
-        - category list (state.menuCategories)
+    → settingsView renders / syncs:
         - adjustment list (state.settings.adjustments)
         - printing toggle (state.settings.printingEnabled)
         - confirmPrint toggle (state.settings.confirmPrint)
+        - printTwoCopies toggle (state.settings.printTwoCopies)
         - showRemovedAdjustments toggle
         - KDS thresholds (yellow, red, auto)
         - KDS & CFD window size selectors
         - CFD ad image section
 ```
+
+Note: Category management was moved out of Settings and into the Menu List modal (§5.6).
 
 #### Toggle: Printing Enabled
 
@@ -735,6 +748,22 @@ User flips confirmPrint toggle
   → controlToggleConfirmPrint(value)
     → state.settings.confirmPrint = value
     → localStorage.setItem('confirmPrint', value)
+```
+
+When the confirm dialog appears, it includes a hint: _"You can turn this prompt off in Settings → Printing."_
+
+#### Toggle: Print 2 Copies
+
+```
+User flips "Print 2 Copies" toggle
+  → settingsView._addHandlerToggleTwoCopies
+  → controlTogglePrintTwoCopies(value)
+    → state.settings.printTwoCopies = value
+    → localStorage.setItem('pointy_print_two_copies', value)
+
+On transaction conclude (if printTwoCopies is true):
+  → controlConcludeTransaction() prints receipt once (customer copy)
+  → then calls ReceiptView.print(sale) a second time (business copy)
 ```
 
 #### KDS Thresholds
@@ -781,8 +810,7 @@ User clicks remove
 | Function | File | Purpose |
 |---|---|---|
 | `_addHandlerOpen(handler)` | settingsView.js | Listens on `#settingsBtn` click |
-| `controlOpenSettings()` | controller.js | Renders the full settings panel |
-| `settingsView.renderCategories(categories)` | settingsView.js | Lists all categories with delete buttons |
+| `controlOpenSettings()` | controller.js | Syncs all settings toggles and renders adjustment list |
 | `settingsView.renderAdjustments(adjustments)` | settingsView.js | Lists all adjustments with toggle, edit, delete |
 | `syncPrintingToggle(value)` | settingsView.js | Sets `#printingToggle` checkbox state from `state` |
 | `_addHandlerTogglePrinting(handler)` | settingsView.js | Listens on `#printingToggle` change |
@@ -790,6 +818,9 @@ User clicks remove
 | `syncConfirmPrintToggle(value)` | settingsView.js | Sets `#confirmPrintToggle` checkbox state |
 | `_addHandlerToggleConfirmPrint(handler)` | settingsView.js | Listens on `#confirmPrintToggle` change |
 | `controlToggleConfirmPrint(value)` | controller.js | Updates `state.settings.confirmPrint` + localStorage |
+| `syncTwoCopiesToggle(value)` | settingsView.js | Sets `#twoCopiesToggle` checkbox state |
+| `_addHandlerToggleTwoCopies(handler)` | settingsView.js | Listens on `#twoCopiesToggle` change |
+| `controlTogglePrintTwoCopies(value)` | controller.js | Updates `state.settings.printTwoCopies` + localStorage (`pointy_print_two_copies`) |
 | `syncKDSThresholds(yellow, red, auto)` | settingsView.js | Populates threshold inputs from state |
 | `_addHandlerKDSThresholds(handler)` | settingsView.js | Listens on threshold input changes |
 | `controlSaveKDSThresholds({ yellow, red, auto })` | controller.js | Updates all three thresholds in state + localStorage |
@@ -965,15 +996,25 @@ User clicks delete on expense row (with inline confirm)
     → cashflowView.renderExpensesList(...)
 ```
 
-#### View Sale Receipt
+#### View Sale Receipt & Reprint
 
 ```
 User clicks a sale row
   → cashflowView._addHandlerOpenSaleReceipt
   → controlOpenSaleReceipt(id)
     → finds sale in state.cashflowSales
-    → cashflowView.showSaleReceipt(sale)  [creates receipt detail modal]
+    → cashflowView.showSaleReceipt(sale, onReprint)
+        → creates receipt detail modal with a "Reprint Receipt" button
+
+User clicks "Reprint Receipt"
+  → closes the detail modal
+  → controlReprintSale(sale)
+    → maps DB sale shape (snake_case) to receipt shape (camelCase):
+        sale_date → date, total_price → totalPrice, customer_payment → customerPayment
+    → ReceiptView.print(mappedSale)  [opens print popup, no new transaction]
 ```
+
+Note: No sale record is created or modified. This is purely a re-print of the stored data.
 
 #### Export CSV
 
@@ -1018,8 +1059,9 @@ User clicks "Export CSV"
 | `controlDeleteExpense(id)` | controller.js | Calls model, updates summary + list |
 | `model.deleteExpense(id)` | model.js | Deletes from DB, splices `state.expenses` |
 | `_addHandlerOpenSaleReceipt(handler)` | cashflowView.js | Listens on clickable sale rows |
-| `controlOpenSaleReceipt(id)` | controller.js | Finds sale in `state.cashflowSales`, shows receipt modal |
-| `cashflowView.showSaleReceipt(sale)` | cashflowView.js | Creates receipt detail modal overlay |
+| `controlOpenSaleReceipt(id)` | controller.js | Finds sale in `state.cashflowSales`, shows receipt modal with reprint callback |
+| `cashflowView.showSaleReceipt(sale, onReprint)` | cashflowView.js | Creates receipt detail modal; renders "Reprint Receipt" button if `onReprint` provided |
+| `controlReprintSale(sale)` | controller.js | Maps DB sale shape → receipt shape, calls `ReceiptView.print()` — no new transaction |
 | `_addHandlerExport(handler)` | cashflowView.js | Listens on `#exportCsvBtn` |
 | `controlExportCSV()` | controller.js | Calls `_generateAndDownloadCSV` |
 | `_generateAndDownloadCSV()` | controller.js | Formats sales + expenses as CSV, creates Blob, triggers download |

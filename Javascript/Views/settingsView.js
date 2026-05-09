@@ -7,14 +7,10 @@
   _showRemovedToggle = document.getElementById("showRemovedToggle");
   _printingToggle = document.getElementById("printingToggle");
   _confirmPrintToggle = document.getElementById("confirmPrintToggle");
-  _categoryList = document.getElementById("categoryList");
-  _categoryInput = document.getElementById("categoryInput");
-  _addCategoryBtn = document.getElementById("addCategoryBtn");
+  _twoCopiesToggle = document.getElementById("twoCopiesToggle");
   _kdsYellowInput = document.getElementById("kdsYellowInput");
   _kdsRedInput = document.getElementById("kdsRedInput");
   _kdsAutoInput = document.getElementById("kdsAutoInput");
-  _pendingFlash = false;
-
   // ── Open / Close ─────────────────────────────────────────────────────────────
 
   _addHandlerOpen(handler) {
@@ -39,57 +35,6 @@
       this._modal.classList.add("hidden");
       this._removeForm();
     }, 220);
-  }
-
-  // ── Category List ────────────────────────────────────────────────────────────
-
-  renderCategories(categories) {
-    if (categories.length === 0) {
-      this._categoryList.innerHTML =
-        '<li class="adjustment-empty">No categories yet.</li>';
-      return;
-    }
-    this._categoryList.innerHTML = categories
-      .map(
-        (cat) => `
-        <li class="category-item">
-          <span class="category-item-name">${cat[0].toUpperCase() + cat.slice(1)}</span>
-          <button class="category-delete-btn" data-category="${cat}" type="button">Delete</button>
-        </li>`,
-      )
-      .join("");
-
-    if (this._pendingFlash) {
-      this._pendingFlash = false;
-      const items = this._categoryList.querySelectorAll(".category-item");
-      const last = items[items.length - 1];
-      if (last) {
-        requestAnimationFrame(() => last.classList.add("entering"));
-        setTimeout(() => last.classList.remove("entering"), 800);
-      }
-    }
-  }
-
-  _addHandlerAddCategory(handler) {
-    const submit = () => {
-      if (!this._categoryInput.value.trim()) return;
-      this._pendingFlash = true;
-      handler(this._categoryInput.value);
-      this._categoryInput.value = "";
-    };
-    this._addCategoryBtn.addEventListener("click", submit);
-    this._categoryInput.addEventListener("keydown", (e) => {
-      if (e.key !== "Enter") return;
-      submit();
-    });
-  }
-
-  _addHandlerDeleteCategory(handler) {
-    this._categoryList.addEventListener("click", (e) => {
-      const btn = e.target.closest(".category-delete-btn");
-      if (!btn) return;
-      handler(btn.dataset.category);
-    });
   }
 
   // ── Adjustment List ───────────────────────────────────────────────────────────
@@ -320,6 +265,14 @@
 
   syncConfirmPrintToggle(value) {
     this._confirmPrintToggle.checked = value;
+  }
+
+  _addHandlerToggleTwoCopies(handler) {
+    this._twoCopiesToggle.addEventListener('change', () => handler(this._twoCopiesToggle.checked));
+  }
+
+  syncTwoCopiesToggle(value) {
+    this._twoCopiesToggle.checked = value;
   }
 
   // ── Display window size ───────────────────────────────────────────────────────

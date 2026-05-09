@@ -146,8 +146,7 @@ const controlUploadItem = async function (data) {
     if (data.newCategory?.trim()) {
       data.category = data.newCategory.trim();
     } else {
-      alert("Please select a category for this item before saving.");
-      return;
+      data.category = "uncategorized";
     }
   }
 
@@ -431,6 +430,8 @@ const controlConcludeTransaction = async function () {
       return;
     }
 
+    if (model.state.settings.printTwoCopies) ReceiptView.print(sale);
+
     await printPromise;
 
     if (model.state.settings.confirmPrint) {
@@ -476,11 +477,11 @@ const controlCloseOrderModal = function (close) {
 // ── Settings ──────────────────────────────────────────────────────────────────
 
 const controlOpenSettings = function () {
-  SettingsView.renderCategories(model.state.menuCategories);
   SettingsView.renderAdjustments(model.state.settings.adjustments);
   SettingsView.syncShowRemovedToggle(model.state.settings.showRemovedAdjustments);
   SettingsView.syncPrintingToggle(model.state.settings.printingEnabled);
   SettingsView.syncConfirmPrintToggle(model.state.settings.confirmPrint);
+  SettingsView.syncTwoCopiesToggle(model.state.settings.printTwoCopies);
   SettingsView.syncKDSThresholds(
     model.state.settings.kdsYellowThreshold,
     model.state.settings.kdsRedThreshold,
@@ -502,6 +503,11 @@ const controlToggleConfirmPrint = function (value) {
   localStorage.setItem('pointy_confirm_print', value);
 };
 
+const controlTogglePrintTwoCopies = function (value) {
+  model.state.settings.printTwoCopies = value;
+  localStorage.setItem('pointy_print_two_copies', value);
+};
+
 const _refreshCategoryDropdowns = function () {
   NewMenuItemView._mapMenuCategoriesMarkUp(model.state.menuCategories);
   if (document.querySelector(".edit-field-select"))
@@ -511,7 +517,7 @@ const _refreshCategoryDropdowns = function () {
 const controlAddCategoryFromSettings = async function (name) {
   try {
     await model.addCategory(name);
-    SettingsView.renderCategories(model.state.menuCategories);
+    MenuListView.render(model.state);
     _refreshCategoryDropdowns();
   } catch (err) {
     showToast(err.message ?? err);
@@ -531,7 +537,7 @@ const controlDeleteCategory = async function (name) {
     return;
   try {
     await model.deleteCategory(name);
-    SettingsView.renderCategories(model.state.menuCategories);
+    MenuListView.render(model.state);
     _refreshCategoryDropdowns();
   } catch (err) {
     showToast(err.message ?? err);
@@ -1016,9 +1022,29 @@ const controlExportCSV = function () {
   });
 };
 
+const controlReprintSale = async function (sale) {
+  const mapped = {
+    date: sale.sale_date,
+    items: sale.items ?? [],
+    adjustments: (sale.adjustments ?? [])
+      .filter((a) => !a.removed)
+      .map((a) => ({ ...a, computedAmount: a.computedAmount ?? a.computed_amount })),
+    totalPrice: sale.total_price,
+    customerPayment: sale.customer_payment,
+    customerChange: sale.customer_change,
+    subtotal: sale.subtotal,
+    storeName: modelState.username,
+    cashierName: sale.added_by,
+    showRemovedAdjustments: false,
+    removedAdjustments: [],
+  };
+  const promise = ReceiptView.print(mapped);
+  if (!promise) showToast('Popup was blocked. Allow popups for this site and try again.', 'error');
+};
+
 const controlOpenSaleReceipt = function (id) {
   const sale = modelState.cashflowSales.find((s) => s.id === id);
-  if (sale) CashflowView.showSaleReceipt(sale);
+  if (sale) CashflowView.showSaleReceipt(sale, () => controlReprintSale(sale));
 };
 
 const controlDeleteExpense = async function (id) {
@@ -1189,8 +1215,8 @@ const _wireApp = function () {
   // Settings
   SettingsView._addHandlerOpen(controlOpenSettings);
   SettingsView._addHandlerClose();
-  SettingsView._addHandlerAddCategory(controlAddCategoryFromSettings);
-  SettingsView._addHandlerDeleteCategory(controlDeleteCategory);
+  MenuListView._addHandlerAddCategory(controlAddCategoryFromSettings);
+  MenuListView._addHandlerDeleteCategory(controlDeleteCategory);
   SettingsView._addHandlerAdd();
   SettingsView._addHandlerSave(controlSaveAdjustment);
   SettingsView._addHandlerEdit(controlEditAdjustment);
@@ -1199,6 +1225,7 @@ const _wireApp = function () {
   SettingsView._addHandlerShowRemoved(controlShowRemoved);
   SettingsView._addHandlerTogglePrinting(controlTogglePrinting);
   SettingsView._addHandlerToggleConfirmPrint(controlToggleConfirmPrint);
+  SettingsView._addHandlerToggleTwoCopies(controlTogglePrintTwoCopies);
 
   //NewOrder
   NewOrderView._addHandlerShowMenuModal(controlNewOrder);

@@ -10,7 +10,8 @@
       "Bash(npm start *)",
       "Bash(Get-ChildItem -Recurse \"C:\\\\Users\\\\Kelly\\\\Desktop\\\\Pointy\\\\Pointy Project\" -Include \"*.js\", \"*.html\")",
       "Bash(Select-Object FullName)",
-      "Bash(Sort-Object FullName)"
+      "Bash(Sort-Object FullName)",
+      "Bash(Remove-Item -Recurse -Force \".parcel-cache\" -ErrorAction SilentlyContinue)"
     ]
   }
 }

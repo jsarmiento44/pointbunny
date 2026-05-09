@@ -155,7 +155,7 @@ class CashflowView extends View {
     document.querySelector("#cashflowExpensesList").scrollTop = 0;
   }
 
-  showSaleReceipt(sale) {
+  showSaleReceipt(sale, onReprint) {
     document.querySelector("#saleReceiptModal")?.remove();
 
     const items = sale.items ?? [];
@@ -231,11 +231,13 @@ class CashflowView extends View {
             <span>Change</span><span>${fmt(sale.customer_change)}</span>
           </div>
         </div>
+        ${onReprint ? `<div class="sr-reprint"><button class="btn primary sr-reprint-btn">Reprint Receipt</button></div>` : ''}
       </div>`;
 
     this._parentElement.appendChild(el);
     el.querySelector(".sale-receipt-close").addEventListener("click", () => el.remove());
     el.addEventListener("click", (e) => { if (e.target === el) el.remove(); });
+    el.querySelector(".sr-reprint-btn")?.addEventListener("click", () => { el.remove(); onReprint?.(); });
   }
 
   // ── Handlers ─────────────────────────────────────────────────────────────────

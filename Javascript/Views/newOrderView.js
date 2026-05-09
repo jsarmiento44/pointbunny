@@ -16,35 +16,39 @@ class NewOrderView extends View {
     <div class="modal-left">
       ${this._data.menuItems.length === 0
         ? `<p class="no-items-msg">No items yet. Go to menu list and add a new item.</p>`
-        : this._data.menuCategories
-            .map((category) => {
+        : (() => {
+            const categories = this._data.menuCategories.filter(c => c !== 'uncategorized');
+            const renderCard = (item) => {
+              const unavailable = item.status === "unavailable";
+              return `
+                <div class="item-card${unavailable ? " item-card--unavailable" : ""}" data-id="${item._id}">
+                  <div class="btn-main">
+                    <img src="${item.imageURL}" alt="${item.itemName}" />
+                    <div>
+                      <div class="title">${item.itemName}</div>
+                      <div class="hint">$${item.price}</div>
+                    </div>
+                  </div>
+                </div>`;
+            };
+            const groups = categories.map((category) => {
               const items = this._data.menuItems.filter(
                 (item) => item.category === category && item.status !== "inactive",
               );
               if (items.length === 0) return "";
               return `
                 <div class="menu-category-header">${category}</div>
-                <div class="menu-category">
-                  ${items
-                    .map((item) => {
-                      const unavailable = item.status === "unavailable";
-                      return `
-                        <div class="item-card${unavailable ? " item-card--unavailable" : ""}" data-id="${item._id}">
-                          <div class="btn-main">
-                            <img src="${item.imageURL}" alt="${item.itemName}" />
-                            <div>
-                              <div class="title">${item.itemName}</div>
-                              <div class="hint">$${item.price}</div>
-                            </div>
-                          </div>
-                        </div>
-                      `;
-                    })
-                    .join("")}
-                </div>
-              `;
-            })
-            .join("")}
+                <div class="menu-category">${items.map(renderCard).join("")}</div>`;
+            }).join("");
+            const uncategorized = this._data.menuItems.filter(
+              (item) => item.status !== "inactive" &&
+                (!item.category || item.category === "uncategorized" || !this._data.menuCategories.includes(item.category))
+            );
+            const uncategorizedGroup = uncategorized.length ? `
+                <div class="menu-category-header">Uncategorized</div>
+                <div class="menu-category">${uncategorized.map(renderCard).join("")}</div>` : "";
+            return groups + uncategorizedGroup;
+          })()}
     </div>
 
     <!-- Right Panel: Cart Summary -->

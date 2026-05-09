@@ -132,30 +132,6 @@
           <h2 class="edit-form-title">Settings</h2>
 
           <div class="settings-body">
-            <!-- Menu Categories -->
-            <section class="settings-section" data-min-role="manager">
-              <div class="settings-section-header">
-                <div>
-                  <h3 class="settings-section-title">Menu Categories</h3>
-                  <p class="settings-section-hint">
-                    Add or remove categories used when creating menu items.
-                  </p>
-                </div>
-              </div>
-              <ul class="category-list" id="categoryList"></ul>
-              <div class="category-add-row">
-                <input
-                  type="text"
-                  id="categoryInput"
-                  placeholder="New category name"
-                  class="category-input"
-                />
-                <button class="btn primary" id="addCategoryBtn" type="button">
-                  + Add
-                </button>
-              </div>
-            </section>
-
             <!-- Receipt Adjustments -->
             <section class="settings-section" data-min-role="manager">
               <div class="settings-section-header">
@@ -209,6 +185,21 @@
                 </div>
                 <label class="switch">
                   <input type="checkbox" id="confirmPrintToggle" checked />
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </section>
+
+            <section class="settings-section">
+              <div class="settings-toggle-row">
+                <div>
+                  <p class="settings-toggle-label">Print 2 Copies</p>
+                  <p class="settings-toggle-hint">
+                    Print a customer copy and a business copy for every sale.
+                  </p>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="twoCopiesToggle" />
                   <span class="slider round"></span>
                 </label>
               </div>
