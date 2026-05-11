@@ -100,24 +100,6 @@
         <p class="sub">Ready to ring up sales and keep things moving.</p>
       </section>
 
-      <section class="stats-bar fade-up" aria-label="Today overview">
-        <div class="stat-card stat-card--accent">
-          <span class="stat-label">Today's Sales</span>
-          <span class="stat-value" id="totalStr">$0.00</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Date</span>
-          <span class="stat-value" id="dateStr">--/--/----</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Time</span>
-          <span class="stat-value" id="timeStr">--:-- --</span>
-        </div>
-        <div class="stat-card stat-card--btn" id="cashierCard" role="button" tabindex="0" title="Switch cashier">
-          <span class="stat-label">Cashier</span>
-          <span class="stat-value" id="shiftStr">—</span>
-        </div>
-      </section>
 
       <div class="modal-parent"></div>
       <div class="new-order-parent"></div>
@@ -327,8 +309,10 @@
 
       <div class="modal-overlay-form hidden" id="addMenuModal">
         <div class="modal-content form-only">
-          <button class="modal-close">&times;</button>
-          <h3 class="form-title">Add Menu Item</h3>
+          <div class="form-modal-header">
+            <h2 class="form-modal-title">Add Menu Item</h2>
+            <button class="modal-close" aria-label="Close">&times;</button>
+          </div>
 
           <form class="add-menu-form two-column-form">
             <div class="form-columns-wrapper">
@@ -497,276 +481,189 @@
         </div>
       </div>
 
-      <div class="item-modal-overlay hidden" id="${item._id}">
-        <div class="modal-content">
-          <!-- Close Button -->
-          <button class="item-modal-close">&times;</button>
-
-          <!-- Single Panel Item Info -->
-          <div class="modal-left">
-            <h2 class="menu-category-header">Item Details</h2>
-
-            <div class="item-card">
-              <div class="btn-main">
-                <img class="item-image" alt="Item Image" />
-                <div>
-                  <div class="title">${item.itemName}</div>
-                  <div class="hint">Category: ${item.category}s</div>
+      <div class="item-modal-overlay hidden">
+        <div class="modal-content pos-item-detail-card">
+          <button class="item-modal-close" aria-label="Close">&times;</button>
+          <img class="item-image pos-item-detail-img" alt="Item Image" />
+          <div class="pos-item-detail-body">
+            <div class="pos-item-detail-info">
+              <div class="title pos-item-detail-name"></div>
+              <div class="item-price pos-item-detail-price"></div>
+            </div>
+            <div class="variant-section pos-variant-section"></div>
+            <div class="pos-item-detail-footer">
+              <div class="pos-qty-row">
+                <span class="pos-qty-label">Quantity</span>
+                <div class="quantity-buttons pos-qty-controls">
+                  <button class="qty-btn" data-action="decrease">−</button>
+                  <span id="item-qty">1</span>
+                  <button class="qty-btn" data-action="increase">+</button>
                 </div>
               </div>
+              <button class="btn primary" id="btn-add-to-cart">Add to Cart</button>
             </div>
-
-            <div class="variant-section"></div>
-
-            <p class="hint" style="margin-top: 12px">
-              This is a sample description of the menu item. You can add more
-              details here.
-            </p>
-
-            <div class="item-price" style="font-weight: 900; margin-top: 12px">
-              $${item.price}
-            </div>
-
-            <div class="quantity-wrapper">
-              <span class="hint">Quantity</span>
-              <div class="quantity-buttons">
-                <button class="qty-btn" data-action="decrease">−</button>
-                <span id="item-qty">1</span>
-                <button class="qty-btn" data-action="increase">+</button>
-              </div>
-            </div>
-
-            <button
-              class="btn primary"
-              id="btn-add-to-cart"
-              style="width: 100%; margin-top: 16px; flex-shrink: 0"
-            >
-              Add to Cart
-            </button>
           </div>
         </div>
       </div>
 
-      <section class="main-buttons fade-up" aria-label="Primary actions">
-        <!-- New Order -->
-        <article class="card card--featured" tabindex="0">
+      <div class="home-layout fade-up">
+
+        <!-- 1. Primary action -->
+        <article class="card card--featured home-new-order-card" tabindex="0">
           <span class="ring" aria-hidden="true"></span>
-          <button
-            class="btn-main"
-            data-action="new-order"
-            aria-label="Create new order"
-            id="#newOrderBtn"
-          >
+          <button class="btn-main" data-action="new-order" aria-label="Create new order" id="#newOrderBtn">
             <span class="card-icon" aria-hidden="true">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.75"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
                 <line x1="3" y1="6" x2="21" y2="6" />
                 <path d="M16 10a4 4 0 01-8 0" />
               </svg>
             </span>
             <div>
-              <div class="title new-order">New Order</div>
-              <div class="hint">Start a sale <kbd>N</kbd></div>
+              <div class="title">New Order</div>
+              <div class="hint">Start a new sale</div>
             </div>
             <div class="chev" aria-hidden="true">→</div>
           </button>
         </article>
 
-        <!-- Menu List -->
-        <article class="card" tabindex="0" data-min-role="manager">
-          <span class="ring" aria-hidden="true"></span>
-          <button
-            class="btn-main"
-            data-action="menu-list"
-            aria-label="Open menu list"
-            id="menu-list"
-          >
-            <span class="card-icon" aria-hidden="true">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.75"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <rect x="3" y="3" width="7" height="7" rx="1" />
-                <rect x="14" y="3" width="7" height="7" rx="1" />
-                <rect x="3" y="14" width="7" height="7" rx="1" />
-                <rect x="14" y="14" width="7" height="7" rx="1" />
-              </svg>
-            </span>
-            <div>
-              <div class="title">Menu List</div>
-              <div class="hint">Browse items <kbd>M</kbd></div>
-            </div>
-            <div class="chev" aria-hidden="true">→</div>
-          </button>
-        </article>
+        <!-- 2. Secondary row: Order Queue + Today's Stats -->
+        <div class="home-row-2">
+          <article class="card" tabindex="0">
+            <span class="ring" aria-hidden="true"></span>
+            <button class="btn-main" data-action="order-queue" aria-label="View order queue" id="kdsOpenBtn">
+              <span class="card-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="8" y1="6" x2="21" y2="6"/>
+                  <line x1="8" y1="12" x2="21" y2="12"/>
+                  <line x1="8" y1="18" x2="21" y2="18"/>
+                  <circle cx="3" cy="6" r="1" fill="currentColor"/>
+                  <circle cx="3" cy="12" r="1" fill="currentColor"/>
+                  <circle cx="3" cy="18" r="1" fill="currentColor"/>
+                </svg>
+              </span>
+              <div>
+                <div class="title">Order Queue</div>
+                <div class="hint">Kitchen display</div>
+              </div>
+              <div class="chev" aria-hidden="true">→</div>
+            </button>
+          </article>
 
-        <!-- Discounts -->
-        <article class="card" tabindex="0" data-min-role="manager">
-          <span class="ring" aria-hidden="true"></span>
-          <button
-            class="btn-main"
-            data-action="discounts"
-            aria-label="Manage discounts"
-          >
-            <span class="card-icon" aria-hidden="true">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.75"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <line x1="19" y1="5" x2="5" y2="19" />
-                <circle cx="6.5" cy="6.5" r="2.5" />
-                <circle cx="17.5" cy="17.5" r="2.5" />
-              </svg>
-            </span>
-            <div>
-              <div class="title">Discounts</div>
-              <div class="hint">Promos &amp; codes</div>
+          <div class="home-stats-panel">
+            <div class="stat-card stat-card--accent home-sales-stat">
+              <span class="stat-label">Today's Sales</span>
+              <span class="stat-value" id="totalStr">$0.00</span>
             </div>
-            <div class="chev" aria-hidden="true">→</div>
-          </button>
-        </article>
+            <div class="home-stats-secondary">
+              <div class="stat-card">
+                <span class="stat-label">Date</span>
+                <span class="stat-value" id="dateStr">--/--/----</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Time</span>
+                <span class="stat-value" id="timeStr">--:-- --</span>
+              </div>
+              <div class="stat-card stat-card--btn home-cashier-stat" id="cashierCard" role="button" tabindex="0" title="Switch cashier">
+                <span class="stat-label">Cashier</span>
+                <span class="stat-value" id="shiftStr">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <!-- Order Queue -->
-        <article class="card" tabindex="0">
-          <span class="ring" aria-hidden="true"></span>
-          <button
-            class="btn-main"
-            data-action="order-queue"
-            aria-label="View order queue"
-            id="kdsOpenBtn"
-          >
-            <span class="card-icon" aria-hidden="true">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="8" y1="6" x2="21" y2="6"/>
-                <line x1="8" y1="12" x2="21" y2="12"/>
-                <line x1="8" y1="18" x2="21" y2="18"/>
-                <circle cx="3" cy="6" r="1" fill="currentColor"/>
-                <circle cx="3" cy="12" r="1" fill="currentColor"/>
-                <circle cx="3" cy="18" r="1" fill="currentColor"/>
-              </svg>
-            </span>
-            <div>
-              <div class="title">Order Queue</div>
-              <div class="hint">Kitchen display</div>
-            </div>
-            <div class="chev" aria-hidden="true">→</div>
-          </button>
-        </article>
+        <!-- 3. Utility row -->
+        <div class="home-utility-row">
+          <article class="card home-util-card" tabindex="0" data-min-role="manager">
+            <span class="ring" aria-hidden="true"></span>
+            <button class="btn-main" data-action="menu-list" aria-label="Open menu list" id="menu-list">
+              <span class="card-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7" rx="1" />
+                  <rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" />
+                  <rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg>
+              </span>
+              <div>
+                <div class="title">Menu List</div>
+                <div class="hint">Browse items</div>
+              </div>
+            </button>
+          </article>
 
-        <!-- Summary -->
-        <article class="card card--locked" tabindex="-1" aria-disabled="true">
-          <span class="ring" aria-hidden="true"></span>
-          <span class="coming-soon-badge" aria-hidden="true">Soon</span>
-          <button
-            class="btn-main"
-            data-action="summary"
-            aria-label="View summary"
-            tabindex="-1"
-          >
-            <span class="card-icon" aria-hidden="true">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.75"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <line x1="18" y1="20" x2="18" y2="10" />
-                <line x1="12" y1="20" x2="12" y2="4" />
-                <line x1="6" y1="20" x2="6" y2="14" />
-                <line x1="2" y1="20" x2="22" y2="20" />
-              </svg>
-            </span>
-            <div>
-              <div class="title">Summary</div>
-              <div class="hint">Sales &amp; reports</div>
-            </div>
-            <div class="chev" aria-hidden="true">→</div>
-          </button>
-        </article>
+          <article class="card home-util-card" tabindex="0" data-min-role="manager">
+            <span class="ring" aria-hidden="true"></span>
+            <button class="btn-main" data-action="discounts" aria-label="Manage discounts">
+              <span class="card-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="19" y1="5" x2="5" y2="19" />
+                  <circle cx="6.5" cy="6.5" r="2.5" />
+                  <circle cx="17.5" cy="17.5" r="2.5" />
+                </svg>
+              </span>
+              <div>
+                <div class="title">Discounts</div>
+                <div class="hint">Promos &amp; codes</div>
+              </div>
+            </button>
+          </article>
 
-        <!-- Cash Flow -->
-        <article class="card" tabindex="0" data-min-role="manager">
-          <span class="ring" aria-hidden="true"></span>
-          <button
-            class="btn-main"
-            data-action="cash-flow"
-            aria-label="View cash flow"
-          >
-            <span class="card-icon" aria-hidden="true">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.75"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <line x1="12" y1="1" x2="12" y2="23" />
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-              </svg>
-            </span>
-            <div>
-              <div class="title">Cash Flow</div>
-              <div class="hint">Income &amp; expenses</div>
-            </div>
-            <div class="chev" aria-hidden="true">→</div>
-          </button>
-        </article>
+          <article class="card home-util-card" tabindex="0" data-min-role="manager">
+            <span class="ring" aria-hidden="true"></span>
+            <button class="btn-main" data-action="cash-flow" aria-label="View cash flow">
+              <span class="card-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="1" x2="12" y2="23" />
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+              </span>
+              <div>
+                <div class="title">Cash Flow</div>
+                <div class="hint">Income &amp; expenses</div>
+              </div>
+            </button>
+          </article>
 
-        <!-- Staff Management -->
-        <article class="card" data-min-role="admin">
-          <span class="ring" aria-hidden="true"></span>
-          <button
-            class="btn-main"
-            data-action="staff"
-            aria-label="Manage staff"
-          >
-            <span class="card-icon" aria-hidden="true">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.75"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
-            </span>
-            <div>
-              <div class="title">Staff</div>
-              <div class="hint">Roles &amp; members</div>
-            </div>
-            <div class="chev" aria-hidden="true">→</div>
-          </button>
-        </article>
-      </section>
+          <article class="card home-util-card" tabindex="0" data-min-role="admin">
+            <span class="ring" aria-hidden="true"></span>
+            <button class="btn-main" data-action="staff" aria-label="Manage staff">
+              <span class="card-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </span>
+              <div>
+                <div class="title">Staff</div>
+                <div class="hint">Roles &amp; members</div>
+              </div>
+            </button>
+          </article>
+
+          <article class="card home-util-card card--locked" tabindex="-1" aria-disabled="true">
+            <span class="ring" aria-hidden="true"></span>
+            <span class="coming-soon-badge" aria-hidden="true">Soon</span>
+            <button class="btn-main" data-action="summary" aria-label="View summary" tabindex="-1">
+              <span class="card-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
+                  <line x1="2" y1="20" x2="22" y2="20" />
+                </svg>
+              </span>
+              <div>
+                <div class="title">Summary</div>
+                <div class="hint">Sales &amp; reports</div>
+              </div>
+            </button>
+          </article>
+        </div>
+
+      </div>
 
       <p class="section-label">Quick Actions</p>
       <section class="quick-actions fade-up" aria-label="Quick actions">

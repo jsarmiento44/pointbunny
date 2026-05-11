@@ -20,147 +20,99 @@ class MenuEditView extends View {
 
   _insertEditMenuMarkup(item) {
     this._currentItemId = item._id;
-    const markUp = `<!-- BACKDROP -->
+    const markUp = `
 <div class="modal-backdrop">
-  <!-- MODAL CONTAINER -->
   <div class="modal-container">
-    <button class="modal-close-btn" aria-label="Close modal">x</button>
+    <button class="modal-close-btn" aria-label="Close modal">&#x2715;</button>
 
     <form class="edit-item-form">
       <h2 class="edit-form-title">Edit Menu Item</h2>
 
-      <div class="edit-form-grid">
-        <!-- LEFT COLUMN -->
-        <div class="edit-form-column">
-
-          <!-- IMAGE PREVIEW + UPLOAD -->
-            <div class="file-upload-preview-wrapper">
-              <img
-                src="${item.imageURL || "default-image.png"}"
-                alt="Item Image"
-                class="edit-image-preview"
-              />
-              <input type="file" class="edit-image-input" name="image" accept="image/*" style="display:none;" />
-              <span class="edit-image-overlay">Click to change image</span>
-            </div>
-
-
+      <!-- Hero: image + core info -->
+      <div class="edit-hero">
+        <div class="file-upload-preview-wrapper">
+          <img src="${item.imageURL || "default-image.png"}" alt="Item Image" class="edit-image-preview" />
+          <input type="file" class="edit-image-input" name="image" accept="image/*" style="display:none;" />
+          <span class="edit-image-overlay">Change image</span>
+        </div>
+        <div class="edit-hero-info">
           <label class="edit-field">
             Item Name
             <input type="text" name="itemName" value="${item.itemName}" />
           </label>
-
-          <label class="edit-field">
-            Price
-            <input type="number" name="price" value="${item.price}" />
-          </label>
-
-          <div class="edit-field">
-            <span class="edit-field-label">Category</span>
-            <div class="category-wrapper">
-              <select class="edit-field-select" name="category"></select>
-              <div class="new-category-row hidden">
-                <input type="text" class="new-category-field edit-new-category-input" placeholder="New category name" />
-                <button class="new-category-button" type="button">+ Add</button>
-              </div>
-            </div>
+          <div class="edit-inline-row">
+            <label class="edit-field">
+              Price
+              <input type="number" name="price" value="${item.price}" />
+            </label>
+            <label class="edit-field">
+              Status
+              <select name="status">
+                <option value="Active" ${item.status === "active" ? "selected" : ""}>Active</option>
+                <option value="Inactive" ${item.status === "inactive" ? "selected" : ""}>Inactive</option>
+                <option value="Unavailable" ${item.status === "unavailable" ? "selected" : ""}>Unavailable</option>
+              </select>
+            </label>
           </div>
-
-          <label class="edit-field">
-            Description
-            <textarea name="description" rows="4">${item.description}</textarea>
-          </label>
-
-          <label class="edit-field">
-            Stock
-            <input type="number" name="stock" value="${item._stock}" />
-          </label>
-
         </div>
+      </div>
 
-        <!-- RIGHT COLUMN -->
-        <div class="edit-form-column">
+      <!-- Category -->
+      <div class="edit-field">
+        <span>Category</span>
+        <div class="category-wrapper">
+          <select class="edit-field-select" name="category"></select>
+          <div class="new-category-row hidden">
+            <input type="text" class="new-category-field edit-new-category-input" placeholder="New category name" />
+            <button class="new-category-button" type="button">+ Add</button>
+          </div>
+        </div>
+      </div>
 
-          <label class="edit-field">
-            Status
-            <select name="status">
-              <option value="Active" ${item.status === "active" ? "selected" : ""}>Active</option>
-              <option value="Inactive" ${item.status === "inactive" ? "selected" : ""}>Inactive</option>
-              <option value="Unavailable" ${item.status === "unavailable" ? "selected" : ""}>Unavailable</option>
-            </select>
-          </label>
-
+      <!-- Variants -->
+      <div class="edit-variants-section">
+        <div class="edit-variants-header">
           <div class="edit-toggle-row">
-            <span class="edit-toggle-label">Has Variants</span>
+            <h3 class="edit-variants-title">Variants</h3>
             <label class="edit-switch">
               <input type="checkbox" name="hasVariants" ${item.hasVariants ? "checked" : ""} />
               <span class="edit-slider"></span>
             </label>
           </div>
+          <button type="button" class="edit-add-variant-btn">+ Add Variant Group</button>
+        </div>
 
-          <!-- Variants Section -->
-          <div class="edit-variants-section">
-
-            <!-- Header: Variants title + Add button -->
-            <div class="edit-variants-header">
-              <h3 class="edit-variants-title">Variants</h3>
-              <button type="button" class="edit-add-variant-btn">+ Add Variant Group</button>
-            </div>
-
-            ${
-              item.hasVariants
-                ? item.variants
-                    .map((variant, vIndex) => {
-                      return `
+        ${
+          item.hasVariants
+            ? item.variants.map((variant, vIndex) => `
             <div class="edit-variant-group">
               <div class="edit-variant-header">
                 <label class="edit-field">
-                  Variant Group
+                  Variant Group Label
                   <input type="text" name="variants[${vIndex}][optionLabel]" value="${variant.optionLabel}" />
                 </label>
-                <button type="button" class="edit-delete-variant-btn">✕</button>
+                <button type="button" class="edit-delete-variant-btn">&#x2715;</button>
               </div>
-
               <div class="edit-variant-options">
-                ${variant.options
-                  .map((option, oIndex) => {
-                    return `
-                    <div class="edit-variant-row">
-                      <input
-                        type="text"
-                        name="variants[${vIndex}][options][${oIndex}][optionName]"
-                        placeholder="Option name"
-                        value="${option.optionName}"
-                      />
-                      <input
-                        type="number"
-                        name="variants[${vIndex}][options][${oIndex}][optionPrice]"
-                        placeholder="Price"
-                        value="${option.optionPrice}"
-                      />
-                      <button type="button" class="edit-delete-option-btn">✕</button>
-                    </div>
-                    `;
-                  })
-                  .join("")}
+                ${variant.options.map((option, oIndex) => `
+                  <div class="edit-variant-row">
+                    <input type="text" name="variants[${vIndex}][options][${oIndex}][optionName]" placeholder="Option name" value="${option.optionName}" />
+                    <input type="number" name="variants[${vIndex}][options][${oIndex}][optionPrice]" placeholder="Price" value="${option.optionPrice}" />
+                    <button type="button" class="edit-delete-option-btn">&#x2715;</button>
+                  </div>
+                `).join("")}
               </div>
-
-              <button type="button" class="edit-add-option-btn">+ Add Option</button>   
+              <button type="button" class="edit-add-option-btn">+ Add Option</button>
             </div>
-          `;
-                    })
-                    .join("")
-                : ""
-            }
-          </div>
+          `).join("")
+            : ""
+        }
+      </div>
 
-          <!-- ACTION BUTTONS -->
-          <div class="edit-form-actions">
-            <button type="submit" class="edit-update-btn">Update</button>
-            <button type="button" class="edit-delete-btn">Delete Item</button>
-          </div>
-
-        </div>
+      <!-- Actions -->
+      <div class="edit-form-actions">
+        <button type="submit" class="edit-update-btn">Update Item</button>
+        <button type="button" class="edit-delete-btn">Delete Item</button>
       </div>
     </form>
   </div>
@@ -338,10 +290,8 @@ class MenuEditView extends View {
       const checkbox = this._formDiv.querySelector('[name="hasVariants"]');
       if (checkbox && !checkbox.checked) {
         checkbox.checked = true;
-        const variantsSection = this._formDiv.querySelector(
-          ".edit-variants-section",
-        );
-        if (variantsSection) variantsSection.style.display = "";
+        const addBtn = this._formDiv.querySelector(".edit-add-variant-btn");
+        if (addBtn) addBtn.style.display = "";
       }
     });
   }
@@ -465,21 +415,17 @@ class MenuEditView extends View {
       const checkbox = e.target.closest('[name="hasVariants"]');
       if (!checkbox) return;
 
-      const variantsSection = this._formDiv.querySelector(
-        ".edit-variants-section",
-      );
+      const addBtn = this._formDiv.querySelector(".edit-add-variant-btn");
 
       if (checkbox.checked) {
-        if (variantsSection) variantsSection.style.display = "";
+        if (addBtn) addBtn.style.display = "";
         return;
       }
 
-      const existingGroups = this._formDiv.querySelectorAll(
-        ".edit-variant-group",
-      );
+      const existingGroups = this._formDiv.querySelectorAll(".edit-variant-group");
 
       if (existingGroups.length === 0) {
-        if (variantsSection) variantsSection.style.display = "none";
+        if (addBtn) addBtn.style.display = "none";
         return;
       }
 
@@ -489,7 +435,7 @@ class MenuEditView extends View {
       this._showVariantsToggleConfirm(() => {
         checkbox.checked = false;
         existingGroups.forEach((g) => g.remove());
-        if (variantsSection) variantsSection.style.display = "none";
+        if (addBtn) addBtn.style.display = "none";
       });
     });
   }

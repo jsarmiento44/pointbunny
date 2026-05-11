@@ -84,7 +84,7 @@ class CashflowView extends View {
               ${label}
               ${sale.is_manual ? `<span class="cashflow-manual-badge">Manual</span>` : ""}
             </span>
-            <span class="cashflow-row-date">${fmtDateTime(sale.sale_date)}${sale.added_by ? ` · ${sale.is_manual ? 'Added by' : 'Cashier:'} ${sale.added_by}` : ""}</span>
+            <span class="cashflow-row-date">${fmtDateTime(sale.sale_date)}${sale.order_type ? ` · ${sale.order_type === 'takeout' ? 'Takeout' : 'Dine In'}` : ''}${sale.added_by ? ` · ${sale.is_manual ? 'Added by' : 'Cashier:'} ${sale.added_by}` : ""}</span>
           </div>
           <div class="cashflow-row-right">
             <span class="cashflow-row-amount cashflow-row-amount--sale">${fmt(sale.total_price)}</span>

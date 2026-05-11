@@ -7,6 +7,7 @@ class OrderCheckOutView extends View {
   _totalPrice;
   _customerPayment;
   _customerChange;
+  _orderType = 'dine-in';
 
   // ── Cart items markup ─────────────────────────────────────────────────────────
 
@@ -16,12 +17,15 @@ class OrderCheckOutView extends View {
         (item, index) => {
           const allVariants = item.selectedVariants.map((v) => v.variantName);
           return `
-          <div class="cart-item-row">
-            <div style="display:flex; flex-direction:column;">
-              <span>${item.itemName} x${item.quantity}</span>
-              <span style="font-size:0.85rem; opacity:0.7;">${allVariants.join(", ")}</span>
+          <div class="pos-cart-item cart-item-row">
+            <div class="pos-cart-item-info">
+              <span class="pos-cart-item-name">${item.itemName} ×${item.quantity}</span>
+              ${allVariants.length ? `<span class="pos-cart-item-variants">${allVariants.join(", ")}</span>` : ""}
             </div>
-            <span>$${item.totalPrice}</span>
+            <div class="pos-cart-item-right">
+              <span class="pos-cart-item-price">$${item.totalPrice}</span>
+              <button class="checkout-cart-delete-btn pos-cart-delete" data-cart-index="${index}" type="button">×</button>
+            </div>
           </div>`;
         },
       )
@@ -145,49 +149,59 @@ class OrderCheckOutView extends View {
     };
     const showRemoved = this._data.settings?.showRemovedAdjustments ?? true;
     const subtotal = this._subtotal ?? this._totalPrice;
+    const printingOn = this._data.settings?.printingEnabled ?? true;
 
     return `
-<div class="modal-overlay" id="newOrderModal">
-  <div class="modal-content pos-modal">
-    <button class="modal-close">&times;</button>
-    <button class="checkout-back-btn" type="button" title="Back to order">
+<div class="pos-screen" id="newOrderModal">
+  <div class="pos-header">
+    <button class="checkout-back-btn pos-back-btn" type="button" title="Back to order">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="15 18 9 12 15 6"/>
       </svg>
+      Back
     </button>
-    <h3 class="form-title">Cart Summary</h3>
+    <h2 class="pos-title">Checkout</h2>
+    <button class="modal-close pos-close-btn" aria-label="Close">&times;</button>
+  </div>
 
-    <div id="cartItems" class="cart-items">
-      ${this._generateCartItemsMarkup(this._data.cart)}
+  <div class="pos-checkout-body">
+    <div class="pos-checkout-cart">
+      <h3 class="pos-checkout-section-title">Order Summary</h3>
+      <div id="cartItems" class="pos-checkout-cart-list">
+        ${this._generateCartItemsMarkup(this._data.cart)}
+      </div>
     </div>
 
-    <div class="payment-section">
+    <div class="pos-checkout-payment">
+      <div class="order-type-toggle">
+        <button class="order-type-btn${this._orderType === 'dine-in' ? ' order-type-btn--active' : ''}" data-order-type="dine-in" type="button">Dine In</button>
+        <button class="order-type-btn${this._orderType === 'takeout' ? ' order-type-btn--active' : ''}" data-order-type="takeout" type="button">Takeout</button>
+      </div>
       <div id="receiptAdjSection">
         ${this._generateAdjSectionMarkup(subtotal, allAdj, adjResult, showRemoved)}
       </div>
 
-      <div class="cart-total">
-        <span>Total:</span>
+      <div class="cart-total pos-checkout-total">
+        <span>Total</span>
         <span id="cartTotal">$${this._totalPrice.toFixed(2)}</span>
       </div>
 
-      <div class="receive-container" style="display:flex; gap:8px; align-items:center;">
-        <label for="customerPayment" style="margin:0;">Payment:</label>
-        <input type="number" id="customerPayment" placeholder="Enter amount received" />
-        <button id="enterPaymentBtn">Enter</button>
+      <div class="receive-container">
+        <label for="customerPayment">Payment</label>
+        <div class="pos-payment-row">
+          <input type="number" id="customerPayment" placeholder="Enter amount received" style="flex:1;min-width:0;" />
+          <button id="enterPaymentBtn">Enter</button>
+        </div>
       </div>
 
-      <label>
-        Change:
+      <label class="pos-change-label">
+        Change
         <div id="changeAmount" class="change-box">$0.00</div>
       </label>
 
-      ${(() => {
-        const printingOn = this._data.settings?.printingEnabled ?? true;
-        return `<button class="print-receipt-btn${printingOn ? '' : ' print-receipt-btn--off'} hidden" id="printReceiptBtn">
-          ${printingOn ? 'Print Receipt' : 'Record Sale<span class="print-off-note">Printing is off · Enable in Settings</span>'}
-        </button>`;
-      })()}
+      <button class="print-receipt-btn${printingOn ? '' : ' print-receipt-btn--off'} hidden" id="printReceiptBtn">
+        ${printingOn ? 'Print Receipt' : 'Record Sale<span class="print-off-note">Printing is off · Enable in Settings</span>'}
+      </button>
     </div>
   </div>
 </div>
@@ -256,7 +270,7 @@ class OrderCheckOutView extends View {
 
   _showReceiptAddManualForm() {
     this._removeReceiptForms();
-    const modal = this._parentElement.querySelector(".pos-modal");
+    const modal = this._parentElement.querySelector(".pos-screen");
     if (!modal) return;
 
     const html = `
@@ -356,6 +370,17 @@ class OrderCheckOutView extends View {
   }
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
+
+  _wireOrderType() {
+    this._parentElement.addEventListener('click', (e) => {
+      const btn = e.target.closest('.order-type-btn');
+      if (!btn) return;
+      this._orderType = btn.dataset.orderType;
+      this._parentElement.querySelectorAll('.order-type-btn').forEach(b =>
+        b.classList.toggle('order-type-btn--active', b === btn)
+      );
+    });
+  }
 
   _addHandlerShowCheckout(handler) {
     this._parentElement.addEventListener("click", function (e) {

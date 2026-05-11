@@ -214,6 +214,7 @@ const controlOrderCheckout = function () {
     OrderCheckOutView._subtotal = subtotal;
     OrderCheckOutView._adjResult = adjResult;
     OrderCheckOutView._totalPrice = adjResult.finalTotal;
+    OrderCheckOutView._orderType = 'dine-in';
     OrderCheckOutView.render(modelState);
   } catch (err) {
     showToast(err.message ?? err);
@@ -236,6 +237,7 @@ const _buildSale = function () {
     promoCode: model.state.currentPromoCode ?? null,
     storeName: model.state.username,
     cashierName,
+    orderType: OrderCheckOutView._orderType ?? 'dine-in',
     date: Date.now(),
   };
 };
@@ -368,6 +370,7 @@ const _finaliseSale = async function (sale, note = null) {
     sale_date: new Date(sale.date).toISOString(),
     is_manual: false,
     added_by: sale.cashierName || null,
+    order_type: sale.orderType ?? 'dine-in',
   }).select('id').single();
   if (insertError) throw insertError;
   if (sale.promoCode) {
@@ -379,6 +382,7 @@ const _finaliseSale = async function (sale, note = null) {
     items: sale.items,
     startedAt: sale.date,
     totalPrice: sale.totalPrice,
+    orderType: sale.orderType ?? 'dine-in',
   });
   _ensureKDSTick();
   KDSView.renderQueue(modelState.orderQueue);
@@ -1229,6 +1233,7 @@ const _wireApp = function () {
 
   //NewOrder
   NewOrderView._addHandlerShowMenuModal(controlNewOrder);
+  NewOrderView._addHandlerCategoryTabs();
   NewOrderItemView._addHandlerShowItemModal(controlDisplayMenuItem);
   controlNewOrderModals();
   NewOrderItemView._pushToCart(controlPushToModelCart);
@@ -1251,6 +1256,7 @@ const _wireApp = function () {
   OrderCheckOutView._addHandlerDeleteCartItem(controlDeleteCartItemInCheckout);
   OrderCheckOutView._addHandlerBack(controlGoBackToOrder);
   OrderCheckOutView._subtractChange();
+  OrderCheckOutView._wireOrderType();
   OrderCheckOutView._addHandlerPrintReceipt(controlConcludeTransaction);
   OrderCheckOutView._addHandlerReceiptEdit(controlReceiptEdit);
   OrderCheckOutView._addHandlerReceiptRemove(controlRemoveReceiptAdj);

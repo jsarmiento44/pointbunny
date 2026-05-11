@@ -35,10 +35,15 @@ class KDSView {
       return `<li class="kds-item">${item.itemName} ×${item.quantity}${variants ? `<span class="kds-item-variants"> · ${variants}</span>` : ''}</li>`;
     }).join('');
 
+    const istakeout = order.orderType === 'takeout';
+    const typeLabel = istakeout ? 'Takeout' : 'Dine In';
+    const typeCls = istakeout ? 'kds-badge--takeout' : 'kds-badge--dine-in';
+
     return `
       <div class="kds-card" data-order-id="${order.id}">
         <div class="kds-card-header">
           <span class="kds-order-num">#${num}</span>
+          <span class="kds-order-type ${typeCls}">${typeLabel}</span>
           <span class="kds-timer" data-order-id="${order.id}">0:00</span>
         </div>
         <ul class="kds-items">${itemsHtml}</ul>

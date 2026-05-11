@@ -762,7 +762,7 @@ export const loadOrderQueue = async function () {
   const end   = new Date(now); end.setHours(23, 59, 59, 999);
   const { data, error } = await supabase
     .from('sales')
-    .select('id, sale_date, items, total_price')
+    .select('id, sale_date, items, total_price, order_type')
     .eq('user_id', state.businessId)
     .gte('sale_date', start.toISOString())
     .lte('sale_date', end.toISOString())
@@ -775,6 +775,7 @@ export const loadOrderQueue = async function () {
     items: row.items,
     startedAt: new Date(row.sale_date).getTime(),
     totalPrice: Number(row.total_price),
+    orderType: row.order_type ?? 'dine-in',
   }));
 };
 

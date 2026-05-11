@@ -11,7 +11,12 @@
       "Bash(Get-ChildItem -Recurse \"C:\\\\Users\\\\Kelly\\\\Desktop\\\\Pointy\\\\Pointy Project\" -Include \"*.js\", \"*.html\")",
       "Bash(Select-Object FullName)",
       "Bash(Sort-Object FullName)",
-      "Bash(Remove-Item -Recurse -Force \".parcel-cache\" -ErrorAction SilentlyContinue)"
+      "Bash(Remove-Item -Recurse -Force \".parcel-cache\" -ErrorAction SilentlyContinue)",
+      "Bash(node -e ' *)",
+      "Bash(Start-Process \"msedge\" \"--headless --screenshot='C:\\\\Users\\\\Kelly\\\\Desktop\\\\form-check.png' --window-size=1280,900 'http://localhost:59775'\" -Wait)",
+      "PowerShell(Start-Process \"msedge\" -ArgumentList \"--headless --screenshot=`\"C:\\\\Users\\\\Kelly\\\\Desktop\\\\form-check.png`\" --window-size=1280,900 `\"http://localhost:59775`\"\" -Wait; Start-Sleep 3)",
+      "Bash(npx parcel *)",
+      "Bash(node *)"
     ]
   }
 }

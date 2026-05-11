@@ -1,98 +1,150 @@
-﻿import View from "./view.js";
+import View from "./view.js";
 
 class NewOrderView extends View {
   _parentElement = document.querySelector(".modal-parent");
   _openBtn = document.getElementById("#newOrderBtn");
-  _modalParent = document.querySelector(".new-order-parent");
 
   _generateMarkUp() {
+    const cap = (s) => s[0].toUpperCase() + s.slice(1);
+    const { menuItems, menuCategories, cart } = this._data;
+
+    const cartCount = cart.length;
+    const cartTotal = cart.reduce((acc, item) => acc + item.totalPrice, 0);
+    const userCategories = menuCategories.filter((c) => c !== "uncategorized");
+
+    const renderCard = (item) => {
+      const unavailable = item.status === "unavailable";
+      return `
+        <div class="pos-item-card${unavailable ? " pos-item-card--unavailable" : ""}" data-id="${item._id}">
+          <img src="${item.imageURL}" alt="${item.itemName}" class="pos-item-img" />
+          <div class="pos-item-info">
+            <div class="pos-item-name">${item.itemName}</div>
+            <div class="pos-item-price">$${item.price}</div>
+          </div>
+        </div>`;
+    };
+
+    const activeCategories = userCategories.filter((cat) =>
+      menuItems.some((i) => i.category === cat && i.status !== "inactive"),
+    );
+
+    const uncategorizedItems = menuItems.filter(
+      (i) =>
+        i.status !== "inactive" &&
+        (!i.category ||
+          i.category === "uncategorized" ||
+          !menuCategories.includes(i.category)),
+    );
+
+    const tabs = [
+      `<button class="pos-cat-tab pos-cat-tab--active" data-cat="all">All Items</button>`,
+      ...activeCategories.map(
+        (cat) =>
+          `<button class="pos-cat-tab" data-cat="${cat}">${cap(cat)}</button>`,
+      ),
+      uncategorizedItems.length
+        ? `<button class="pos-cat-tab" data-cat="uncategorized">Uncategorized</button>`
+        : "",
+    ].join("");
+
+    const categoryGroups = activeCategories
+      .map((cat) => {
+        const items = menuItems.filter(
+          (i) => i.category === cat && i.status !== "inactive",
+        );
+        if (!items.length) return "";
+        return `
+          <div class="pos-cat-section" data-section="${cat}">
+            <p class="pos-cat-label">${cap(cat)}</p>
+            <div class="pos-items-grid">${items.map(renderCard).join("")}</div>
+          </div>`;
+      })
+      .join("");
+
+    const uncatGroup = uncategorizedItems.length
+      ? `
+        <div class="pos-cat-section" data-section="uncategorized">
+          <p class="pos-cat-label pos-cat-label--muted">Uncategorized</p>
+          <div class="pos-items-grid">${uncategorizedItems.map(renderCard).join("")}</div>
+        </div>`
+      : "";
+
+    const cartMarkup = cart
+      .map((item, i) => {
+        const variants = item.selectedVariants.map((v) => v.variantName).join(", ");
+        return `
+          <div class="pos-cart-item cart-item-row">
+            <div class="pos-cart-item-info">
+              <span class="pos-cart-item-name">${item.itemName} ×${item.quantity}</span>
+              ${variants ? `<span class="pos-cart-item-variants">${variants}</span>` : ""}
+            </div>
+            <div class="pos-cart-item-right">
+              <span class="pos-cart-item-price">$${item.totalPrice}</span>
+              <button class="cart-item-delete-btn pos-cart-delete" data-cart-index="${i}" type="button">×</button>
+            </div>
+          </div>`;
+      })
+      .join("");
+
     return `
-    <div class="modal-overlay" id="newOrderModal">
-  <div class="modal-content">
-    <!-- Close Button -->
-    <button class="modal-close">&times;</button>
-
-    <!-- Left Panel: Menu Items -->
-    <div class="modal-left">
-      ${this._data.menuItems.length === 0
-        ? `<p class="no-items-msg">No items yet. Go to menu list and add a new item.</p>`
-        : (() => {
-            const categories = this._data.menuCategories.filter(c => c !== 'uncategorized');
-            const renderCard = (item) => {
-              const unavailable = item.status === "unavailable";
-              return `
-                <div class="item-card${unavailable ? " item-card--unavailable" : ""}" data-id="${item._id}">
-                  <div class="btn-main">
-                    <img src="${item.imageURL}" alt="${item.itemName}" />
-                    <div>
-                      <div class="title">${item.itemName}</div>
-                      <div class="hint">$${item.price}</div>
-                    </div>
-                  </div>
-                </div>`;
-            };
-            const groups = categories.map((category) => {
-              const items = this._data.menuItems.filter(
-                (item) => item.category === category && item.status !== "inactive",
-              );
-              if (items.length === 0) return "";
-              return `
-                <div class="menu-category-header">${category}</div>
-                <div class="menu-category">${items.map(renderCard).join("")}</div>`;
-            }).join("");
-            const uncategorized = this._data.menuItems.filter(
-              (item) => item.status !== "inactive" &&
-                (!item.category || item.category === "uncategorized" || !this._data.menuCategories.includes(item.category))
-            );
-            const uncategorizedGroup = uncategorized.length ? `
-                <div class="menu-category-header">Uncategorized</div>
-                <div class="menu-category">${uncategorized.map(renderCard).join("")}</div>` : "";
-            return groups + uncategorizedGroup;
-          })()}
-    </div>
-
-    <!-- Right Panel: Cart Summary -->
-    <div class="modal-right">
-      <h3 class="form-title">Cart Summary</h3>
-
-      <div
-        id="cartItems"
-        style="display:flex; flex-direction:column; gap:12px; max-height:60vh; overflow-y:auto;"
-      >
-        ${this._data.cart
-          .map((item, index) => {
-            const allVariants = item.selectedVariants.map((v) => v.variantName);
-            return `
-            <div class="cart-item-row">
-              <div style="display:flex; flex-direction:column;">
-                <span>${item.itemName} x${item.quantity}</span>
-                <span style="font-size:0.85rem; opacity:0.7;">${allVariants.join(", ")}</span>
+      <div class="pos-screen" id="newOrderModal">
+        <div class="pos-header">
+          <button class="modal-close pos-close-btn" aria-label="Close">×</button>
+          <h2 class="pos-title">New Order</h2>
+          <button class="btn-checkout pos-cart-fab">
+            Cart${cartCount > 0 ? ` <span class="pos-cart-count">${cartCount}</span>` : ""} · $${cartTotal.toFixed(2)}
+          </button>
+        </div>
+        <div class="pos-body">
+          ${menuItems.length > 0 ? `<div class="pos-cat-sidebar">${tabs}</div>` : ""}
+          <div class="pos-menu">
+            ${
+              menuItems.length === 0
+                ? `<p class="pos-empty">No items yet. Go to Menu List to add items.</p>`
+                : `<div class="pos-items-area" id="posItemsArea">
+                  ${categoryGroups}${uncatGroup}
+                </div>`
+            }
+          </div>
+          <div class="pos-cart-sidebar">
+            <h3 class="pos-cart-title">Cart</h3>
+            <div class="pos-cart-list" id="cartItems">
+              ${cartMarkup || '<p class="pos-cart-empty">No items yet.</p>'}
+            </div>
+            <div class="pos-cart-footer">
+              <div class="pos-cart-total">
+                <span>Total</span>
+                <span>$${cartTotal.toFixed(2)}</span>
               </div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span>$${item.totalPrice}</span>
-                <button class="cart-item-delete-btn" data-cart-index="${index}" type="button">&times;</button>
-              </div>
-            </div>`;
-          })
-          .join("")}
-      </div>
+              <button class="btn-checkout pos-checkout-btn">Checkout</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
 
-      <div
-        style="margin-top:auto; font-weight:900; font-size:1.1rem;
-               display:flex; justify-content:space-between;
-               padding-top:8px; border-top:1px solid var(--line);"
-      >
-        <span>Total:</span>
-        <span>
-          $${this._data.cart.reduce((acc, item) => acc + item.totalPrice, 0)}
-        </span>
-      </div>
+  _addHandlerCategoryTabs() {
+    this._parentElement.addEventListener("click", (e) => {
+      const tab = e.target.closest(".pos-cat-tab");
+      if (!tab) return;
 
-      <button class="btn-checkout">Checkout</button>
-    </div>
-  </div>
-</div>
-`;
+      this._parentElement
+        .querySelectorAll(".pos-cat-tab")
+        .forEach((t) => t.classList.remove("pos-cat-tab--active"));
+      tab.classList.add("pos-cat-tab--active");
+
+      const cat = tab.dataset.cat;
+      this._parentElement.querySelectorAll(".pos-cat-section").forEach((s) => {
+        if (cat === "all" || s.dataset.section === cat) {
+          s.classList.remove("hidden");
+        } else {
+          s.classList.add("hidden");
+        }
+      });
+
+      const itemsArea = this._parentElement.querySelector(".pos-items-area");
+      if (itemsArea) itemsArea.scrollTop = 0;
+    });
   }
 
   _addHandlerDeleteCartItem(handler) {
@@ -111,16 +163,14 @@ class NewOrderView extends View {
   }
 
   _addHandlerCloseModal(handler) {
-    this._parentElement.addEventListener("click", function (e) {
+    this._parentElement.addEventListener("click", (e) => {
       const btn = e.target.closest(".modal-close");
       if (!btn || !btn.closest("#newOrderModal")) return;
-      const overlay = document.querySelector(".modal-overlay");
-      const inner = overlay?.querySelector(".modal-content");
+      const screen = this._parentElement.querySelector(".pos-screen");
       handler(() => {
-        if (inner) inner.classList.add("modal-exiting");
+        if (screen) screen.classList.add("modal-exiting");
         setTimeout(() => {
-          if (inner) inner.classList.remove("modal-exiting");
-          if (overlay) overlay.classList.add("hidden");
+          this._parentElement.innerHTML = "";
         }, 220);
       });
     });

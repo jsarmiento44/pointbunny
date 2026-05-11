@@ -1,4 +1,4 @@
-﻿import View from "./view.js";
+import View from "./view.js";
 
 class NewOrderItemView extends View {
   _parentElement = document.querySelector(".modal-parent");
@@ -12,10 +12,10 @@ class NewOrderItemView extends View {
   _addHandlerShowItemModal(handler) {
     this._parentElement.addEventListener("click", (e) => {
       e.preventDefault();
-      const item = e.target.closest(".item-card");
+      const item = e.target.closest(".pos-item-card");
       if (!item) return;
       item.classList.remove("pulse");
-      void item.offsetWidth; // force reflow so animation restarts
+      void item.offsetWidth;
       item.classList.add("pulse");
       handler(item.dataset.id);
       this._itemModal.classList.toggle("hidden");
@@ -26,7 +26,6 @@ class NewOrderItemView extends View {
     const variantsSection = this._itemModal.querySelector(".variant-section");
 
     this._itemModal.querySelector(".title").textContent = item.itemName;
-    this._itemModal.querySelector(".hint").textContent = item.category;
     this._itemModal.querySelector(".item-price").textContent = `$${item.price}`;
 
     const imgEl = this._itemModal.querySelector(".item-image");
@@ -41,14 +40,14 @@ class NewOrderItemView extends View {
             const [...optionsArr] = variant.options;
             return `
           <div class="variant-set">
-            <div class="menu-category-header">${variant.optionLabel}</div>
+            <div class="pos-variant-label">${variant.optionLabel}</div>
             <div class="variant-options">
               ${optionsArr
                 .map(
                   (option) => `
                   <div class="variant-chip" data-value="${option.optionName}" data-price="${option.optionPrice}">
                     ${option.optionName !== "" ? option.optionName : `Unnamed option`}
-                    <span>${option.optionPrice === "0" ? "" : `$${option.optionPrice}`}</span>
+                    <span>${option.optionPrice === "0" ? "" : `+$${option.optionPrice}`}</span>
                   </div>
                   `,
                 )
@@ -131,19 +130,15 @@ class NewOrderItemView extends View {
   }
 
   _selectMultipleVariantListener() {
-    //1.) Listen for a click event when user clicks a variant
     document
       .querySelector(".variant-section")
       .addEventListener("click", (e) => {
         e.preventDefault();
         const chip = e.target.closest(".variant-chip");
         if (!chip) return;
-
         chip.classList.toggle("selected");
         e.stopImmediatePropagation();
       });
-
-    //3.) Push all selected variants to basket
   }
 
   _selectSingleVariantListener() {
@@ -151,12 +146,10 @@ class NewOrderItemView extends View {
       set.addEventListener("click", function (e) {
         const chip = e.target.closest(".variant-chip");
         if (!chip) return;
-
         const currentlySelected = set.querySelector(".variant-chip.selected");
         if (currentlySelected && currentlySelected !== chip) {
           currentlySelected.classList.remove("selected");
         }
-
         chip.classList.toggle("selected");
       });
     });
