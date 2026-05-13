@@ -38,20 +38,11 @@ onReady(function () {
   }
   function setDateTime() {
     var now = new Date();
-    var dateStr =
-      pad(now.getMonth() + 1) +
-      "/" +
-      pad(now.getDate()) +
-      "/" +
-      now.getFullYear();
-    var h = now.getHours(),
-      hour12 = h % 12 || 12,
-      ampm = h < 12 ? "AM" : "PM";
+    var dateStr = pad(now.getMonth() + 1) + "/" + pad(now.getDate()) + "/" + now.getFullYear();
+    var h = now.getHours(), hour12 = h % 12 || 12, ampm = h < 12 ? "AM" : "PM";
     var timeStr = hour12 + ":" + pad(now.getMinutes()) + " " + ampm;
-    var d = document.getElementById("dateStr");
-    if (d) d.textContent = dateStr;
-    var t = document.getElementById("timeStr");
-    if (t) t.textContent = timeStr;
+    var el = document.getElementById("dateTimeStr");
+    if (el) el.textContent = dateStr + "  ·  " + timeStr;
   }
   setDateTime();
   setInterval(setDateTime, 15000);

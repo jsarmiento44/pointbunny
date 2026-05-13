@@ -63,9 +63,10 @@ const tick = () => {
     const timerEl = grid.querySelector(`.kds-timer[data-order-id="${order.id}"]`);
     const cardEl  = grid.querySelector(`.kds-card[data-order-id="${order.id}"]`);
     if (!timerEl || !cardEl) return;
-    timerEl.textContent = `${mins}:${String(secs).padStart(2, '0')}`;
     const isWarn   = elapsed >= thresholds.yellow && elapsed < thresholds.red;
     const isUrgent = elapsed >= thresholds.red;
+    const timeStr  = `${mins}:${String(secs).padStart(2, '0')}`;
+    timerEl.textContent = isUrgent ? `🔥 ${timeStr}` : isWarn ? `⏰ ${timeStr}` : timeStr;
     timerEl.classList.toggle('kds-timer--warn',   isWarn);
     timerEl.classList.toggle('kds-timer--urgent', isUrgent);
     cardEl.classList.toggle('kds-card--warn',   isWarn);
@@ -101,4 +102,4 @@ channel.onmessage = ({ data }) => {
 
 // ── Init — ask cashier for current queue ──────────────────────────────────────
 
-channel.postMessage({ type: MSG.KDS_REQUEST_SYNC });
+channel.ready.then(() => channel.postMessage({ type: MSG.KDS_REQUEST_SYNC }));

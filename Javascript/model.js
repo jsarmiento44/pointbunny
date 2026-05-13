@@ -537,6 +537,42 @@ export const loadTodaySalesTotal = async function () {
   return data.reduce((sum, r) => sum + Number(r.total_price), 0);
 };
 
+export const loadTransactionCounts = async function () {
+  const now = new Date();
+  const todayStart     = new Date(now); todayStart.setHours(0, 0, 0, 0);
+  const todayEnd       = new Date(now); todayEnd.setHours(23, 59, 59, 999);
+  const yesterday      = new Date(now); yesterday.setDate(now.getDate() - 1);
+  const yesterdayStart = new Date(yesterday); yesterdayStart.setHours(0, 0, 0, 0);
+  const yesterdayEnd   = new Date(yesterday); yesterdayEnd.setHours(23, 59, 59, 999);
+
+  const [todayRes, yestRes] = await Promise.all([
+    supabase.from('sales').select('id', { count: 'exact', head: true })
+      .eq('user_id', state.businessId)
+      .gte('sale_date', todayStart.toISOString())
+      .lte('sale_date', todayEnd.toISOString()),
+    supabase.from('sales').select('id', { count: 'exact', head: true })
+      .eq('user_id', state.businessId)
+      .gte('sale_date', yesterdayStart.toISOString())
+      .lte('sale_date', yesterdayEnd.toISOString()),
+  ]);
+
+  return { today: todayRes.count ?? 0, yesterday: yestRes.count ?? 0 };
+};
+
+export const loadYesterdaySalesTotal = async function () {
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+  const start = new Date(yesterday); start.setHours(0, 0, 0, 0);
+  const end   = new Date(yesterday); end.setHours(23, 59, 59, 999);
+  const { data, error } = await supabase
+    .from("sales")
+    .select("total_price")
+    .eq("user_id", state.businessId)
+    .gte("sale_date", start.toISOString())
+    .lte("sale_date", end.toISOString());
+  if (error) throw error;
+  return data.reduce((sum, r) => sum + Number(r.total_price), 0);
+};
+
 // ── Cashflow ──────────────────────────────────────────────────────────────────
 
 export const fetchCashflowData = async function (startISO, endISO) {

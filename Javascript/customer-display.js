@@ -83,4 +83,4 @@ channel.onmessage = ({ data }) => {
 
 // ── Init — ask cashier for current cart ───────────────────────────────────────
 
-channel.postMessage({ type: MSG.CFD_REQUEST_SYNC });
+channel.ready.then(() => channel.postMessage({ type: MSG.CFD_REQUEST_SYNC }));

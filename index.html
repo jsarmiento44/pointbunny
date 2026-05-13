@@ -527,52 +527,71 @@
           </button>
         </article>
 
-        <!-- 2. Secondary row: Order Queue + Today's Stats -->
+        <!-- 2. Secondary row: Stats -->
         <div class="home-row-2">
-          <article class="card" tabindex="0">
-            <span class="ring" aria-hidden="true"></span>
-            <button class="btn-main" data-action="order-queue" aria-label="View order queue" id="kdsOpenBtn">
-              <span class="card-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="8" y1="6" x2="21" y2="6"/>
-                  <line x1="8" y1="12" x2="21" y2="12"/>
-                  <line x1="8" y1="18" x2="21" y2="18"/>
-                  <circle cx="3" cy="6" r="1" fill="currentColor"/>
-                  <circle cx="3" cy="12" r="1" fill="currentColor"/>
-                  <circle cx="3" cy="18" r="1" fill="currentColor"/>
-                </svg>
-              </span>
-              <div>
-                <div class="title">Order Queue</div>
-                <div class="hint">Kitchen display</div>
-              </div>
-              <div class="chev" aria-hidden="true">→</div>
-            </button>
-          </article>
-
           <div class="home-stats-panel">
             <div class="stat-card stat-card--accent home-sales-stat">
-              <span class="stat-label">Today's Sales</span>
+              <span class="stat-label">
+                <span class="stat-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </span>
+                Today's Sales
+              </span>
               <span class="stat-value" id="totalStr">$0.00</span>
+              <span class="sales-vs-yesterday" id="salesVsYesterday">
+                <span class="svs-dot"></span>
+              </span>
             </div>
             <div class="home-stats-secondary">
               <div class="stat-card">
-                <span class="stat-label">Date</span>
-                <span class="stat-value" id="dateStr">--/--/----</span>
+                <span class="stat-label">
+                  <span class="stat-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  </span>
+                  Date &amp; Time
+                </span>
+                <span class="stat-value" id="dateTimeStr">-- : --</span>
               </div>
               <div class="stat-card">
-                <span class="stat-label">Time</span>
-                <span class="stat-value" id="timeStr">--:-- --</span>
+                <span class="stat-label">
+                  <span class="stat-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8H8"/><path d="M16 12H8"/><path d="M12 16H8"/></svg>
+                  </span>
+                  Transactions
+                </span>
+                <span class="stat-value" id="basketCountStr">—</span>
+                <span class="sales-vs-yesterday" id="basketsVsYesterday"><span class="svs-dot"></span></span>
               </div>
               <div class="stat-card stat-card--btn home-cashier-stat" id="cashierCard" role="button" tabindex="0" title="Switch cashier">
-                <span class="stat-label">Cashier</span>
+                <span class="stat-label">
+                  <span class="stat-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  </span>
+                  Cashier
+                </span>
                 <span class="stat-value" id="shiftStr">—</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 3. Utility row -->
+        <!-- 3. Open Orders -->
+        <section class="open-orders-section">
+          <div class="open-orders-header">
+            <h2 class="open-orders-title">
+              <span class="stat-icon open-orders-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              </span>
+              Open Orders
+            </h2>
+            <button class="open-orders-view-all hidden" id="openOrdersViewAll" type="button"></button>
+          </div>
+          <ul class="open-orders-list" id="openOrdersList">
+            <li class="oq-empty">No active orders.</li>
+          </ul>
+        </section>
+
+        <!-- 4. Utility row -->
         <div class="home-utility-row">
           <article class="card home-util-card" tabindex="0" data-min-role="manager">
             <span class="ring" aria-hidden="true"></span>
@@ -751,6 +770,7 @@
 
       <div class="cashflow-period-bar">
         <button class="period-btn active" data-period="today">Today</button>
+        <button class="period-btn" data-period="yesterday">Yesterday</button>
         <button class="period-btn" data-period="week">This Week</button>
         <button class="period-btn" data-period="month">This Month</button>
         <button class="period-btn" data-period="year">This Year</button>
@@ -789,27 +809,6 @@
           <h3 class="cashflow-col-title">Expenses</h3>
           <div class="cashflow-list" id="cashflowExpensesList"></div>
         </div>
-      </div>
-    </div>
-
-    <!-- Order Queue (KDS) Panel -->
-    <div id="kdsPanel" class="cashflow-panel hidden">
-      <div class="cashflow-header">
-        <button class="cashflow-back" id="kdsCloseBtn" aria-label="Go back">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
-            <line x1="19" y1="12" x2="5" y2="12" />
-            <polyline points="12 19 5 12 12 5" />
-          </svg>
-        </button>
-        <div class="cashflow-header-center">
-          <h2 class="cashflow-title">Order Queue</h2>
-        </div>
-        <div class="cashflow-header-actions">
-          <span class="kds-queue-count" id="kdsQueueCount"></span>
-        </div>
-      </div>
-      <div class="kds-grid" id="kdsGrid">
-        <p class="kds-empty">No active orders.</p>
       </div>
     </div>
 

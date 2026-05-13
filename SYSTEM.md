@@ -30,7 +30,7 @@
 
 ## 1. Architecture Overview
 
-**Pointy** is a frontend-only SPA (Single Page Application) following a strict **MVC** pattern:
+**Pointy** is a SPA (Single Page Application) following a strict **MVC** pattern. Persistence is via **Supabase** (Postgres DB + Auth + Storage + Realtime).
 
 ```
 User Action
@@ -45,7 +45,7 @@ Controller re-renders the relevant View
 ```
 
 - **No framework.** Vanilla JS (ES6 modules), bundled by Parcel.
-- **No persistent local state.** All state lives in the `state` object (`model.js`) and resets on reload. Persistence is via Supabase (DB + Storage).
+- **No persistent local state.** All state lives in the `state` object (`model.js`) and resets on reload. Persistence is via Supabase.
 - **No direct View→Model calls.** Views only call handlers passed to them by the controller.
 - **External displays** (KDS window, CFD window) communicate via `PointyChannel` — a thin wrapper around Supabase Realtime.
 
@@ -69,7 +69,7 @@ Controller re-renders the relevant View
 | `Views/settingsView.js` | `SettingsView` | Settings panel: categories, adjustments, toggles, display config |
 | `Views/cashflowView.js` | `CashflowView` | Cashflow panel: summary cards, sales list, expenses, export |
 | `Views/receiptView.js` | `ReceiptView` | Thermal receipt generator (80mm format) + popup print |
-| `Views/kdsView.js` | `KDSView` | Kitchen display: order queue cards, timers, done button |
+| `Views/kdsView.js` | `KDSView` | Home page Open Orders inline list: rows, timers, status badges, done button |
 | `Views/discountView.js` | `DiscountView` | Discount code management panel |
 | `Views/staffView.js` | `StaffView` | Staff management panel |
 
@@ -111,8 +111,8 @@ state = {
   // Discount codes
   discountCodes,     // [{ id, code, title, description, type, value, status, usageCount, usageLimit }]
 
-  // KDS
-  orderQueue,        // [{ id, orderId, items, createdAt, ... }]
+  // KDS / Open Orders
+  orderQueue,        // [{ id, saleDate, items, startedAt, totalPrice, orderType }] — sales where prepared_at IS NULL
 
   // Settings
   settings: {
@@ -153,6 +153,12 @@ state = {
 ---
 
 ## 5. Feature Workflows
+
+> **Home Page Stat Cards** — four cards at the top of the home screen, each with a `.stat-icon` Lucide SVG pill (green-tinted):
+> - **Today's Sales** (`#totalStr`) — animated count-up via `_animateSalesTotal`; trending arrow badge (`#salesVsYesterday`) vs yesterday, loaded once at login via `model.loadYesterdaySalesTotal()` and cached in `_yesterdayTotal`
+> - **Date & Time** (`#dateTimeStr`) — combined single card, updated every 15s by `setDateTime()` in `pointy.js`
+> - **Transactions** (`#basketCountStr`) — today's transaction count with % badge (`#basketsVsYesterday`) vs yesterday; counts fetched once at login via `model.loadTransactionCounts()`, cached in `_todayTransactionCount` / `_yesterdayTransactionCount`; increments locally by 1 after each `_finaliseSale`
+> - **Cashier** (`#shiftStr`) — active cashier first name; clickable to switch via `controlSwitchCashier()`
 
 ---
 
@@ -955,7 +961,7 @@ User clicks "Cash Flow" nav button
 #### Change Period
 
 ```
-User clicks period button (Today / Week / Month / Custom)
+User clicks period button (Today / Yesterday / Week / Month / Custom)
   → cashflowView._addHandlerPeriodChange  (or _addHandlerCustomRange for date picker)
   → controlChangePeriod({ period, from, to })
     → cashflowView.setLoading(true)  [disables buttons]
@@ -1258,37 +1264,66 @@ User clicks cashier name in header (#shiftStr)
 
 ### 5.13 Kitchen Display System (KDS)
 
-#### Open KDS Panel (Inline)
+#### Open Orders — Always-Visible Home Page Section
+
+The old KDS toggle-panel was replaced with a permanent inline list below the stat cards. It renders automatically on `initApp` and stays visible at all times.
 
 ```
-User clicks KDS button
-  → kdsView._addHandlerOpen
-  → controlOpenKDS()
-    → kdsView.open(state.orderQueue)
-    → kdsView.renderQueue(state.orderQueue)
-    → _ensureKDSTick()  [starts 1-second interval if not running]
+On initApp:
+  → model.loadOrderQueue()  [fetches sales where prepared_at IS NULL for today]
+  → state.orderQueue populated
+  → KDSView.renderQueue(state.orderQueue)
+  → _ensureKDSTick()  [starts 1-second interval]
+
+Structure (index.html):
+  <section class="open-orders-section">
+    <h2>Open Orders</h2>         ← always visible
+    <ul id="openOrdersList">     ← KDSView renders rows here
+    <button id="openOrdersViewAll">  ← appears when queue > 5
 ```
+
+Each row shows: order #, type (Dine In / Takeout), item count, time placed, status badge, Done button. Up to 5 rows shown; "View All (N)" button expands the rest.
+
+#### Status Badges (update every second via `_tickKDS`)
+
+| Elapsed | Badge text | Row class |
+|---|---|---|
+| < yellowThreshold | `Preparing` | — |
+| ≥ yellowThreshold | `⏰ Delayed` | `oq-row--warn` |
+| ≥ redThreshold | `🔥 Urgent` | `oq-row--urgent` |
 
 #### Open KDS in Popup Window
 
 ```
-User clicks "Open KDS Window"
+User clicks "Open KDS Window" (in Settings or nav)
   → controlOpenKDSWindow()
-    → window.open('kds.html', 'kds', `width=${kdsWindowSize.width},height=${kdsWindowSize.height}`)
-    → KDS window loads, sends KDS_REQUEST_SYNC
+    → window.open('kds-display.html', 'kds', `width=...,height=...`)
+    → KDS window loads, awaits channel.ready, sends KDS_REQUEST_SYNC
     → controller responds with KDS_QUEUE_SYNC (full queue + thresholds)
-    → KDS window renders queue
+    → KDS popup renders card grid
+    → KDS popup timer emojis: plain time (fresh), ⏰ time (warn), 🔥 time (urgent)
+```
+
+#### New Order Placed
+
+```
+_finaliseSale(sale)
+  → supabase inserts sale (prepared_at = null)
+  → state.orderQueue.push(newOrder)
+  → KDSView.renderQueue(state.orderQueue)   [home page list updates]
+  → KDSView.playNewOrderSound()
+  → channel.postMessage(KDS_QUEUE_SYNC)     [KDS popup updates]
+  → _ensureKDSTick()
 ```
 
 #### KDS Timer Tick (every 1 second)
 
 ```
 _tickKDS() called every 1000ms
-  → kdsView.updateTimers(state.orderQueue, Date.now(), yellow, red)
-      → for each order card: calculates elapsed seconds
-      → adds .warn class if elapsed > yellowThreshold
-      → adds .urgent class if elapsed > redThreshold
-  → for each order where elapsed > kdsAutoCompleteThreshold:
+  → KDSView.updateTimers(state.orderQueue, Date.now(), yellow, red)
+      → updates badge text + row classes for each order row
+  → checks kdsAutoCompleteThreshold (Infinity if setting is 0)
+  → for each order where elapsed ≥ autoThreshold:
       → controlMarkOrderDone(id, timedOut: true)
   → if state.orderQueue is empty: _stopKDSTick()
 ```
@@ -1296,40 +1331,39 @@ _tickKDS() called every 1000ms
 #### Mark Order Done
 
 ```
-Cook taps "Done" button (either inline KDS or KDS popup window)
-  Inline:  kdsView._addHandlerDone → controlMarkOrderDone(id, false)
-  Popup:   KDS window sends KDS_ORDER_DONE → channel.onmessage → controlMarkOrderDone(id)
+Cook taps "Done" button (home page list or KDS popup window)
+  Home list: KDSView._addHandlerDone → controlMarkOrderDone(id, false)
+  KDS popup: sends KDS_ORDER_DONE → channel.onmessage → controlMarkOrderDone(id)
+  Auto-complete: _tickKDS → controlMarkOrderDone(id, timedOut: true)
 
 controlMarkOrderDone(id, timedOut)
-  → removes order from state.orderQueue
+  → splices order from state.orderQueue
   → model.recordServeTime(id, timedOut)
       → supabase.from('sales').update({ prepared_at: now, timed_out: timedOut })
-  → kdsView.renderQueue(state.orderQueue)  [if inline panel open]
-  → channel.postMessage(KDS_QUEUE_SYNC)  [syncs KDS popup window]
-  → if state.orderQueue is empty: _stopKDSTick()
+      → requires GRANT UPDATE ON sales TO authenticated + RLS policy allowing staff
+  → KDSView.renderQueue(state.orderQueue)
+  → channel.postMessage(KDS_QUEUE_SYNC)  [syncs KDS popup]
+  → if queue empty: _stopKDSTick()
 ```
 
 #### Function Reference
 
 | Function | File | Purpose |
 |---|---|---|
-| `_addHandlerOpen(handler)` | kdsView.js | Listens on `#kdsOpenBtn` click |
-| `controlOpenKDS()` | controller.js | Shows inline KDS panel, renders queue, starts tick |
-| `kdsView.open(queue)` | kdsView.js | Shows `#kdsPanel`, renders initial queue |
-| `kdsView.renderQueue(queue)` | kdsView.js | Renders up to 10 order cards in `#kdsGrid` |
-| `kdsView._cardMarkup(order, num)` | kdsView.js | Generates HTML for a single order card with items + timer |
-| `_addHandlerClose(handler)` | kdsView.js | Listens on `#kdsCloseBtn` click |
-| `controlCloseKDS()` | controller.js | Hides inline KDS panel |
-| `controlOpenKDSWindow()` | controller.js | `window.open('kds.html', ...)` with configured size |
+| `KDSView.renderQueue(queue)` | kdsView.js | Renders order rows into `#openOrdersList`; shows/hides View All button |
+| `KDSView._rowMarkup(order, num, hidden)` | kdsView.js | Generates `<li class="oq-row">` HTML for one order |
+| `KDSView.updateTimers(queue, now, yellow, red)` | kdsView.js | Updates badge text (with emoji) + `oq-row--warn/urgent` classes |
+| `KDSView._addHandlerViewAll()` | kdsView.js | Toggles `oq-row--hidden` on rows beyond index 4 |
+| `KDSView._addHandlerDone(handler)` | kdsView.js | Event-delegated listener on `#openOrdersList` for `.oq-done-btn` clicks |
+| `KDSView.playNewOrderSound()` | kdsView.js | Web Audio API: C5-E5-G5 chord on new order |
+| `controlOpenKDSWindow()` | controller.js | `window.open('kds-display.html', ...)` with configured size |
 | `controlOpenCFDWindow()` | controller.js | `window.open('cfd.html', ...)` with configured size |
 | `_ensureKDSTick()` | controller.js | Starts 1-second interval if not already running |
 | `_stopKDSTick()` | controller.js | Clears the interval when queue empties |
-| `_tickKDS()` | controller.js | Updates timers every second, auto-completes past threshold |
-| `kdsView.updateTimers(queue, now, yellow, red)` | kdsView.js | Updates elapsed time text + `.warn`/`.urgent` classes on cards |
-| `kdsView.playNewOrderSound()` | kdsView.js | Web Audio API: plays brief C5-E5-G5 chord on new order |
-| `_addHandlerDone(handler)` | kdsView.js | Listens on `.kds-done-btn` click |
-| `controlMarkOrderDone(id, timedOut)` | controller.js | Removes from queue, records serve time, syncs windows |
-| `model.recordServeTime(id, timedOut)` | model.js | Sets `prepared_at` timestamp and `timed_out` flag in DB |
+| `_tickKDS()` | controller.js | Updates timers, triggers auto-complete past threshold (Infinity guard for 0) |
+| `controlMarkOrderDone(id, timedOut)` | controller.js | Removes from queue, records serve time in DB, re-renders + syncs popup |
+| `model.recordServeTime(id, timedOut)` | model.js | Sets `prepared_at` + `timed_out` in DB |
+| `model.loadOrderQueue()` | model.js | Fetches today's sales where `prepared_at IS NULL` → `state.orderQueue` |
 | `channel.onmessage` handler | controller.js | Routes `KDS_ORDER_DONE` → `controlMarkOrderDone`, `KDS_REQUEST_SYNC` → queue sync |
 
 ---
@@ -1399,4 +1433,4 @@ Steps:
 
 ---
 
-*Last updated: 2026-05-09. Update this file when a new feature is added or a workflow changes.*
+*Last updated: 2026-05-13. Update this file when a new feature is added or a workflow changes.*

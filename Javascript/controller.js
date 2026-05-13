@@ -260,8 +260,9 @@ const _tickKDS = function () {
   if (modelState.orderQueue.length === 0) { _stopKDSTick(); return; }
   const now = Date.now();
   const { kdsYellowThreshold, kdsRedThreshold, kdsAutoCompleteThreshold } = model.state.settings;
+  const autoThreshold = kdsAutoCompleteThreshold > 0 ? kdsAutoCompleteThreshold : Infinity;
   const expired = modelState.orderQueue.filter(
-    o => Math.floor((now - o.startedAt) / 1000) >= kdsAutoCompleteThreshold
+    o => Math.floor((now - o.startedAt) / 1000) >= autoThreshold
   );
   expired.forEach(o => controlMarkOrderDone(o.id, true));
   if (expired.length === 0) {
@@ -291,13 +292,6 @@ const controlMarkOrderDone = async function (id, timedOut = false) {
   }
 };
 
-const controlOpenKDS = function () {
-  KDSView.open(modelState.orderQueue);
-};
-
-const controlCloseKDS = function () {
-  KDSView.close();
-};
 
 const controlOpenKDSWindow = function () {
   const { width, height } = model.state.settings.kdsWindowSize;
@@ -399,6 +393,7 @@ const _finaliseSale = async function (sale, note = null) {
   channel.postMessage({ type: MSG.CFD_SALE_COMPLETE });
   model.clearReceiptAdjustments();
   refreshTodaySalesDisplay();
+  if (_todayTransactionCount !== null) { _todayTransactionCount++; _updateTransactionBadge(); }
   OrderCheckOutView._showSuccess(note);
   const successOverlay = document.querySelector('.success-overlay');
   const autoCloseTimer = setTimeout(() => {
@@ -763,6 +758,8 @@ const refreshTodaySalesDisplay = async function () {
 
     if (newVal === currentVal) return;
 
+    _updateYesterdayBadge(newVal);
+
     // If a success overlay is on screen, wait for it to be removed first
     const overlay = document.querySelector(".success-overlay");
     if (overlay) {
@@ -803,6 +800,66 @@ const initApp = async function (user) {
     _ensureKDSTick();
   }
   initAnalytics(user.id);
+  _loadYesterdayComparison();
+  _loadTransactionCounts();
+};
+
+let _yesterdayTotal = null;
+let _todayTransactionCount = null;
+let _yesterdayTransactionCount = null;
+
+const _updateYesterdayBadge = function (todayTotal) {
+  const el = document.getElementById('salesVsYesterday');
+  if (!el || _yesterdayTotal === null || _yesterdayTotal === 0) return;
+  const pct   = Math.round(((todayTotal - _yesterdayTotal) / _yesterdayTotal) * 100);
+  const isUp  = pct >= 0;
+  const arrow = isUp
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>`;
+  el.className = `sales-vs-yesterday ${isUp ? 'svs--up' : 'svs--down'}`;
+  el.innerHTML = `${arrow}<span>${Math.abs(pct)}% vs yesterday</span>`;
+};
+
+const _updateTransactionBadge = function () {
+  const countEl = document.getElementById('basketCountStr');
+  const badgeEl = document.getElementById('basketsVsYesterday');
+  if (!countEl || _todayTransactionCount === null) return;
+
+  countEl.textContent = _todayTransactionCount;
+
+  if (!badgeEl || _yesterdayTransactionCount === null || _yesterdayTransactionCount === 0) return;
+  const pct   = Math.round(((_todayTransactionCount - _yesterdayTransactionCount) / _yesterdayTransactionCount) * 100);
+  const isUp  = pct >= 0;
+  const arrow = isUp
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>`;
+  badgeEl.className = `sales-vs-yesterday ${isUp ? 'svs--up' : 'svs--down'}`;
+  badgeEl.innerHTML = `${arrow}<span>${Math.abs(pct)}% vs yesterday</span>`;
+};
+
+const _loadTransactionCounts = async function () {
+  const badgeEl = document.getElementById('basketsVsYesterday');
+  try {
+    const { today, yesterday } = await model.loadTransactionCounts();
+    _todayTransactionCount    = today;
+    _yesterdayTransactionCount = yesterday;
+    _updateTransactionBadge();
+  } catch (_) {
+    if (badgeEl) badgeEl.innerHTML = '';
+  }
+};
+
+const _loadYesterdayComparison = async function () {
+  const el = document.getElementById('salesVsYesterday');
+  if (!el) return;
+  try {
+    _yesterdayTotal = await model.loadYesterdaySalesTotal();
+    if (_yesterdayTotal === 0) { el.innerHTML = ''; return; }
+    const todayTotal = parseFloat(document.getElementById('totalStr')?.textContent.replace(/[$,]/g, '')) || 0;
+    _updateYesterdayBadge(todayTotal);
+  } catch (_) {
+    if (el) el.innerHTML = '';
+  }
 };
 
 const controlSignIn = async function (email, password) {
@@ -865,6 +922,13 @@ const _getCashflowRange = function (period, from, to) {
     const start = new Date(now); start.setHours(0, 0, 0, 0);
     const end   = new Date(now); end.setHours(23, 59, 59, 999);
     return { startISO: start.toISOString(), endISO: end.toISOString(), label: fmt(now) };
+  }
+
+  if (period === "yesterday") {
+    const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+    const start = new Date(yesterday); start.setHours(0, 0, 0, 0);
+    const end   = new Date(yesterday); end.setHours(23, 59, 59, 999);
+    return { startISO: start.toISOString(), endISO: end.toISOString(), label: `Yesterday · ${fmt(yesterday)}` };
   }
 
   if (period === "week") {
@@ -1267,8 +1331,7 @@ const _wireApp = function () {
   OrderCheckOutView._addHandlerRemovePromo(controlRemovePromoCode);
 
   // Order Queue (KDS)
-  KDSView._addHandlerOpen(controlOpenKDS);
-  KDSView._addHandlerClose(controlCloseKDS);
+  KDSView._addHandlerViewAll();
   KDSView._addHandlerDone(controlMarkOrderDone);
   SettingsView._addHandlerKDSThresholds(controlSaveKDSThresholds);
   SettingsView._addHandlerDisplaySizes(controlSaveKDSWindowSize, controlSaveCFDWindowSize);

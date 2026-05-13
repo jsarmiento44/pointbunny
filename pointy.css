@@ -3835,12 +3835,31 @@ footer {
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .stat-value {
   font-size: 1.25rem;
   font-weight: 900;
   letter-spacing: -0.01em;
   color: var(--text);
+}
+
+.stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  background: rgba(34, 197, 94, 0.13);
+  border-radius: 6px;
+  color: var(--brand-1);
+}
+.stat-card--accent .stat-icon {
+  background: rgba(34, 197, 94, 0.13);
+  color: var(--brand-1);
 }
 .stat-card--accent .stat-value {
   background: linear-gradient(90deg, var(--brand-2), var(--brand-1));
@@ -4348,9 +4367,35 @@ kbd {
 .home-sales-stat .stat-value {
   font-size: 1.5rem;
 }
+
+.sales-vs-yesterday {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-top: 4px;
+  min-height: 16px;
+}
+
+.svs--up   { color: #22c55e; }
+.svs--down { color: #ef4444; }
+
+@keyframes svs-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.svs-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: svs-pulse 1.4s ease-in-out infinite;
+}
 .home-stats-secondary {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 .home-stats-secondary .stat-card {
@@ -4360,7 +4405,7 @@ kbd {
   font-size: 0.92rem;
 }
 .home-cashier-stat {
-  grid-column: 1 / -1;
+  grid-column: auto;
 }
 
 /* ── Utility row (compact) ── */
@@ -6306,6 +6351,112 @@ body.role-manager [data-min-role="admin"] {
     justify-content: flex-end;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   OPEN ORDERS (home page list)
+═══════════════════════════════════════════════════════════════════════════ */
+
+.open-orders-section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.open-orders-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+}
+
+.open-orders-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.open-orders-icon {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border-radius: 8px;
+}
+
+.open-orders-view-all {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--brand-1);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.open-orders-view-all.hidden { display: none; }
+
+.open-orders-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.oq-empty {
+  padding: 20px 18px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.oq-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-top: 1px solid var(--line);
+}
+
+.oq-row--hidden { display: none; }
+
+.oq-icon { color: var(--muted); flex-shrink: 0; }
+
+.oq-info { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+
+.oq-num  { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+
+.oq-sub  { font-size: 0.75rem; color: var(--muted); }
+
+.oq-time { font-size: 0.8rem; color: var(--muted); flex-shrink: 0; }
+
+.oq-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+
+.oq-badge--preparing { background: rgba(245,158,11,0.12); color: #d97706; }
+.oq-badge--warn      { background: rgba(245,158,11,0.18); color: #b45309; }
+.oq-badge--urgent    { background: rgba(239,68,68,0.12);  color: #dc2626; }
+
+.oq-row--warn   { background: rgba(245,158,11,0.04); }
+.oq-row--urgent { background: rgba(239,68,68,0.04); }
+
+.oq-done-btn {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.oq-done-btn:hover { border-color: var(--brand-1); color: var(--brand-1); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ORDER QUEUE (KDS)

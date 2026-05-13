@@ -1,84 +1,80 @@
+const PREVIEW_COUNT = 5;
+
+const fmtTime = iso =>
+  new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
 class KDSView {
-  _panel = document.getElementById('kdsPanel');
-  _grid = document.getElementById('kdsGrid');
-  _queueCount = document.getElementById('kdsQueueCount');
-
-  open(queue) {
-    this._panel.classList.remove('hidden');
-    this.renderQueue(queue);
-  }
-
-  close() {
-    this._panel.classList.add('hidden');
-  }
+  _list       = document.getElementById('openOrdersList');
+  _viewAllBtn = document.getElementById('openOrdersViewAll');
+  _expanded   = false;
 
   renderQueue(queue) {
-    const visible = queue.slice(0, 10);
-    if (this._queueCount) {
-      this._queueCount.textContent = queue.length > 0
-        ? `${queue.length} order${queue.length !== 1 ? 's' : ''}`
-        : '';
-    }
-    if (visible.length === 0) {
-      this._grid.innerHTML = '<p class="kds-empty">No active orders.</p>';
+    if (queue.length === 0) {
+      this._list.innerHTML = '<li class="oq-empty">No active orders.</li>';
+      this._viewAllBtn.classList.add('hidden');
+      this._expanded = false;
       return;
     }
-    this._grid.innerHTML = visible.map((order, i) => this._cardMarkup(order, i + 1)).join('');
+
+    this._list.innerHTML = queue
+      .map((order, i) => this._rowMarkup(order, i + 1, i >= PREVIEW_COUNT && !this._expanded))
+      .join('');
+
+    if (queue.length > PREVIEW_COUNT) {
+      this._viewAllBtn.classList.remove('hidden');
+      this._viewAllBtn.textContent = this._expanded
+        ? 'Show Less'
+        : `View All (${queue.length})`;
+    } else {
+      this._viewAllBtn.classList.add('hidden');
+      this._expanded = false;
+    }
   }
 
-  _cardMarkup(order, num) {
-    const itemsHtml = order.items.map(item => {
-      const variants = item.selectedVariants
-        ?.map(v => v.variantName)
-        .filter(Boolean)
-        .join(', ');
-      return `<li class="kds-item">${item.itemName} ×${item.quantity}${variants ? `<span class="kds-item-variants"> · ${variants}</span>` : ''}</li>`;
-    }).join('');
-
-    const istakeout = order.orderType === 'takeout';
-    const typeLabel = istakeout ? 'Takeout' : 'Dine In';
-    const typeCls = istakeout ? 'kds-badge--takeout' : 'kds-badge--dine-in';
+  _rowMarkup(order, num, hidden) {
+    const typeLabel = order.orderType === 'takeout' ? 'Takeout' : 'Dine In';
+    const itemCount = order.items.reduce((sum, it) => sum + (it.quantity ?? 1), 0);
+    const time = fmtTime(order.saleDate);
 
     return `
-      <div class="kds-card" data-order-id="${order.id}">
-        <div class="kds-card-header">
-          <span class="kds-order-num">#${num}</span>
-          <span class="kds-order-type ${typeCls}">${typeLabel}</span>
-          <span class="kds-timer" data-order-id="${order.id}">0:00</span>
+      <li class="oq-row${hidden ? ' oq-row--hidden' : ''}" data-order-id="${order.id}">
+        <div class="oq-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
         </div>
-        <ul class="kds-items">${itemsHtml}</ul>
-        <div class="kds-card-footer">
-          <span class="kds-total">$${order.totalPrice.toFixed(2)}</span>
-          <button class="kds-done-btn btn primary" data-order-id="${order.id}" type="button">Done</button>
+        <div class="oq-info">
+          <span class="oq-num">#${num}</span>
+          <span class="oq-sub">${typeLabel} &middot; ${itemCount} item${itemCount !== 1 ? 's' : ''}</span>
         </div>
-      </div>
-    `;
+        <span class="oq-time">${time}</span>
+        <span class="oq-badge oq-badge--preparing" data-badge-id="${order.id}">Preparing</span>
+        <button class="oq-done-btn btn" data-order-id="${order.id}" type="button">Done</button>
+      </li>`;
   }
 
   updateTimers(queue, now, yellowThreshold, redThreshold) {
     queue.forEach(order => {
       const elapsed = Math.floor((now - order.startedAt) / 1000);
-      const mins = Math.floor(elapsed / 60);
-      const secs = elapsed % 60;
-      const timerEl = this._grid.querySelector(`.kds-timer[data-order-id="${order.id}"]`);
-      const cardEl = this._grid.querySelector(`.kds-card[data-order-id="${order.id}"]`);
-      if (!timerEl || !cardEl) return;
-      timerEl.textContent = `${mins}:${String(secs).padStart(2, '0')}`;
-      const isWarn = elapsed >= yellowThreshold && elapsed < redThreshold;
+      const badge = this._list.querySelector(`.oq-badge[data-badge-id="${order.id}"]`);
+      const row   = this._list.querySelector(`.oq-row[data-order-id="${order.id}"]`);
+      if (!badge || !row) return;
+
+      const isWarn   = elapsed >= yellowThreshold && elapsed < redThreshold;
       const isUrgent = elapsed >= redThreshold;
-      timerEl.classList.toggle('kds-timer--warn', isWarn);
-      timerEl.classList.toggle('kds-timer--urgent', isUrgent);
-      cardEl.classList.toggle('kds-card--warn', isWarn);
-      cardEl.classList.toggle('kds-card--urgent', isUrgent);
+      badge.className = `oq-badge ${isUrgent ? 'oq-badge--urgent' : isWarn ? 'oq-badge--warn' : 'oq-badge--preparing'}`;
+      badge.textContent = isUrgent ? '🔥 Urgent' : isWarn ? '⏰ Delayed' : 'Preparing';
+      row.classList.toggle('oq-row--warn',   isWarn);
+      row.classList.toggle('oq-row--urgent', isUrgent);
     });
   }
 
   playNewOrderSound() {
     try {
       const ctx = new AudioContext();
-      const frequencies = [523.25, 659.25, 783.99]; // C5 E5 G5 — a short bright chord
+      const frequencies = [523.25, 659.25, 783.99];
       frequencies.forEach((freq, i) => {
-        const osc = ctx.createOscillator();
+        const osc  = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -93,17 +89,19 @@ class KDSView {
     } catch (_) {}
   }
 
-  _addHandlerOpen(handler) {
-    document.getElementById('kdsOpenBtn').addEventListener('click', handler);
-  }
-
-  _addHandlerClose(handler) {
-    document.getElementById('kdsCloseBtn').addEventListener('click', handler);
+  _addHandlerViewAll() {
+    this._viewAllBtn.addEventListener('click', () => {
+      this._expanded = !this._expanded;
+      Array.from(this._list.querySelectorAll('.oq-row')).forEach((row, i) => {
+        row.classList.toggle('oq-row--hidden', !this._expanded && i >= PREVIEW_COUNT);
+      });
+      this._viewAllBtn.textContent = this._expanded ? 'Show Less' : `View All`;
+    });
   }
 
   _addHandlerDone(handler) {
-    this._grid.addEventListener('click', e => {
-      const btn = e.target.closest('.kds-done-btn');
+    this._list.addEventListener('click', e => {
+      const btn = e.target.closest('.oq-done-btn');
       if (!btn) return;
       handler(btn.dataset.orderId);
     });

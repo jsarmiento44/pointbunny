@@ -5,13 +5,17 @@ const BROADCAST_EVENT = 'msg';
 class PointyChannel {
   constructor() {
     this._handler = null;
-    this._ch = supabase.channel('pointy-displays', {
-      config: { broadcast: { self: false } },
+    this.ready = new Promise(resolve => {
+      this._ch = supabase.channel('pointy-displays', {
+        config: { broadcast: { self: false } },
+      });
+      this._ch.on('broadcast', { event: BROADCAST_EVENT }, ({ payload }) => {
+        if (this._handler) this._handler({ data: payload });
+      });
+      this._ch.subscribe(status => {
+        if (status === 'SUBSCRIBED') resolve();
+      });
     });
-    this._ch.on('broadcast', { event: BROADCAST_EVENT }, ({ payload }) => {
-      if (this._handler) this._handler({ data: payload });
-    });
-    this._ch.subscribe();
   }
 
   postMessage(data) {
