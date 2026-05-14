@@ -173,10 +173,10 @@ class OrderCheckOutView extends View {
     </div>
 
     <div class="pos-checkout-payment">
-      <div class="order-type-toggle">
+      ${this._data.settings.orderTypeEnabled ? `<div class="order-type-toggle">
         <button class="order-type-btn${this._orderType === 'dine-in' ? ' order-type-btn--active' : ''}" data-order-type="dine-in" type="button">Dine In</button>
         <button class="order-type-btn${this._orderType === 'takeout' ? ' order-type-btn--active' : ''}" data-order-type="takeout" type="button">Takeout</button>
-      </div>
+      </div>` : ''}
       <div id="receiptAdjSection">
         ${this._generateAdjSectionMarkup(subtotal, allAdj, adjResult, showRemoved)}
       </div>

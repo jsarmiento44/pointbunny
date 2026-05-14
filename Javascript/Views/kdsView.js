@@ -97,7 +97,8 @@ class KDSView {
   }
 
   _rowMarkup(order, num, hidden) {
-    const typeLabel = order.orderType === 'takeout' ? 'Takeout' : 'Dine In';
+    const orderTypeEnabled = localStorage.getItem('pointy_order_type_enabled') !== 'false';
+    const typeLabel = (!orderTypeEnabled || !order.orderType) ? '' : order.orderType === 'takeout' ? 'Takeout' : 'Dine In';
     const itemCount = order.items.reduce((sum, it) => sum + (it.quantity ?? 1), 0);
     const time = fmtTime(order.saleDate);
     const preview = this._buildItemPreview(order.items);
@@ -110,7 +111,7 @@ class KDSView {
           </svg>
         </div>
         <div class="oq-info">
-          <span class="oq-num">#${num} <span class="oq-type">${typeLabel}</span></span>
+          <span class="oq-num">#${num}${typeLabel ? ` <span class="oq-type">${typeLabel}</span>` : ''}</span>
           <span class="oq-items">${preview}</span>
         </div>
         <span class="oq-time">${time}</span>

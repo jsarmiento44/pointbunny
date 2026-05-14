@@ -8,6 +8,7 @@
   _printingToggle = document.getElementById("printingToggle");
   _confirmPrintToggle = document.getElementById("confirmPrintToggle");
   _twoCopiesToggle = document.getElementById("twoCopiesToggle");
+  _orderTypeToggle = document.getElementById("orderTypeToggle");
   _kdsYellowInput = document.getElementById("kdsYellowInput");
   _kdsRedInput = document.getElementById("kdsRedInput");
   _kdsAutoInput = document.getElementById("kdsAutoInput");
@@ -273,6 +274,14 @@
 
   syncTwoCopiesToggle(value) {
     this._twoCopiesToggle.checked = value;
+  }
+
+  _addHandlerToggleOrderType(handler) {
+    this._orderTypeToggle.addEventListener('change', () => handler(this._orderTypeToggle.checked));
+  }
+
+  syncOrderTypeToggle(value) {
+    this._orderTypeToggle.checked = value;
   }
 
   // ── Display window size ───────────────────────────────────────────────────────

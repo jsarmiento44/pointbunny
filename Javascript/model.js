@@ -37,6 +37,7 @@ export const state = {
     kdsAutoCompleteThreshold: parseInt(localStorage.getItem('pointy_kds_auto') || '900'),
     kdsWindowSize: JSON.parse(localStorage.getItem('pointy_kds_window_size') || '{"width":1920,"height":1080}'),
     cfdWindowSize: JSON.parse(localStorage.getItem('pointy_cfd_window_size') || '{"width":1920,"height":1080}'),
+    orderTypeEnabled: localStorage.getItem('pointy_order_type_enabled') !== 'false',
   },
   currentReceiptAdjustments: [],
 };

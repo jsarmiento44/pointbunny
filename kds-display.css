@@ -46,6 +46,36 @@ body {
   font-weight: 500;
 }
 
+.kds-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.kds-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.kds-status--syncing {
+  color: #f59e0b;
+}
+.kds-status--syncing .kds-status-dot {
+  animation: kds-dot-pulse 1.1s ease-in-out infinite;
+}
+.kds-status--live {
+  color: var(--brand-1);
+}
+@keyframes kds-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}
+
 .display-theme-toggle {
   background: none;
   border: 1px solid var(--line);

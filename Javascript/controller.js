@@ -214,7 +214,7 @@ const controlOrderCheckout = function () {
     OrderCheckOutView._subtotal = subtotal;
     OrderCheckOutView._adjResult = adjResult;
     OrderCheckOutView._totalPrice = adjResult.finalTotal;
-    OrderCheckOutView._orderType = 'dine-in';
+    OrderCheckOutView._orderType = model.state.settings.orderTypeEnabled ? 'dine-in' : null;
     OrderCheckOutView.render(modelState);
   } catch (err) {
     showToast(err.message ?? err);
@@ -486,6 +486,7 @@ const controlOpenSettings = function () {
   SettingsView.syncPrintingToggle(model.state.settings.printingEnabled);
   SettingsView.syncConfirmPrintToggle(model.state.settings.confirmPrint);
   SettingsView.syncTwoCopiesToggle(model.state.settings.printTwoCopies);
+  SettingsView.syncOrderTypeToggle(model.state.settings.orderTypeEnabled);
   SettingsView.syncKDSThresholds(
     model.state.settings.kdsYellowThreshold,
     model.state.settings.kdsRedThreshold,
@@ -510,6 +511,11 @@ const controlToggleConfirmPrint = function (value) {
 const controlTogglePrintTwoCopies = function (value) {
   model.state.settings.printTwoCopies = value;
   localStorage.setItem('pointy_print_two_copies', value);
+};
+
+const controlToggleOrderType = function (value) {
+  model.state.settings.orderTypeEnabled = value;
+  localStorage.setItem('pointy_order_type_enabled', value);
 };
 
 const _refreshCategoryDropdowns = function () {
@@ -790,6 +796,7 @@ const initApp = async function (user) {
     user.email;
   document.querySelector('.company-name').textContent = model.state.username;
   localStorage.setItem('pointy_store_name', model.state.username);
+  localStorage.setItem('pointy_business_id', model.state.businessId);
   document.body.classList.remove('role-admin', 'role-manager', 'role-cashier');
   document.body.classList.add(`role-${model.state.role.toLowerCase()}`);
   _updateCashierDisplay();
@@ -804,6 +811,15 @@ const initApp = async function (user) {
     KDSView.renderQueue(modelState.orderQueue);
     _ensureKDSTick();
   }
+  // Push queue to any KDS/CFD windows already open when the main app finishes loading
+  channel.postMessage({
+    type: MSG.KDS_QUEUE_SYNC,
+    queue: modelState.orderQueue,
+    thresholds: {
+      yellow: model.state.settings.kdsYellowThreshold,
+      red: model.state.settings.kdsRedThreshold,
+    },
+  });
   initAnalytics(user.id);
   _loadYesterdayComparison();
   _loadTransactionCounts();
@@ -1302,6 +1318,7 @@ const _wireApp = function () {
   SettingsView._addHandlerTogglePrinting(controlTogglePrinting);
   SettingsView._addHandlerToggleConfirmPrint(controlToggleConfirmPrint);
   SettingsView._addHandlerToggleTwoCopies(controlTogglePrintTwoCopies);
+  SettingsView._addHandlerToggleOrderType(controlToggleOrderType);
 
   //NewOrder
   NewOrderView._addHandlerShowMenuModal(controlNewOrder);

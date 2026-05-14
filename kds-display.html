@@ -14,12 +14,15 @@
       <span class="kds-win-title">Kitchen Display</span>
       <div class="kds-win-header-right">
         <span class="kds-win-count" id="kdsWinCount"></span>
+        <span class="kds-status kds-status--syncing" id="kdsStatus">
+          <span class="kds-status-dot"></span>Syncing…
+        </span>
         <button class="display-theme-toggle" id="displayThemeToggle" title="Toggle theme">☀︎</button>
       </div>
     </header>
 
     <div class="kds-grid" id="kdsWinGrid">
-      <p class="kds-empty">Waiting for orders…</p>
+      <p class="kds-empty">Connecting…</p>
     </div>
 
     <script type="module" src="/Javascript/kds-display.js"></script>

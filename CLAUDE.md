@@ -50,7 +50,7 @@ Views never call model functions directly.
 | `menuListView.js` | Browse all menu items |
 | `newMenuItemView.js` | Add new menu item form |
 | `menuEditView.js` | Edit existing menu items |
-| `kdsView.js` | Home page open orders list (inline, not a modal) |
+| `kdsView.js` | Home page active queue list (inline, not a modal) |
 | `cashflowView.js` | Cashflow panel |
 | `staffView.js` | Staff management |
 | `settingsView.js` | Settings panel |
@@ -62,6 +62,8 @@ Wires model and views together. `initApp()` is the app entry point after auth. K
 - `_yesterdayTotal` — cached yesterday's sales total (fetched once at login)
 - `_todayTransactionCount` / `_yesterdayTransactionCount` — transaction counts for the stat card badge
 
+`initApp()` stores `pointy_business_id` to `localStorage` after loading business context so the KDS popup can query Supabase directly without depending on the main window.
+
 ### Entry point (`index.html`)
 All modal HTML templates are defined directly in `index.html` as hidden elements. Views target specific `id`/`class` selectors to render into or toggle visibility. The edit menu modal is an exception — dynamically injected into `.edit-form-parent` by `menuEditView.js`.
 
@@ -71,7 +73,9 @@ Single unified stylesheet using CSS custom properties for theming. Theme switchi
 **CSS cascade gotcha:** Several overlay classes (`.modal-overlay-form`, `.modal-backdrop`) have duplicate definitions later in the file that override earlier media queries. Mobile responsive overrides must be placed immediately after the duplicate definition, not in the central responsive block at line ~1071.
 
 ### Channel (`Javascript/channel.js`)
-Supabase Realtime broadcast channel (`self: false`) used for cross-window sync between the main POS, KDS popup, and CFD popup. Exposes a `ready` Promise that resolves when the subscription is `SUBSCRIBED` — display windows must `await channel.ready` before sending sync requests to avoid race conditions.
+Supabase Realtime broadcast channel (`self: false`) used for cross-window sync between the main POS, KDS popup, and CFD popup. Also wraps a native `BroadcastChannel` for same-browser reliability. Exposes a `ready` Promise that resolves when the Supabase subscription is `SUBSCRIBED`.
+
+**Important:** The KDS popup does NOT use the channel for its initial queue load — it queries Supabase directly (see KDS section below). The channel handles real-time deltas only (new orders pushed in, orders marked done).
 
 ### External displays
 - `kds-display.js` / `kds-display.html` — Kitchen Display System popup
@@ -119,7 +123,7 @@ Prices are stored as **numbers** throughout.
 | `adjustments` | Tax/fee/discount adjustment templates |
 | `discount_codes` | Promo codes |
 
-**`sales.prepared_at`**: NULL = order is active (shown in KDS/open orders). Set to a timestamp when the kitchen marks it done via `recordServeTime()`.
+**`sales.prepared_at`**: NULL = order is active (shown in KDS/active queue). Set to a timestamp when the kitchen marks it done via `recordServeTime()`.
 
 **`sales.sale_date`**: Stored as UTC ISO string from `new Date(Date.now()).toISOString()`. All date range queries use local-time midnight boundaries converted with `.toISOString()` — this correctly handles timezone offsets.
 
@@ -131,16 +135,16 @@ Four stat cards on the home page, each with a small `.stat-icon` pill (green-tin
 - **Transactions** — receipt icon; today's count with % badge vs yesterday; increments locally on each sale
 - **Cashier** — person icon; shows active cashier's first name; clickable to switch
 
-## Open Orders Section (Home Page)
+## Active Queue Section (Home Page)
 
-Always-visible inline list below the stat cards. Powered by `kdsView.js` targeting `#openOrdersList`.
-- Shows up to 5 rows; "View All" button appears when there are more
-- Rows show: order number, type (Dine In / Takeout), item count, time, status badge, Done button
+Always-visible inline list below the stat cards. Powered by `kdsView.js` targeting `#openOrdersList`. Previously called "Open Orders".
+- Shows up to 8 rows (`PREVIEW_COUNT`); "View All" button appears when there are more
+- Rows show: order number, type badge (Dine In / Takeout — hidden when setting is off), item count, time, status badge, Done button
 - Status badges update every second via `_tickKDS`:
   - Normal → "Preparing" (no emoji)
   - Warning (yellow threshold) → "⏰ Delayed"
   - Urgent (red threshold) → "🔥 Urgent"
-- Synced with KDS popup via broadcast channel
+- Real-time updates pushed from main window via `KDS_QUEUE_SYNC` channel message
 
 ## KDS Popup (`kds-display.html`)
 
@@ -148,6 +152,29 @@ Card-based kitchen display. Timer shows elapsed time; emojis added at thresholds
 - Normal → `1:23`
 - Warning → `⏰ 3:45`
 - Urgent → `🔥 6:12`
+
+**Initial load**: On open, `kds-display.js` queries Supabase directly (using `pointy_business_id` from `localStorage`) for today's unprepared sales. This avoids all race conditions with the main window's load sequence. After initial load, real-time updates arrive via the broadcast channel (`KDS_QUEUE_SYNC`).
+
+**Status indicator**: Header shows a pulsing amber "Syncing…" dot until the DB query returns, then flips to a solid green "Live" dot.
+
+**Order type badges**: Cards show a colored pill (Dine In = green, Takeout = purple) when the Dine In / Takeout setting is enabled.
+
+## Settings
+
+Settings are persisted to `localStorage` and loaded into `model.state.settings` at startup.
+
+| Key | Default | Description |
+|---|---|---|
+| `pointy_printing_enabled` | `true` | Receipt printing on/off |
+| `pointy_confirm_print` | `true` | Ask "did it print?" before recording sale |
+| `pointy_print_two_copies` | `false` | Print customer + business copy |
+| `pointy_order_type_enabled` | `true` | Show Dine In / Takeout selector on checkout |
+| `pointy_kds_yellow` | `180` | Seconds before order turns yellow |
+| `pointy_kds_red` | `300` | Seconds before order turns red |
+| `pointy_kds_auto` | `900` | Seconds before order auto-completes |
+| `pointy_business_id` | — | Set at login; used by KDS popup to query Supabase directly |
+
+**`orderTypeEnabled`**: When off, the Dine In / Takeout toggle is hidden from checkout, `orderType` is stored as `null`, and no type label appears on receipts, the active queue, or KDS cards.
 
 ## Project Direction
 
