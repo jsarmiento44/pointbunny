@@ -1,10 +1,23 @@
 import { supabase } from './supabase.js';
 
 const BROADCAST_EVENT = 'msg';
+const BC_NAME = 'pointy-local';
 
 class PointyChannel {
   constructor() {
     this._handler = null;
+
+    // Native BroadcastChannel: synchronous, zero-network, same-browser windows only.
+    // Used alongside Supabase Realtime so messages survive brief connection drops.
+    this._bc = typeof BroadcastChannel !== 'undefined'
+      ? new BroadcastChannel(BC_NAME)
+      : null;
+    if (this._bc) {
+      this._bc.onmessage = ({ data }) => {
+        if (this._handler) this._handler({ data });
+      };
+    }
+
     this.ready = new Promise(resolve => {
       this._ch = supabase.channel('pointy-displays', {
         config: { broadcast: { self: false } },
@@ -20,6 +33,7 @@ class PointyChannel {
 
   postMessage(data) {
     this._ch.send({ type: 'broadcast', event: BROADCAST_EVENT, payload: data });
+    this._bc?.postMessage(data);
   }
 
   set onmessage(fn) {

@@ -132,9 +132,20 @@ state = {
 
 ---
 
-## 4. Cross-Cutting: BroadcastChannel Messages
+## 4. Cross-Cutting: Channel Messages
 
-`channel.js` exposes a `PointyChannel` instance backed by Supabase Realtime (channel name: `pointy-displays`). All external display windows use the same channel.
+`channel.js` exposes a `PointyChannel` instance that sends and receives over **two parallel transports**:
+
+| Transport | Mechanism | When it's used |
+|---|---|---|
+| **Native `BroadcastChannel`** (`pointy-local`) | Browser API, synchronous, zero-network | Same-browser windows (KDS popup, CFD popup on the same machine) |
+| **Supabase Realtime** (`pointy-displays`, `self: false`) | WebSocket via Supabase | Cross-device scenarios; fallback if `BroadcastChannel` is unavailable |
+
+Every `channel.postMessage(data)` call sends on **both** transports simultaneously. The receiving window's `onmessage` handler fires on whichever arrives first; all handlers are idempotent so a second delivery is harmless.
+
+`channel.ready` resolves when the Supabase subscription hits `SUBSCRIBED` (BroadcastChannel is always immediately ready).
+
+All external display windows use the same channel instance via the shared `channel.js` module.
 
 | Message type (`MSG.*`) | Direction | Payload | What triggers it |
 |---|---|---|---|
@@ -1282,7 +1293,7 @@ Structure (index.html):
     <button id="openOrdersViewAll">  ← appears when queue > 5
 ```
 
-Each row shows: order #, type (Dine In / Takeout), item count, time placed, status badge, Done button. Up to 5 rows shown; "View All (N)" button expands the rest.
+Each row shows: order #, type (Dine In / Takeout), item count, time placed, status badge, Done button. Up to 8 rows shown; "View All (N)" button appears when there are more, and the expand icon (⤢) opens the All Orders Modal.
 
 #### Status Badges (update every second via `_tickKDS`)
 
@@ -1298,9 +1309,12 @@ Each row shows: order #, type (Dine In / Takeout), item count, time placed, stat
 User clicks "Open KDS Window" (in Settings or nav)
   → controlOpenKDSWindow()
     → window.open('kds-display.html', 'kds', `width=...,height=...`)
-    → KDS window loads, awaits channel.ready, sends KDS_REQUEST_SYNC
-    → controller responds with KDS_QUEUE_SYNC (full queue + thresholds)
-    → KDS popup renders card grid
+    → KDS window loads, awaits channel.ready
+    → sends KDS_REQUEST_SYNC via both transports (Supabase + BroadcastChannel)
+    → controller receives it, responds with KDS_QUEUE_SYNC (full queue + thresholds)
+    → KDS popup receives via BroadcastChannel (fast, same-browser) or Supabase Realtime
+    → sets _syncReceived = true, renders card grid
+    → if no KDS_QUEUE_SYNC arrives within 2.5 s: retries KDS_REQUEST_SYNC (up to 3×)
     → KDS popup timer emojis: plain time (fresh), ⏰ time (warn), 🔥 time (urgent)
 ```
 
@@ -1333,7 +1347,7 @@ _tickKDS() called every 1000ms
 ```
 Cook taps "Done" button (home page list or KDS popup window)
   Home list: KDSView._addHandlerDone → controlMarkOrderDone(id, false)
-  KDS popup: sends KDS_ORDER_DONE → channel.onmessage → controlMarkOrderDone(id)
+  KDS popup: sends KDS_ORDER_DONE (both transports) → channel.onmessage → controlMarkOrderDone(id)
   Auto-complete: _tickKDS → controlMarkOrderDone(id, timedOut: true)
 
 controlMarkOrderDone(id, timedOut)
@@ -1346,13 +1360,42 @@ controlMarkOrderDone(id, timedOut)
   → if queue empty: _stopKDSTick()
 ```
 
+#### All Orders Modal
+
+A maximize icon button in the Open Orders section header opens a modal that lists every active order (no 5-row cap). Used when an order that's off the visible list needs to be marked done.
+
+```
+User clicks the maximize icon (⤢) in the Open Orders header
+  → KDSView._addHandlerOpenModal → KDSView.openModal(modelState.orderQueue)
+    → sets _modalOpen = true
+    → removes .hidden from #allOrdersBackdrop
+    → _renderModalList(queue): renders all rows into #allOrdersModalList (no hidden rows)
+
+While modal is open:
+  → renderQueue(queue) re-renders both inline list and modal list
+  → updateTimers() updates badge + row classes in both lists every second
+
+User clicks Done on any row in the modal
+  → KDSView._addHandlerModalDone → controlMarkOrderDone(id)
+    → same path as inline Done (removes from queue, DB update, re-renders both lists, broadcasts)
+
+User clicks × or clicks backdrop
+  → KDSView.closeModal()  [sets _modalOpen = false, adds .hidden]
+```
+
 #### Function Reference
 
 | Function | File | Purpose |
 |---|---|---|
-| `KDSView.renderQueue(queue)` | kdsView.js | Renders order rows into `#openOrdersList`; shows/hides View All button |
+| `KDSView.renderQueue(queue)` | kdsView.js | Renders inline list + modal list (when open); shows/hides View All button |
+| `KDSView._renderModalList(queue)` | kdsView.js | Renders all orders into `#allOrdersModalList` with count badge |
+| `KDSView.openModal(queue)` | kdsView.js | Sets `_modalOpen`, unhides backdrop, calls `_renderModalList` |
+| `KDSView.closeModal()` | kdsView.js | Clears `_modalOpen`, hides backdrop |
+| `KDSView._addHandlerOpenModal(getQueue)` | kdsView.js | Listens on `#openOrdersExpandBtn`; calls `openModal(getQueue())` |
+| `KDSView._addHandlerModalClose()` | kdsView.js | Listens on `#allOrdersCloseBtn` and backdrop click |
+| `KDSView._addHandlerModalDone(handler)` | kdsView.js | Event-delegated Done listener on `#allOrdersModalList` |
 | `KDSView._rowMarkup(order, num, hidden)` | kdsView.js | Generates `<li class="oq-row">` HTML for one order |
-| `KDSView.updateTimers(queue, now, yellow, red)` | kdsView.js | Updates badge text (with emoji) + `oq-row--warn/urgent` classes |
+| `KDSView.updateTimers(queue, now, yellow, red)` | kdsView.js | Updates badge text + row classes in inline list and modal list (when open) |
 | `KDSView._addHandlerViewAll()` | kdsView.js | Toggles `oq-row--hidden` on rows beyond index 4 |
 | `KDSView._addHandlerDone(handler)` | kdsView.js | Event-delegated listener on `#openOrdersList` for `.oq-done-btn` clicks |
 | `KDSView.playNewOrderSound()` | kdsView.js | Web Audio API: C5-E5-G5 chord on new order |
@@ -1433,4 +1476,4 @@ Steps:
 
 ---
 
-*Last updated: 2026-05-13. Update this file when a new feature is added or a workflow changes.*
+*Last updated: 2026-05-13. Updated §4 (dual-channel transport), §5.13 (KDS sync retry logic + All Orders Modal). Update this file when a new feature is added or a workflow changes.*

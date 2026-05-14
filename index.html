@@ -33,7 +33,7 @@
               <line x1="8" y1="21" x2="16" y2="21"/>
               <line x1="12" y1="17" x2="12" y2="21"/>
             </svg>
-            <span class="nav-display-label">Kitchen</span>
+            <span class="nav-display-label">Kitchen<span class="nav-display-sub">Screen</span></span>
           </button>
           <button class="btn nav-display-btn hidden" type="button" id="cfdWindowBtn" aria-label="Open Customer Display" title="Customer Display">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
@@ -41,7 +41,7 @@
               <path d="M8 21h8M12 17v4"/>
               <path d="M7 8h10M7 12h6"/>
             </svg>
-            <span class="nav-display-label">Customer</span>
+            <span class="nav-display-label">Customer<span class="nav-display-sub">Screen</span></span>
           </button>
           <div class="toggle" role="group" aria-label="Theme toggle">
             <button
@@ -93,10 +93,7 @@
 
     <main>
       <section class="hero fade-up" aria-labelledby="greet">
-        <h1 id="greet" class="greet">
-          Hello, <span class="company-name">Wowa</span> Team!
-        </h1>
-
+        <h1 id="greet" class="greet">👋 Hello, <span class="company-name">Wowa</span>!</h1>
         <p class="sub">Ready to ring up sales and keep things moving.</p>
       </section>
 
@@ -508,7 +505,10 @@
 
       <div class="home-layout fade-up">
 
-        <!-- 1. Primary action -->
+        <!-- Left column: New Order · Stats · Shortcuts -->
+        <div class="home-left-col">
+
+        <!-- Primary action -->
         <article class="card card--featured home-new-order-card" tabindex="0">
           <span class="ring" aria-hidden="true"></span>
           <button class="btn-main" data-action="new-order" aria-label="Create new order" id="#newOrderBtn">
@@ -527,8 +527,6 @@
           </button>
         </article>
 
-        <!-- 2. Secondary row: Stats -->
-        <div class="home-row-2">
           <div class="home-stats-panel">
             <div class="stat-card stat-card--accent home-sales-stat">
               <span class="stat-label">
@@ -550,7 +548,8 @@
                   </span>
                   Date &amp; Time
                 </span>
-                <span class="stat-value" id="dateTimeStr">-- : --</span>
+                <span class="stat-value" id="dateTimeStr">--:--</span>
+                <span class="stat-date" id="dateStr"></span>
               </div>
               <div class="stat-card">
                 <span class="stat-label">
@@ -573,26 +572,13 @@
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- 3. Open Orders -->
-        <section class="open-orders-section">
-          <div class="open-orders-header">
-            <h2 class="open-orders-title">
-              <span class="stat-icon open-orders-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-              </span>
-              Open Orders
-            </h2>
-            <button class="open-orders-view-all hidden" id="openOrdersViewAll" type="button"></button>
+          <!-- Divider -->
+          <div class="home-section-divider" aria-hidden="true">
+            <span>Shortcuts</span>
           </div>
-          <ul class="open-orders-list" id="openOrdersList">
-            <li class="oq-empty">No active orders.</li>
-          </ul>
-        </section>
 
-        <!-- 4. Utility row -->
-        <div class="home-utility-row">
+          <div class="home-utility-row">
           <article class="card home-util-card" tabindex="0" data-min-role="manager">
             <span class="ring" aria-hidden="true"></span>
             <button class="btn-main" data-action="menu-list" aria-label="Open menu list" id="menu-list">
@@ -680,28 +666,55 @@
               </div>
             </button>
           </article>
-        </div>
+          </div>
+
+        </div><!-- end home-left-col -->
+
+        <!-- Right column: Open Orders -->
+        <section class="open-orders-section">
+          <div class="open-orders-header">
+            <h2 class="open-orders-title">
+              <span class="stat-icon open-orders-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              </span>
+              Open Orders
+            </h2>
+            <div class="open-orders-header-actions">
+              <button class="open-orders-view-all hidden" id="openOrdersViewAll" type="button"></button>
+              <button class="open-orders-expand-btn" id="openOrdersExpandBtn" type="button" aria-label="View all orders">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+              </button>
+            </div>
+          </div>
+          <ul class="open-orders-list" id="openOrdersList">
+            <li class="oq-empty">No active orders.</li>
+          </ul>
+        </section>
 
       </div>
 
-      <p class="section-label">Quick Actions</p>
-      <section class="quick-actions fade-up" aria-label="Quick actions">
-        <button class="chip chip--locked" data-action="scan" disabled>
-          Scan Item
-        </button>
-        <button class="chip chip--locked" data-action="drawer" disabled>
-          Open Drawer
-        </button>
-        <button class="chip chip--locked" data-action="refund" disabled>
-          Refund
-        </button>
-        <button class="chip chip--locked" data-action="zreport" disabled>
-          Z Report
-        </button>
-      </section>
     </main>
 
     <footer></footer>
+
+    <!-- All Orders Modal -->
+    <div class="all-orders-backdrop hidden" id="allOrdersBackdrop">
+      <div class="all-orders-modal" role="dialog" aria-modal="true" aria-labelledby="allOrdersModalTitle">
+        <div class="all-orders-modal-header">
+          <div class="all-orders-modal-title-row">
+            <span class="stat-icon open-orders-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </span>
+            <h2 id="allOrdersModalTitle" class="all-orders-modal-title">Open Orders</h2>
+            <span class="all-orders-modal-count" id="allOrdersModalCount"></span>
+          </div>
+          <button class="all-orders-modal-close" id="allOrdersCloseBtn" type="button" aria-label="Close">&times;</button>
+        </div>
+        <ul class="open-orders-list all-orders-modal-list" id="allOrdersModalList">
+          <li class="oq-empty">No active orders.</li>
+        </ul>
+      </div>
+    </div>
 
     <!-- App loading overlay — shown while initApp runs after login/session restore -->
     <div id="appLoadingOverlay" class="app-loading-overlay hidden">

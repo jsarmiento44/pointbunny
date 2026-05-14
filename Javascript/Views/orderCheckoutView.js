@@ -189,7 +189,7 @@ class OrderCheckOutView extends View {
       <div class="receive-container">
         <label for="customerPayment">Payment</label>
         <div class="pos-payment-row">
-          <input type="number" id="customerPayment" placeholder="Enter amount received" style="flex:1;min-width:0;" />
+          <input type="number" id="customerPayment" placeholder="Enter amount received" min="0" step="0.01" style="flex:1;min-width:0;" />
           <button id="enterPaymentBtn">Enter</button>
         </div>
       </div>
@@ -391,13 +391,26 @@ class OrderCheckOutView extends View {
   }
 
   _subtractChange() {
+    // Block -, +, e, E from being typed into the payment field
+    this._parentElement.addEventListener("keydown", (e) => {
+      if (e.target.id !== "customerPayment") return;
+      if (["-", "+", "e", "E"].includes(e.key)) e.preventDefault();
+    });
+
     this._parentElement.addEventListener("click", (e) => {
       const btn = e.target.closest("#enterPaymentBtn");
       if (!btn) return;
 
       const changeBox = document.querySelector(".change-box");
-      const payment =
-        +this._parentElement.querySelector("#customerPayment").value;
+      const raw = this._parentElement.querySelector("#customerPayment").value;
+      const payment = parseFloat(raw);
+
+      if (!raw || isNaN(payment) || payment <= 0) {
+        changeBox.classList.remove("ok");
+        changeBox.textContent = "Enter a valid payment amount";
+        return;
+      }
+
       this._customerPayment = payment;
 
       if (payment < this._totalPrice) {

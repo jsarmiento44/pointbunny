@@ -366,7 +366,12 @@ const _finaliseSale = async function (sale, note = null) {
     added_by: sale.cashierName || null,
     order_type: sale.orderType ?? 'dine-in',
   }).select('id').single();
-  if (insertError) throw insertError;
+  if (insertError) {
+    if (insertError.code === '22003' || insertError.message?.includes('numeric field overflow')) {
+      throw new Error("That number doesn't look right — check the payment amount and try again.");
+    }
+    throw insertError;
+  }
   if (sale.promoCode) {
     await model.redeemDiscountCode(sale.promoCode.discountCodeId);
   }
@@ -1336,6 +1341,9 @@ const _wireApp = function () {
   // Order Queue (KDS)
   KDSView._addHandlerViewAll();
   KDSView._addHandlerDone(controlMarkOrderDone);
+  KDSView._addHandlerOpenModal(() => modelState.orderQueue);
+  KDSView._addHandlerModalClose();
+  KDSView._addHandlerModalDone(controlMarkOrderDone);
   SettingsView._addHandlerKDSThresholds(controlSaveKDSThresholds);
   SettingsView._addHandlerDisplaySizes(controlSaveKDSWindowSize, controlSaveCFDWindowSize);
   SettingsView._addHandlerCFDAdUpload(controlUploadCFDAd);

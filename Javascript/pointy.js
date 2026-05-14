@@ -42,7 +42,9 @@ onReady(function () {
     var h = now.getHours(), hour12 = h % 12 || 12, ampm = h < 12 ? "AM" : "PM";
     var timeStr = hour12 + ":" + pad(now.getMinutes()) + " " + ampm;
     var el = document.getElementById("dateTimeStr");
-    if (el) el.textContent = dateStr + "  ·  " + timeStr;
+    var dateEl = document.getElementById("dateStr");
+    if (el) el.textContent = timeStr;
+    if (dateEl) dateEl.textContent = dateStr;
   }
   setDateTime();
   setInterval(setDateTime, 15000);

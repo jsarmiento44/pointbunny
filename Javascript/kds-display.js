@@ -91,8 +91,11 @@ grid.addEventListener('click', e => {
 
 // ── Channel messages ──────────────────────────────────────────────────────────
 
+let _syncReceived = false;
+
 channel.onmessage = ({ data }) => {
   if (data.type === MSG.KDS_QUEUE_SYNC) {
+    _syncReceived = true;
     queue = data.queue ?? [];
     if (data.thresholds) thresholds = data.thresholds;
     renderQueue();
@@ -100,6 +103,17 @@ channel.onmessage = ({ data }) => {
   }
 };
 
-// ── Init — ask cashier for current queue ──────────────────────────────────────
+// ── Init — ask cashier for current queue (with retry) ─────────────────────────
 
-channel.ready.then(() => channel.postMessage({ type: MSG.KDS_REQUEST_SYNC }));
+channel.ready.then(() => {
+  let attempts = 0;
+  const requestSync = () => {
+    channel.postMessage({ type: MSG.KDS_REQUEST_SYNC });
+    if (attempts < 3) {
+      attempts++;
+      // Retry if the main window hasn't responded yet (e.g. Supabase timing race)
+      setTimeout(() => { if (!_syncReceived) requestSync(); }, 2500);
+    }
+  };
+  requestSync();
+});

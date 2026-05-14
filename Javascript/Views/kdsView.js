@@ -1,40 +1,106 @@
-const PREVIEW_COUNT = 5;
+const PREVIEW_COUNT = 8;
 
 const fmtTime = iso =>
   new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
 class KDSView {
-  _list       = document.getElementById('openOrdersList');
-  _viewAllBtn = document.getElementById('openOrdersViewAll');
-  _expanded   = false;
+  _list          = document.getElementById('openOrdersList');
+  _viewAllBtn    = document.getElementById('openOrdersViewAll');
+  _expanded      = false;
+  _modalBackdrop = document.getElementById('allOrdersBackdrop');
+  _modalList     = document.getElementById('allOrdersModalList');
+  _modalCount    = document.getElementById('allOrdersModalCount');
+  _modalOpen     = false;
 
   renderQueue(queue) {
     if (queue.length === 0) {
       this._list.innerHTML = '<li class="oq-empty">No active orders.</li>';
       this._viewAllBtn.classList.add('hidden');
       this._expanded = false;
+    } else {
+      this._list.innerHTML = queue
+        .map((order, i) => this._rowMarkup(order, i + 1, i >= PREVIEW_COUNT && !this._expanded))
+        .join('');
+
+      if (queue.length > PREVIEW_COUNT) {
+        this._viewAllBtn.classList.remove('hidden');
+        this._viewAllBtn.textContent = this._expanded
+          ? 'Show Less'
+          : `View All (${queue.length})`;
+      } else {
+        this._viewAllBtn.classList.add('hidden');
+        this._expanded = false;
+      }
+    }
+
+    if (this._modalOpen) this._renderModalList(queue);
+  }
+
+  _renderModalList(queue) {
+    if (this._modalCount) {
+      this._modalCount.textContent = queue.length > 0
+        ? `${queue.length} order${queue.length !== 1 ? 's' : ''}`
+        : '';
+    }
+    if (queue.length === 0) {
+      this._modalList.innerHTML = '<li class="oq-empty">No active orders.</li>';
       return;
     }
-
-    this._list.innerHTML = queue
-      .map((order, i) => this._rowMarkup(order, i + 1, i >= PREVIEW_COUNT && !this._expanded))
+    this._modalList.innerHTML = queue
+      .map((order, i) => this._rowMarkup(order, i + 1, false))
       .join('');
+  }
 
-    if (queue.length > PREVIEW_COUNT) {
-      this._viewAllBtn.classList.remove('hidden');
-      this._viewAllBtn.textContent = this._expanded
-        ? 'Show Less'
-        : `View All (${queue.length})`;
-    } else {
-      this._viewAllBtn.classList.add('hidden');
-      this._expanded = false;
-    }
+  openModal(queue) {
+    this._modalOpen = true;
+    this._modalBackdrop.classList.remove('hidden');
+    this._renderModalList(queue);
+  }
+
+  closeModal() {
+    this._modalOpen = false;
+    this._modalBackdrop.classList.add('hidden');
+  }
+
+  _addHandlerOpenModal(getQueue) {
+    document.getElementById('openOrdersExpandBtn')?.addEventListener('click', () => {
+      this.openModal(getQueue());
+    });
+  }
+
+  _addHandlerModalClose() {
+    document.getElementById('allOrdersCloseBtn')?.addEventListener('click', () => this.closeModal());
+    this._modalBackdrop?.addEventListener('click', e => {
+      if (e.target === this._modalBackdrop) this.closeModal();
+    });
+  }
+
+  _addHandlerModalDone(handler) {
+    this._modalList?.addEventListener('click', e => {
+      const btn = e.target.closest('.oq-done-btn');
+      if (!btn) return;
+      handler(btn.dataset.orderId);
+    });
+  }
+
+  _buildItemPreview(items) {
+    const parts = items.map(it => {
+      const qty = it.quantity ?? 1;
+      let label = it.itemName;
+      if (qty > 1) label += ` ×${qty}`;
+      const firstVariant = it.selectedVariants?.[0];
+      if (firstVariant?.optionName) label += ` (${firstVariant.optionName})`;
+      return label;
+    });
+    const text = parts.join(' · ');
+    return text.length > 55 ? text.slice(0, 52) + '…' : text;
   }
 
   _rowMarkup(order, num, hidden) {
     const typeLabel = order.orderType === 'takeout' ? 'Takeout' : 'Dine In';
     const itemCount = order.items.reduce((sum, it) => sum + (it.quantity ?? 1), 0);
     const time = fmtTime(order.saleDate);
+    const preview = this._buildItemPreview(order.items);
 
     return `
       <li class="oq-row${hidden ? ' oq-row--hidden' : ''}" data-order-id="${order.id}">
@@ -44,8 +110,8 @@ class KDSView {
           </svg>
         </div>
         <div class="oq-info">
-          <span class="oq-num">#${num}</span>
-          <span class="oq-sub">${typeLabel} &middot; ${itemCount} item${itemCount !== 1 ? 's' : ''}</span>
+          <span class="oq-num">#${num} <span class="oq-type">${typeLabel}</span></span>
+          <span class="oq-items">${preview}</span>
         </div>
         <span class="oq-time">${time}</span>
         <span class="oq-badge oq-badge--preparing" data-badge-id="${order.id}">Preparing</span>
@@ -54,18 +120,26 @@ class KDSView {
   }
 
   updateTimers(queue, now, yellowThreshold, redThreshold) {
-    queue.forEach(order => {
-      const elapsed = Math.floor((now - order.startedAt) / 1000);
-      const badge = this._list.querySelector(`.oq-badge[data-badge-id="${order.id}"]`);
-      const row   = this._list.querySelector(`.oq-row[data-order-id="${order.id}"]`);
-      if (!badge || !row) return;
+    const roots = this._modalOpen
+      ? [this._list, this._modalList]
+      : [this._list];
 
+    queue.forEach(order => {
+      const elapsed  = Math.floor((now - order.startedAt) / 1000);
       const isWarn   = elapsed >= yellowThreshold && elapsed < redThreshold;
       const isUrgent = elapsed >= redThreshold;
-      badge.className = `oq-badge ${isUrgent ? 'oq-badge--urgent' : isWarn ? 'oq-badge--warn' : 'oq-badge--preparing'}`;
-      badge.textContent = isUrgent ? '🔥 Urgent' : isWarn ? '⏰ Delayed' : 'Preparing';
-      row.classList.toggle('oq-row--warn',   isWarn);
-      row.classList.toggle('oq-row--urgent', isUrgent);
+      const cls      = `oq-badge ${isUrgent ? 'oq-badge--urgent' : isWarn ? 'oq-badge--warn' : 'oq-badge--preparing'}`;
+      const text     = isUrgent ? '🔥 Urgent' : isWarn ? '⏰ Delayed' : 'Preparing';
+
+      roots.forEach(root => {
+        const badge = root.querySelector(`.oq-badge[data-badge-id="${order.id}"]`);
+        const row   = root.querySelector(`.oq-row[data-order-id="${order.id}"]`);
+        if (!badge || !row) return;
+        badge.className = cls;
+        badge.textContent = text;
+        row.classList.toggle('oq-row--warn',   isWarn);
+        row.classList.toggle('oq-row--urgent', isUrgent);
+      });
     });
   }
 
