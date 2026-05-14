@@ -853,9 +853,12 @@ const _loadYesterdayComparison = async function () {
   const el = document.getElementById('salesVsYesterday');
   if (!el) return;
   try {
-    _yesterdayTotal = await model.loadYesterdaySalesTotal();
+    const [yesterdayTotal, todayTotal] = await Promise.all([
+      model.loadYesterdaySalesTotal(),
+      model.loadTodaySalesTotal(),
+    ]);
+    _yesterdayTotal = yesterdayTotal;
     if (_yesterdayTotal === 0) { el.innerHTML = ''; return; }
-    const todayTotal = parseFloat(document.getElementById('totalStr')?.textContent.replace(/[$,]/g, '')) || 0;
     _updateYesterdayBadge(todayTotal);
   } catch (_) {
     if (el) el.innerHTML = '';
