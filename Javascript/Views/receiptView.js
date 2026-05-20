@@ -1,5 +1,7 @@
 ﻿import View from "./view.js";
 
+const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
 class ReceiptView extends View {
   _generateReceiptHTML(sale) {
     const date = new Date(sale.date);
@@ -19,17 +21,16 @@ class ReceiptView extends View {
       ? (sale.removedAdjustments ?? [])
       : [];
 
-    const storeName = sale.storeName?.includes("@")
-      ? "POINTY POS"
-      : (sale.storeName ?? "POINTY POS");
+    const storeName = esc(
+      sale.storeName?.includes("@") ? "POINTY POS" : (sale.storeName ?? "POINTY POS")
+    );
 
     const itemsHtml = sale.items
       .map((item) => {
-        const variants =
-          item.selectedVariants?.map((v) => v.variantName).join(", ") ?? "";
+        const variants = esc(item.selectedVariants?.map((v) => v.variantName).join(", ") ?? "");
         return `
         <tr>
-          <td style="padding:2px 4px 2px 0;vertical-align:top;">${item.itemName} x${item.quantity}</td>
+          <td style="padding:2px 4px 2px 0;vertical-align:top;">${esc(item.itemName)} x${item.quantity}</td>
           <td style="padding:2px 0;text-align:right;vertical-align:top;white-space:nowrap;">$${Number(item.totalPrice).toFixed(2)}</td>
         </tr>
         ${variants ? `<tr><td colspan="2" style="font-size:10px;color:#555;padding:0 0 4px 0;">${variants}</td></tr>` : ""}
@@ -50,7 +51,7 @@ class ReceiptView extends View {
           .map(
             (adj) => `
           <tr>
-            <td style="padding:1px 4px 1px 0;font-size:11px;">${adj.name}${adj.calculation === "percentage" ? ` (${adj.appliedValue}%)` : ""}</td>
+            <td style="padding:1px 4px 1px 0;font-size:11px;">${esc(adj.name)}${adj.calculation === "percentage" ? ` (${adj.appliedValue}%)` : ""}</td>
             <td style="text-align:right;font-size:11px;">${adj.computedAmount >= 0 ? "+" : ""}$${Number(adj.computedAmount).toFixed(2)}</td>
           </tr>
         `,
@@ -86,7 +87,7 @@ class ReceiptView extends View {
 </style>
 <script>
   window.addEventListener('afterprint', function() {
-    if (window.opener) window.opener.postMessage('pointy-afterprint', '*');
+    if (window.opener) window.opener.postMessage('pointy-afterprint', window.location.origin);
     setTimeout(function() { window.close(); }, 150);
   });
 </script>
@@ -94,8 +95,13 @@ class ReceiptView extends View {
 <body>
   <div class="center brand">${storeName}</div>
   <div class="center" style="margin:2px 0 2px;font-size:11px;">${dateStr} &nbsp; ${timeStr}</div>
-  ${sale.cashierName ? `<div class="center" style="font-size:10px;color:#555;margin:0 0 2px;">Cashier: ${sale.cashierName}</div>` : ''}
+  ${sale.cashierName ? `<div class="center" style="font-size:10px;color:#555;margin:0 0 2px;">Cashier: ${esc(sale.cashierName)}</div>` : ''}
   ${sale.orderType ? `<div class="center" style="font-size:11px;font-weight:bold;letter-spacing:0.05em;margin:0 0 4px;">${sale.orderType === 'takeout' ? 'TAKEOUT' : 'DINE IN'}</div>` : ''}
+  ${sale.ticketNumber != null ? `
+  <div class="center" style="margin:6px 0;padding:6px 0;border-top:2px dashed #000;border-bottom:2px dashed #000;">
+    <div style="font-size:11px;letter-spacing:0.08em;">TICKET</div>
+    <div style="font-size:32px;font-weight:bold;line-height:1.1;">#${sale.ticketNumber}</div>
+  </div>` : ''}
   <hr class="divider">
 
   <table>${itemsHtml}</table>
@@ -140,12 +146,13 @@ class ReceiptView extends View {
     setTimeout(() => win.print(), 300);
 
     return new Promise((resolve) => {
-      const handler = (e) => {
-        if (e.data === "pointy-afterprint") {
-          window.removeEventListener("message", handler);
-          resolve();
-        }
+      const cleanup = () => {
+        window.removeEventListener("message", handler);
+        clearTimeout(fallback);
+        resolve();
       };
+      const handler = (e) => { if (e.data === "pointy-afterprint") cleanup(); };
+      const fallback = setTimeout(cleanup, 60_000);
       window.addEventListener("message", handler);
     });
   }

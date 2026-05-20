@@ -1,6 +1,9 @@
-import { supabase } from "./supabase.js";
+import { createClient } from '@supabase/supabase-js';
+import { supabase, supabaseUrl, supabaseAnonKey } from "./supabase.js";
 
 let adjCounter = 0;
+
+const safeParse = (str, fallback) => { if (str == null) return fallback; try { return JSON.parse(str); } catch { return fallback; } };
 
 const generateAdjustmentId = function () {
   adjCounter += 1;
@@ -23,6 +26,8 @@ export const state = {
   orderQueue: [],
   salesBasket: [],
   cashflowSales: [],
+  voidedSales: [],
+  reportsSales: [],
   expenses: [],
   discountCodes: [],
   currentPromoCode: null,
@@ -35,8 +40,8 @@ export const state = {
     kdsYellowThreshold: parseInt(localStorage.getItem('pointy_kds_yellow') || '180'),
     kdsRedThreshold: parseInt(localStorage.getItem('pointy_kds_red') || '300'),
     kdsAutoCompleteThreshold: parseInt(localStorage.getItem('pointy_kds_auto') || '900'),
-    kdsWindowSize: JSON.parse(localStorage.getItem('pointy_kds_window_size') || '{"width":1920,"height":1080}'),
-    cfdWindowSize: JSON.parse(localStorage.getItem('pointy_cfd_window_size') || '{"width":1920,"height":1080}'),
+    kdsWindowSize: safeParse(localStorage.getItem('pointy_kds_window_size'), { width: 1920, height: 1080 }),
+    cfdWindowSize: safeParse(localStorage.getItem('pointy_cfd_window_size'), { width: 1920, height: 1080 }),
     orderTypeEnabled: localStorage.getItem('pointy_order_type_enabled') !== 'false',
   },
   currentReceiptAdjustments: [],
@@ -533,7 +538,8 @@ export const loadTodaySalesTotal = async function () {
     .select("total_price")
     .eq("user_id", state.businessId)
     .gte("sale_date", start.toISOString())
-    .lte("sale_date", end.toISOString());
+    .lte("sale_date", end.toISOString())
+    .is("voided_at", null);
   if (error) throw error;
   return data.reduce((sum, r) => sum + Number(r.total_price), 0);
 };
@@ -550,11 +556,13 @@ export const loadTransactionCounts = async function () {
     supabase.from('sales').select('id', { count: 'exact', head: true })
       .eq('user_id', state.businessId)
       .gte('sale_date', todayStart.toISOString())
-      .lte('sale_date', todayEnd.toISOString()),
+      .lte('sale_date', todayEnd.toISOString())
+      .is('voided_at', null),
     supabase.from('sales').select('id', { count: 'exact', head: true })
       .eq('user_id', state.businessId)
       .gte('sale_date', yesterdayStart.toISOString())
-      .lte('sale_date', yesterdayEnd.toISOString()),
+      .lte('sale_date', yesterdayEnd.toISOString())
+      .is('voided_at', null),
   ]);
 
   return { today: todayRes.count ?? 0, yesterday: yestRes.count ?? 0 };
@@ -569,7 +577,8 @@ export const loadYesterdaySalesTotal = async function () {
     .select("total_price")
     .eq("user_id", state.businessId)
     .gte("sale_date", start.toISOString())
-    .lte("sale_date", end.toISOString());
+    .lte("sale_date", end.toISOString())
+    .is("voided_at", null);
   if (error) throw error;
   return data.reduce((sum, r) => sum + Number(r.total_price), 0);
 };
@@ -577,13 +586,14 @@ export const loadYesterdaySalesTotal = async function () {
 // ── Cashflow ──────────────────────────────────────────────────────────────────
 
 export const fetchCashflowData = async function (startISO, endISO) {
-  const [salesResult, expensesResult] = await Promise.all([
+  const [salesResult, expensesResult, voidedResult] = await Promise.all([
     supabase
       .from("sales")
-      .select("id, total_price, subtotal, customer_payment, customer_change, adjustments, sale_date, items, is_manual, added_by")
+      .select("id, total_price, subtotal, customer_payment, customer_change, adjustments, sale_date, items, is_manual, added_by, order_type, ticket_number")
       .eq("user_id", state.businessId)
       .gte("sale_date", startISO)
       .lte("sale_date", endISO)
+      .is("voided_at", null)
       .order("sale_date", { ascending: false }),
     supabase
       .from("expenses")
@@ -592,11 +602,124 @@ export const fetchCashflowData = async function (startISO, endISO) {
       .gte("expense_date", startISO)
       .lte("expense_date", endISO)
       .order("expense_date", { ascending: false }),
+    supabase
+      .from("sales")
+      .select("id, total_price, subtotal, sale_date, items, added_by, order_type, ticket_number, voided_at, voided_by")
+      .eq("user_id", state.businessId)
+      .gte("sale_date", startISO)
+      .lte("sale_date", endISO)
+      .not("voided_at", "is", null)
+      .order("voided_at", { ascending: false }),
   ]);
   if (salesResult.error) throw salesResult.error;
   if (expensesResult.error) throw expensesResult.error;
+  if (voidedResult.error) throw voidedResult.error;
   state.cashflowSales = salesResult.data;
   state.expenses = expensesResult.data.map(dbToExpense);
+  state.voidedSales = voidedResult.data;
+};
+
+export const voidSale = async function (id, voidedBy) {
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from('sales')
+    .update({ voided_at: now, voided_by: voidedBy })
+    .eq('id', id)
+    .eq('user_id', state.businessId);
+  if (error) throw error;
+  const wasInQueue = state.orderQueue.some(o => o.id === id);
+  state.orderQueue = state.orderQueue.filter(o => o.id !== id);
+  const voidedSale = state.cashflowSales.find(s => s.id === id);
+  state.cashflowSales = state.cashflowSales.filter(s => s.id !== id);
+  if (voidedSale) {
+    state.voidedSales = [{ ...voidedSale, voided_at: now, voided_by: voidedBy }, ...state.voidedSales];
+  }
+  return { wasInQueue };
+};
+
+export const restoreSale = async function (id) {
+  const { data, error } = await supabase
+    .from('sales')
+    .update({ voided_at: null, voided_by: null })
+    .eq('id', id)
+    .eq('user_id', state.businessId)
+    .select('id, sale_date, items, total_price, order_type, ticket_number, prepared_at')
+    .single();
+  if (error) throw error;
+  const restoredSale = state.voidedSales.find(s => s.id === id);
+  state.voidedSales = state.voidedSales.filter(s => s.id !== id);
+  if (restoredSale) {
+    const { voided_at, voided_by, ...cleanSale } = restoredSale;
+    state.cashflowSales = [cleanSale, ...state.cashflowSales]
+      .sort((a, b) => new Date(b.sale_date) - new Date(a.sale_date));
+  }
+  return data;
+};
+
+
+export const verifyOverrideCredentials = async function (email, password) {
+  const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+  const { data: authData, error: authError } = await tempClient.auth.signInWithPassword({ email, password });
+  if (authError) throw new Error('Invalid email or password.');
+
+  const { data: staffData } = await tempClient
+    .from('staff')
+    .select('first_name, last_name, roles(permissions)')
+    .eq('user_id', authData.user.id)
+    .eq('business_id', state.businessId)
+    .maybeSingle();
+
+  await tempClient.auth.signOut({ scope: 'local' });
+
+  if (!staffData) throw new Error('This account is not a staff member at this location.');
+  if (!staffData.roles?.permissions?.cashflow) throw new Error('This account does not have permission to authorize this action.');
+
+  return [staffData.first_name, staffData.last_name].filter(Boolean).join(' ') || email;
+};
+
+export const fetchReportsSalesRaw = async function (startISO, endISO) {
+  const { data, error } = await supabase
+    .from("sales")
+    .select("id, total_price, sale_date, items, added_by, order_type, prepared_at")
+    .eq("user_id", state.businessId)
+    .gte("sale_date", startISO)
+    .lte("sale_date", endISO)
+    .is("voided_at", null)
+    .order("sale_date", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+};
+
+export const fetchReportsSales = async function (startISO, endISO) {
+  state.reportsSales = await fetchReportsSalesRaw(startISO, endISO);
+};
+
+export const fetchPeriodTotals = async function (startISO, endISO) {
+  const { data, error } = await supabase
+    .from("sales")
+    .select("total_price, sale_date, prepared_at")
+    .eq("user_id", state.businessId)
+    .gte("sale_date", startISO)
+    .lte("sale_date", endISO)
+    .is("voided_at", null);
+  if (error) throw error;
+  const revenue = data.reduce((s, r) => s + Number(r.total_price), 0);
+  const transactions = data.length;
+  let servTotal = 0, servCount = 0;
+  for (const r of data) {
+    if (!r.prepared_at) continue;
+    const mins = (new Date(r.prepared_at) - new Date(r.sale_date)) / 60000;
+    if (mins < 0 || mins > 120) continue;
+    servTotal += mins; servCount++;
+  }
+  return {
+    revenue,
+    transactions,
+    avgOrder: transactions > 0 ? revenue / transactions : 0,
+    avgServingMinutes: servCount > 0 ? servTotal / servCount : null,
+  };
 };
 
 export const addExpense = async function ({ amount, description, category, expense_date }) {
@@ -799,11 +922,12 @@ export const loadOrderQueue = async function () {
   const end   = new Date(now); end.setHours(23, 59, 59, 999);
   const { data, error } = await supabase
     .from('sales')
-    .select('id, sale_date, items, total_price, order_type')
+    .select('id, sale_date, items, total_price, order_type, ticket_number')
     .eq('user_id', state.businessId)
     .gte('sale_date', start.toISOString())
     .lte('sale_date', end.toISOString())
     .is('prepared_at', null)
+    .is('voided_at', null)
     .order('sale_date', { ascending: true });
   if (error) throw error;
   state.orderQueue = data.map(row => ({
@@ -813,6 +937,7 @@ export const loadOrderQueue = async function () {
     startedAt: new Date(row.sale_date).getTime(),
     totalPrice: Number(row.total_price),
     orderType: row.order_type ?? 'dine-in',
+    ticketNumber: row.ticket_number ?? null,
   }));
 };
 

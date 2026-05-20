@@ -16,7 +16,8 @@
       "Bash(Start-Process \"msedge\" \"--headless --screenshot='C:\\\\Users\\\\Kelly\\\\Desktop\\\\form-check.png' --window-size=1280,900 'http://localhost:59775'\" -Wait)",
       "PowerShell(Start-Process \"msedge\" -ArgumentList \"--headless --screenshot=`\"C:\\\\Users\\\\Kelly\\\\Desktop\\\\form-check.png`\" --window-size=1280,900 `\"http://localhost:59775`\"\" -Wait; Start-Sleep 3)",
       "Bash(npx parcel *)",
-      "Bash(node *)"
+      "Bash(node *)",
+      "Bash(npm install *)"
     ]
   }
 }

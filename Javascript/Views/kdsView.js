@@ -111,7 +111,7 @@ class KDSView {
           </svg>
         </div>
         <div class="oq-info">
-          <span class="oq-num">#${num}${typeLabel ? ` <span class="oq-type">${typeLabel}</span>` : ''}</span>
+          <span class="oq-num">#${order.ticketNumber ?? num}${typeLabel ? ` <span class="oq-type">${typeLabel}</span>` : ''}</span>
           <span class="oq-items">${preview}</span>
         </div>
         <span class="oq-time">${time}</span>
@@ -180,6 +180,46 @@ class KDSView {
       if (!btn) return;
       handler(btn.dataset.orderId);
     });
+  }
+
+  showUndoToast(order, onUndo, durationMs) {
+    const label = order.ticketNumber ? `#${order.ticketNumber}` : 'Order';
+    const el = document.createElement('div');
+    el.className = 'toast toast--undo';
+    let remaining = Math.ceil(durationMs / 1000);
+
+    el.innerHTML = `
+      <span class="toast-undo-msg">${label} marked done</span>
+      <span class="toast-undo-countdown">${remaining}s</span>
+      <button class="toast-undo-btn" type="button">Undo</button>`;
+    el.querySelector('.toast-undo-btn').addEventListener('click', onUndo, { once: true });
+
+    let container = document.getElementById('undoToastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'undoToastContainer';
+      container.className = 'undo-toast-container';
+      document.body.appendChild(container);
+    }
+    container.appendChild(el);
+    void el.offsetHeight;
+    el.classList.add('toast--visible');
+
+    const countdownInterval = setInterval(() => {
+      remaining--;
+      const cd = el.querySelector('.toast-undo-countdown');
+      if (cd) cd.textContent = `${remaining}s`;
+    }, 1000);
+
+    return () => {
+      clearInterval(countdownInterval);
+      el.classList.remove('toast--visible');
+      el.addEventListener('transitionend', () => {
+        el.remove();
+        const c = document.getElementById('undoToastContainer');
+        if (c && c.children.length === 0) c.remove();
+      }, { once: true });
+    };
   }
 }
 

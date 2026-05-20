@@ -16,9 +16,13 @@ import StaffView from "./Views/staffView.js";
 import KDSView from "./Views/kdsView.js";
 import channel, { MSG } from "./channel.js";
 import { init as initAnalytics, destroy as destroyAnalytics } from "./analytics.js";
+import ReportsView from "./Views/reportsView.js";
+import { fetchReportsSalesRaw } from "./model.js";
 
 const modelState = model.state;
 let item;
+
+const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 // ── Toast notifications ───────────────────────────────────────────────────────
 
@@ -244,6 +248,13 @@ const _buildSale = function () {
 
 // ── Order Queue (KDS) ─────────────────────────────────────────────────────────
 
+const _generateTicketNumber = function () {
+  const active = new Set(modelState.orderQueue.map(o => o.ticketNumber).filter(Boolean));
+  let n;
+  do { n = Math.floor(Math.random() * 999) + 1; } while (active.has(n));
+  return n;
+};
+
 let _kdsInterval = null;
 
 const _ensureKDSTick = function () {
@@ -270,10 +281,36 @@ const _tickKDS = function () {
   }
 };
 
-const controlMarkOrderDone = async function (id, timedOut = false) {
+// ── Undo "done" window ────────────────────────────────────────────────────────
+const UNDO_WINDOW_MS = 30_000;
+const _pendingDone = new Map(); // id → { timer, order, idx, timedOut, dismissToast }
+
+
+const _undoMarkDone = function (id) {
+  const pending = _pendingDone.get(id);
+  if (!pending) return;
+  clearTimeout(pending.timer);
+  pending.dismissToast();
+  _pendingDone.delete(id);
+  const insertIdx = Math.min(pending.idx, modelState.orderQueue.length);
+  modelState.orderQueue.splice(insertIdx, 0, pending.order);
+  KDSView.renderQueue(modelState.orderQueue);
+  _ensureKDSTick();
+  channel.postMessage({
+    type: MSG.KDS_QUEUE_SYNC,
+    queue: modelState.orderQueue,
+    thresholds: {
+      yellow: model.state.settings.kdsYellowThreshold,
+      red: model.state.settings.kdsRedThreshold,
+    },
+  });
+};
+
+const controlMarkOrderDone = function (id, timedOut = false) {
   const idx = modelState.orderQueue.findIndex(o => o.id === id);
-  if (idx === -1) return;
+  if (idx === -1 || _pendingDone.has(id)) return;
   const order = modelState.orderQueue[idx];
+
   modelState.orderQueue.splice(idx, 1);
   KDSView.renderQueue(modelState.orderQueue);
   if (modelState.orderQueue.length === 0) _stopKDSTick();
@@ -285,11 +322,17 @@ const controlMarkOrderDone = async function (id, timedOut = false) {
       red: model.state.settings.kdsRedThreshold,
     },
   });
-  try {
-    await model.recordServeTime(order.id, timedOut);
-  } catch (_) {
-    // recordServeTime requires prepared_at + timed_out columns and an UPDATE RLS policy on sales
-  }
+
+  const dismissToast = KDSView.showUndoToast(order, () => _undoMarkDone(id), UNDO_WINDOW_MS);
+  const timer = setTimeout(async () => {
+    _pendingDone.delete(id);
+    dismissToast();
+    try {
+      await model.recordServeTime(id, timedOut);
+    } catch (_) {}
+  }, UNDO_WINDOW_MS);
+
+  _pendingDone.set(id, { timer, order, idx, timedOut, dismissToast });
 };
 
 
@@ -365,6 +408,7 @@ const _finaliseSale = async function (sale, note = null) {
     is_manual: false,
     added_by: sale.cashierName || null,
     order_type: sale.orderType ?? 'dine-in',
+    ticket_number: sale.ticketNumber ?? null,
   }).select('id').single();
   if (insertError) {
     if (insertError.code === '22003' || insertError.message?.includes('numeric field overflow')) {
@@ -382,6 +426,7 @@ const _finaliseSale = async function (sale, note = null) {
     startedAt: sale.date,
     totalPrice: sale.totalPrice,
     orderType: sale.orderType ?? 'dine-in',
+    ticketNumber: sale.ticketNumber ?? null,
   });
   _ensureKDSTick();
   KDSView.renderQueue(modelState.orderQueue);
@@ -421,6 +466,7 @@ const controlConcludeTransaction = async function () {
   try {
     if (modelState.cart.length <= 0) throw 'Cart is empty!';
     const sale = _buildSale();
+    sale.ticketNumber = _generateTicketNumber();
 
     if (!model.state.settings.printingEnabled) {
       await _finaliseSale(sale, 'Transaction saved — no receipt was printed. You can enable printing in Settings.');
@@ -734,8 +780,8 @@ const controlSwitchCashier = async function () {
           <li class="cashier-picker-item${model.state.currentCashier?.id === s.id ? ' cashier-picker-item--active' : ''}"
               data-id="${s.id}" role="button" tabindex="0">
             <div class="cashier-picker-info">
-              <span class="cashier-picker-name">${name}</span>
-              <span class="cashier-picker-role">${s.role}</span>
+              <span class="cashier-picker-name">${esc(name)}</span>
+              <span class="cashier-picker-role">${esc(s.role)}</span>
             </div>
             ${model.state.currentCashier?.id === s.id ? '<span class="cashier-picker-check">✓</span>' : ''}
           </li>`;
@@ -771,16 +817,20 @@ const refreshTodaySalesDisplay = async function () {
 
     _updateYesterdayBadge(newVal);
 
-    // If a success overlay is on screen, wait for it to be removed first
     const overlay = document.querySelector(".success-overlay");
     if (overlay) {
+      let done = false;
+      const animate = () => {
+        if (done) return;
+        done = true;
+        observer.disconnect();
+        _animateSalesTotal(el, currentVal, newVal);
+      };
       const observer = new MutationObserver(() => {
-        if (!document.querySelector(".success-overlay")) {
-          observer.disconnect();
-          _animateSalesTotal(el, currentVal, newVal);
-        }
+        if (!document.querySelector(".success-overlay")) animate();
       });
       observer.observe(document.body, { childList: true, subtree: true });
+      setTimeout(animate, 10_000);
     } else {
       _animateSalesTotal(el, currentVal, newVal);
     }
@@ -987,10 +1037,19 @@ const _cashflowSummary = () => {
   return { gross, expenses, net: gross - expenses };
 };
 
+const _cashflowCanEdit = () => modelState.role === 'Admin' || modelState.role === 'Manager';
+
 let _currentCashflowPeriod = { period: "today" };
 
+const _renderCashflowLists = () => {
+  const canEdit = _cashflowCanEdit();
+  CashflowView.renderSalesList(modelState.cashflowSales, canEdit);
+  CashflowView.renderExpensesList(modelState.expenses, canEdit);
+  CashflowView.renderVoidedList(modelState.voidedSales, canEdit);
+};
+
 const controlOpenCashflow = async function () {
-  CashflowView.open();
+  CashflowView.open(_cashflowCanEdit());
   CashflowView.renderLoading();
   CashflowView.setLoading(true);
   try {
@@ -999,8 +1058,7 @@ const controlOpenCashflow = async function () {
     await model.fetchCashflowData(startISO, endISO);
     CashflowView.setPeriodLabel(label);
     CashflowView.renderSummary(_cashflowSummary());
-    CashflowView.renderSalesList(modelState.cashflowSales);
-    CashflowView.renderExpensesList(modelState.expenses);
+    _renderCashflowLists();
   } catch (err) {
     showToast(err.message ?? err);
   } finally {
@@ -1021,8 +1079,7 @@ const controlChangePeriod = async function ({ period, from, to }) {
     await model.fetchCashflowData(startISO, endISO);
     CashflowView.setPeriodLabel(label);
     CashflowView.renderSummary(_cashflowSummary());
-    CashflowView.renderSalesList(modelState.cashflowSales);
-    CashflowView.renderExpensesList(modelState.expenses);
+    _renderCashflowLists();
   } catch (err) {
     showToast(err.message ?? err);
   } finally {
@@ -1036,13 +1093,115 @@ const controlAddExpense = async function (data) {
     await model.addExpense(data);
     CashflowView.hideExpenseModal();
     CashflowView.renderSummary(_cashflowSummary());
-    CashflowView.renderExpensesList(modelState.expenses);
+    CashflowView.renderExpensesList(modelState.expenses, _cashflowCanEdit());
     CashflowView.scrollExpensesToTop();
     showToast("Expense added.", "success");
   } catch (err) {
     showToast(err.message ?? err);
   } finally {
     CashflowView.setSubmitting(false);
+  }
+};
+
+const _isToday = (isoStr) => {
+  const d = new Date(isoStr);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+};
+
+const _executeVoid = async function (id, voidedBy) {
+  const { wasInQueue } = await model.voidSale(id, voidedBy);
+  KDSView.renderQueue(modelState.orderQueue);
+  channel.postMessage({ type: MSG.KDS_ORDER_VOIDED, id });
+  CashflowView.renderSummary(_cashflowSummary());
+  _renderCashflowLists();
+  const voided = modelState.voidedSales.find(s => s.id === id);
+  if (voided && _isToday(voided.sale_date)) {
+    refreshTodaySalesDisplay();
+    if (wasInQueue && _todayTransactionCount !== null) { _todayTransactionCount = Math.max(0, _todayTransactionCount - 1); _updateTransactionBadge(); }
+  }
+  showToast('Transaction voided.', 'success');
+};
+
+const controlVoidTransaction = function (id) {
+  const doVoid = async (voidedBy) => {
+    try { await _executeVoid(id, voidedBy); }
+    catch (err) { showToast(err.message ?? err); }
+  };
+
+  if (_cashflowCanEdit()) {
+    CashflowView.showConfirmModal({
+      message: 'Void this transaction? It will be removed from reports and the active queue.',
+      confirmLabel: 'Void',
+      cancelLabel: 'Cancel',
+      onConfirm: () => doVoid([modelState.currentStaff?.firstName, modelState.currentStaff?.lastName].filter(Boolean).join(' ') || 'Admin'),
+    });
+  } else {
+    CashflowView.showOverrideModal(async (email, password) => {
+      try {
+        const staffName = await model.verifyOverrideCredentials(email, password);
+        CashflowView.hideOverrideModal();
+        await _executeVoid(id, staffName);
+      } catch (err) {
+        CashflowView.setOverrideError(err.message ?? 'Authorization failed.');
+      }
+    });
+  }
+};
+
+const _executeRestore = async function (id) {
+  const restored = await model.restoreSale(id);
+  if (restored.prepared_at === null) {
+    const queueItem = {
+      id: restored.id,
+      saleDate: restored.sale_date,
+      items: restored.items,
+      startedAt: new Date(restored.sale_date).getTime(),
+      totalPrice: Number(restored.total_price),
+      orderType: restored.order_type ?? null,
+      ticketNumber: restored.ticket_number ?? null,
+    };
+    modelState.orderQueue = [...modelState.orderQueue, queueItem].sort((a, b) => a.startedAt - b.startedAt);
+    KDSView.renderQueue(modelState.orderQueue);
+    channel.postMessage({
+      type: MSG.KDS_QUEUE_SYNC,
+      queue: modelState.orderQueue,
+      thresholds: { yellow: modelState.settings.kdsYellowThreshold, red: modelState.settings.kdsRedThreshold },
+    });
+  }
+  CashflowView.renderSummary(_cashflowSummary());
+  _renderCashflowLists();
+  const restoredInCashflow = modelState.cashflowSales.find(s => s.id === restored.id);
+  if (restoredInCashflow && _isToday(restored.sale_date)) {
+    refreshTodaySalesDisplay();
+    if (_todayTransactionCount !== null) { _todayTransactionCount++; _updateTransactionBadge(); }
+  }
+  showToast('Transaction restored.', 'success');
+};
+
+const controlRestoreTransaction = function (id) {
+  const doRestore = async (authorized) => {
+    try { await _executeRestore(id); }
+    catch (err) { showToast(err.message ?? err); }
+  };
+
+  if (_cashflowCanEdit()) {
+    CashflowView.showConfirmModal({
+      message: 'Restore this transaction? It will reappear in reports.',
+      confirmLabel: 'Restore',
+      cancelLabel: 'Cancel',
+      onConfirm: doRestore,
+    });
+  } else {
+    CashflowView.showOverrideModal(async (email, password) => {
+      try {
+        await model.verifyOverrideCredentials(email, password);
+        CashflowView.hideOverrideModal();
+        await _executeRestore(id);
+      } catch (err) {
+        CashflowView.setOverrideError(err.message ?? 'Authorization failed.');
+      }
+    });
   }
 };
 
@@ -1143,7 +1302,7 @@ const controlDeleteExpense = async function (id) {
   try {
     await model.deleteExpense(id);
     CashflowView.renderSummary(_cashflowSummary());
-    CashflowView.renderExpensesList(modelState.expenses);
+    CashflowView.renderExpensesList(modelState.expenses, _cashflowCanEdit());
     showToast("Expense deleted.", "success");
   } catch (err) {
     showToast(err.message ?? err);
@@ -1282,6 +1441,752 @@ const controlRemoveStaff = async function (id) {
   }
 };
 
+// ── Reports ───────────────────────────────────────────────────────────────────
+
+const _computeReportsSummary = function () {
+  const sales = modelState.reportsSales;
+  const revenue = sales.reduce((s, r) => s + Number(r.total_price), 0);
+  const transactions = sales.length;
+  const avgOrder = transactions > 0 ? revenue / transactions : 0;
+  const avgServingMinutes = _computeServingTimeStats()?.avgMinutes ?? null;
+  return { revenue, transactions, avgOrder, avgServingMinutes };
+};
+
+let _topItemsSortKey = "quantity";
+
+const _computeTopItems = function (limit = 10, sortKey = _topItemsSortKey) {
+  const map = new Map();
+  for (const sale of modelState.reportsSales) {
+    for (const item of (sale.items ?? [])) {
+      const key = item.itemName;
+      const existing = map.get(key) ?? { name: key, quantity: 0, revenue: 0 };
+      existing.quantity += Number(item.quantity ?? 1);
+      existing.revenue  += Number(item.totalPrice ?? 0);
+      map.set(key, existing);
+    }
+  }
+  return [...map.values()]
+    .sort((a, b) => b[sortKey] - a[sortKey])
+    .slice(0, limit);
+};
+
+const controlSortTopItems = function (key) {
+  _topItemsSortKey = key;
+  ReportsView.setTopItemsSort(key);
+  ReportsView.renderTopItems(_computeTopItems());
+};
+
+const _computeCategoryMix = function () {
+  const itemCatMap = new Map(model.state.menuItems.map(i => [i.itemName, i.category]));
+  const map = new Map();
+  for (const sale of modelState.reportsSales) {
+    for (const item of (sale.items ?? [])) {
+      const cat = itemCatMap.get(item.itemName) ?? "Other";
+      map.set(cat, (map.get(cat) ?? 0) + Number(item.totalPrice ?? 0));
+    }
+  }
+  return [...map.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, value]) => ({ label, value }));
+};
+
+const _computeRevenueOverTime = function (period, startISO, endISO) {
+  const sales = modelState.reportsSales;
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const DAYS   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const fmtHour = (i) => i === 0 ? "12am" : i < 12 ? `${i}am` : i === 12 ? "12pm" : `${i - 12}pm`;
+
+  if (period === "today") {
+    const hours = Array(24).fill(0);
+    for (const s of sales) hours[new Date(s.sale_date).getHours()] += Number(s.total_price);
+    return { labels: Array.from({ length: 24 }, (_, i) => fmtHour(i)), data: hours };
+  }
+
+  if (period === "year") {
+    const year = new Date(startISO).getFullYear();
+    const mmap = new Map();
+    for (const s of sales) {
+      const m = s.sale_date.slice(0, 7);
+      mmap.set(m, (mmap.get(m) ?? 0) + Number(s.total_price));
+    }
+    return {
+      labels: MONTHS,
+      data: MONTHS.map((_, i) => mmap.get(`${year}-${String(i + 1).padStart(2, "0")}`) ?? 0),
+    };
+  }
+
+  // week / month / custom → daily
+  const dmap = new Map();
+  for (const s of sales) {
+    const d = s.sale_date.slice(0, 10);
+    dmap.set(d, (dmap.get(d) ?? 0) + Number(s.total_price));
+  }
+  const start = new Date(startISO);
+  const end   = new Date(endISO);
+  const labels = [], data = [];
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    labels.push(period === "week" ? DAYS[d.getDay()] : `${d.getMonth() + 1}/${d.getDate()}`);
+    data.push(dmap.get(d.toISOString().slice(0, 10)) ?? 0);
+  }
+  return { labels, data };
+};
+
+const _computeHourlyBreakdown = function () {
+  const hours = Array(24).fill(0);
+  for (const s of modelState.reportsSales)
+    hours[new Date(s.sale_date).getHours()] += Number(s.total_price);
+  const fmtHour = (i) => i === 0 ? "12am" : i < 12 ? `${i}am` : i === 12 ? "12pm" : `${i - 12}pm`;
+  return { labels: Array.from({ length: 24 }, (_, i) => fmtHour(i)), data: hours };
+};
+
+const _computeDayOfWeek = function (period) {
+  if (period === "today") return { labels: [], data: [], isEmpty: true };
+  const MON = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const totals = Array(7).fill(0);
+  for (const s of modelState.reportsSales) {
+    const d = new Date(s.sale_date).getDay(); // 0=Sun
+    const idx = d === 0 ? 6 : d - 1;         // shift to Mon=0
+    totals[idx] += Number(s.total_price);
+  }
+  return { labels: MON, data: totals, isEmpty: false };
+};
+
+const _computeServingTimeStats = function () {
+  const fmtHour = (i) => i === 0 ? "12am" : i < 12 ? `${i}am` : i === 12 ? "12pm" : `${i - 12}pm`;
+  const MON = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const sales = modelState.reportsSales.filter(s => s.prepared_at);
+  if (!sales.length) return null;
+  const toMins = (s) => (new Date(s.prepared_at) - new Date(s.sale_date)) / 60000;
+  const hourCounts = Array(24).fill(0), hourTotals = Array(24).fill(0);
+  const dayCounts  = Array(7).fill(0),  dayTotals  = Array(7).fill(0);
+  let totalMins = 0, totalCount = 0;
+  for (const s of sales) {
+    const mins = toMins(s);
+    if (mins < 0 || mins > 120) continue;
+    const h = new Date(s.sale_date).getHours();
+    hourCounts[h]++; hourTotals[h] += mins;
+    const d = new Date(s.sale_date).getDay();
+    const idx = d === 0 ? 6 : d - 1;
+    dayCounts[idx]++; dayTotals[idx] += mins;
+    totalMins += mins; totalCount++;
+  }
+  if (!totalCount) return null;
+  return {
+    avgMinutes: totalMins / totalCount,
+    byHour: { labels: Array.from({ length: 24 }, (_, i) => fmtHour(i)), data: hourCounts.map((c, i) => c > 0 ? hourTotals[i] / c : 0) },
+    byDay:  { labels: MON, data: dayCounts.map((c, i) => c > 0 ? dayTotals[i] / c : 0) },
+  };
+};
+
+const _getPreviousPeriodRange = function (period, startISO, endISO, from, to) {
+  const start = new Date(startISO);
+  const end   = new Date(endISO);
+
+  if (period === "today") {
+    const s = new Date(start); s.setDate(s.getDate() - 1); s.setHours(0,0,0,0);
+    const e = new Date(s); e.setHours(23,59,59,999);
+    return { prevStart: s.toISOString(), prevEnd: e.toISOString(), vsLabel: "yesterday" };
+  }
+  if (period === "week") {
+    const s = new Date(start); s.setDate(s.getDate() - 7);
+    const e = new Date(end);   e.setDate(e.getDate() - 7);
+    return { prevStart: s.toISOString(), prevEnd: e.toISOString(), vsLabel: "last week" };
+  }
+  if (period === "month") {
+    const s = new Date(start.getFullYear(), start.getMonth() - 1, 1);
+    const e = new Date(start.getFullYear(), start.getMonth(), 0, 23, 59, 59, 999);
+    return { prevStart: s.toISOString(), prevEnd: e.toISOString(), vsLabel: "last month" };
+  }
+  if (period === "year") {
+    const s = new Date(start.getFullYear() - 1, 0, 1);
+    const e = new Date(start.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
+    return { prevStart: s.toISOString(), prevEnd: e.toISOString(), vsLabel: "last year" };
+  }
+  // custom — same duration shifted back
+  const ms = end - start;
+  const e  = new Date(start.getTime() - 1);
+  const s  = new Date(e.getTime() - ms);
+  return { prevStart: s.toISOString(), prevEnd: e.toISOString(), vsLabel: "previous period" };
+};
+
+// ── Compare helpers ───────────────────────────────────────────────────────────
+
+const _computeSummaryFromSales = function (sales) {
+  const revenue = sales.reduce((s, r) => s + Number(r.total_price), 0);
+  const transactions = sales.length;
+  const avgOrder = transactions > 0 ? revenue / transactions : 0;
+  let servTotal = 0, servCount = 0;
+  for (const s of sales) {
+    if (!s.prepared_at) continue;
+    const mins = (new Date(s.prepared_at) - new Date(s.sale_date)) / 60000;
+    if (mins < 0 || mins > 120) continue;
+    servTotal += mins; servCount++;
+  }
+  return { revenue, transactions, avgOrder, avgServingMinutes: servCount > 0 ? servTotal / servCount : null };
+};
+
+const _computeTopItemsFromSales = function (sales, limit = 5, sortKey = "quantity") {
+  const map = new Map();
+  for (const sale of sales) {
+    for (const item of (sale.items ?? [])) {
+      const key = item.itemName;
+      const existing = map.get(key) ?? { name: key, quantity: 0, revenue: 0 };
+      existing.quantity += Number(item.quantity ?? 1);
+      existing.revenue  += Number(item.totalPrice ?? 0);
+      map.set(key, existing);
+    }
+  }
+  return [...map.values()].sort((a, b) => b[sortKey] - a[sortKey]).slice(0, limit);
+};
+
+const _computeCompareRevenue = function (sales, type, startISO, endISO) {
+  const MONTHS  = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const DAYS    = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const fmtHour = (i) => i === 0 ? "12am" : i < 12 ? `${i}am` : i === 12 ? "12pm" : `${i - 12}pm`;
+
+  if (type === "today" || type === "yesterday" || type === "day") {
+    const hours = Array(24).fill(0);
+    for (const s of sales) hours[new Date(s.sale_date).getHours()] += Number(s.total_price);
+    return { labels: Array.from({ length: 24 }, (_, i) => fmtHour(i)), data: hours };
+  }
+  if (type === "year") {
+    const year = new Date(startISO).getFullYear();
+    const mmap = new Map();
+    for (const s of sales) { const m = s.sale_date.slice(0, 7); mmap.set(m, (mmap.get(m) ?? 0) + Number(s.total_price)); }
+    return { labels: MONTHS, data: MONTHS.map((_, i) => mmap.get(`${year}-${String(i + 1).padStart(2, "0")}`) ?? 0) };
+  }
+  // week / month / custom → daily
+  const dmap = new Map();
+  for (const s of sales) { const d = s.sale_date.slice(0, 10); dmap.set(d, (dmap.get(d) ?? 0) + Number(s.total_price)); }
+  const start = new Date(startISO);
+  const end   = new Date(endISO);
+  const labels = [], data = [];
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    labels.push(type === "week" ? DAYS[d.getDay()] : `${d.getMonth() + 1}/${d.getDate()}`);
+    data.push(dmap.get(d.toISOString().slice(0, 10)) ?? 0);
+  }
+  return { labels, data };
+};
+
+let _compareModeActive = false;
+let _cmpSalesA = null, _cmpSalesB = null, _cmpRangeA = null, _cmpRangeB = null;
+let _cmpTopItemsSortKey = "quantity";
+
+const _getRangeFromValue = function (type, value) {
+  const fmtShort = (d) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+  if (type === "day") {
+    const start = new Date(value + "T00:00:00"); start.setHours(0, 0, 0, 0);
+    const end   = new Date(value + "T00:00:00"); end.setHours(23, 59, 59, 999);
+    return { startISO: start.toISOString(), endISO: end.toISOString(),
+      label: start.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) };
+  }
+  if (type === "week") {
+    const d = new Date(value + "T00:00:00");
+    const day = d.getDay();
+    const diffToMon = day === 0 ? -6 : 1 - day;
+    const monday = new Date(d); monday.setDate(d.getDate() + diffToMon); monday.setHours(0, 0, 0, 0);
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); sunday.setHours(23, 59, 59, 999);
+    return { startISO: monday.toISOString(), endISO: sunday.toISOString(),
+      label: `${fmtShort(monday)} – ${fmtShort(sunday)}` };
+  }
+  if (type === "month") {
+    const [year, month] = value.split("-").map(Number);
+    const start = new Date(year, month - 1, 1);
+    const end   = new Date(year, month, 0, 23, 59, 59, 999);
+    return { startISO: start.toISOString(), endISO: end.toISOString(),
+      label: start.toLocaleDateString("en-US", { month: "long", year: "numeric" }) };
+  }
+  if (type === "year") {
+    const year = parseInt(value);
+    const start = new Date(year, 0, 1);
+    const end   = new Date(year, 11, 31, 23, 59, 59, 999);
+    return { startISO: start.toISOString(), endISO: end.toISOString(), label: String(year) };
+  }
+  return null;
+};
+
+const controlToggleCompare = function () {
+  _compareModeActive = !_compareModeActive;
+  if (_compareModeActive) ReportsView.enterCompareMode();
+  else ReportsView.exitCompareMode();
+};
+
+const controlCmpSortTopItems = function (key) {
+  _cmpTopItemsSortKey = key;
+  ReportsView.setCmpTopItemsSort(key);
+  if (_cmpSalesA && _cmpSalesB) {
+    ReportsView.renderCmpTopItems(
+      _computeTopItemsFromSales(_cmpSalesA, 5, key),
+      _computeTopItemsFromSales(_cmpSalesB, 5, key),
+    );
+  }
+};
+
+const controlRunComparison = async function ({ type, aValue, bValue, fromA, toA, fromB, toB }) {
+  try {
+    _cmpRangeA = type === "custom" ? _getCashflowRange("custom", fromA, toA) : _getRangeFromValue(type, aValue);
+    _cmpRangeB = type === "custom" ? _getCashflowRange("custom", fromB, toB) : _getRangeFromValue(type, bValue);
+    _cmpTopItemsSortKey = "quantity";
+    ReportsView.setCmpTopItemsSort("quantity");
+    const [salesA, salesB] = await Promise.all([
+      fetchReportsSalesRaw(_cmpRangeA.startISO, _cmpRangeA.endISO),
+      fetchReportsSalesRaw(_cmpRangeB.startISO, _cmpRangeB.endISO),
+    ]);
+    _cmpSalesA = salesA;
+    _cmpSalesB = salesB;
+    const revA = _computeCompareRevenue(salesA, type, _cmpRangeA.startISO, _cmpRangeA.endISO);
+    const revB = _computeCompareRevenue(salesB, type, _cmpRangeB.startISO, _cmpRangeB.endISO);
+    const maxLen = Math.max(revA.labels.length, revB.labels.length);
+    const labels = revA.labels.length >= revB.labels.length ? revA.labels : revB.labels;
+    const dataA = revA.data.concat(Array(maxLen - revA.data.length).fill(0));
+    const dataB = revB.data.concat(Array(maxLen - revB.data.length).fill(0));
+    ReportsView.renderCompareResults({
+      labelA: _cmpRangeA.label,
+      labelB: _cmpRangeB.label,
+      summaryA: _computeSummaryFromSales(salesA),
+      summaryB: _computeSummaryFromSales(salesB),
+      topItemsA: _computeTopItemsFromSales(salesA, 5, "quantity"),
+      topItemsB: _computeTopItemsFromSales(salesB, 5, "quantity"),
+    });
+    await ReportsView.renderCompareChart({ labelA: _cmpRangeA.label, labelB: _cmpRangeB.label, labels, dataA, dataB });
+  } catch (err) {
+    showToast(err.message ?? err);
+  }
+};
+
+const _computeStaffPerformance = function () {
+  const map = new Map();
+  for (const sale of modelState.reportsSales) {
+    const name = sale.added_by || "Unknown";
+    const existing = map.get(name) ?? { name, transactions: 0, revenue: 0 };
+    existing.transactions++;
+    existing.revenue += Number(sale.total_price);
+    map.set(name, existing);
+  }
+  return [...map.values()].sort((a, b) => b.revenue - a.revenue);
+};
+
+let _reportSnapshot = null;
+
+const controlExportReports = function () {
+  if (!_reportSnapshot) {
+    showToast("No data to export for this period.", "info");
+    return;
+  }
+  const { sales, staff, periodLabel } = _reportSnapshot;
+  if (!sales.length) {
+    showToast("No data to export for this period.", "info");
+    return;
+  }
+
+  const safeLabel = periodLabel.replace(/[^a-z0-9]/gi, "-").toLowerCase();
+  const fmtDate = (iso) =>
+    new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const fmtTime = (iso) =>
+    new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const escape = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
+
+  const salesRows = sales.map((s) => [
+    fmtDate(s.sale_date),
+    fmtTime(s.sale_date),
+    (s.items ?? []).map((i) => `${i.itemName} x${i.quantity}`).join("; "),
+    `+${Number(s.total_price).toFixed(2)}`,
+    s.order_type ?? "",
+    s.added_by ?? "",
+  ]);
+
+  const staffRows = staff.map((p) => [
+    "", "", `[Staff] ${p.name}`,
+    p.revenue.toFixed(2),
+    "",
+    `${p.transactions} transaction${p.transactions !== 1 ? "s" : ""}`,
+  ]);
+
+  const header = ["Date", "Time", "Description", "Amount", "Order Type", "Staff / Notes"];
+  const sep = [[""], ["--- Staff Summary ---"], ...staffRows.map((r) => r)];
+  const csv = [header, ...salesRows, [], ...sep]
+    .map((row) => (Array.isArray(row) ? row.map(escape).join(",") : ""))
+    .join("\n");
+
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `reports-${safeLabel}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("CSV downloaded.", "success");
+};
+
+const controlExportReportsPDF = function () {
+  if (!_reportSnapshot) { showToast("No data to export for this period.", "info"); return; }
+  const { sales, staff, periodLabel } = _reportSnapshot;
+  if (!sales.length) { showToast("No data to export for this period.", "info"); return; }
+
+  const summary = _computeReportsSummary();
+  const topItems = _computeTopItems(10);
+
+  const fmt = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtServ = (v) => {
+    if (v == null) return "—";
+    const m = Math.floor(v), s = Math.round((v - m) * 60);
+    return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  };
+  const fmtDate = (iso) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const fmtTime = (iso) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const esc = (v) => String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+  const captureChart = (wrapId, canvasId) => {
+    const wrap = document.querySelector(`#${wrapId}`);
+    if (!wrap || wrap.classList.contains("hidden")) return null;
+    const canvas = document.querySelector(`#${canvasId}`);
+    if (!canvas || canvas.style.display === "none") return null;
+    try { return canvas.toDataURL("image/png"); } catch { return null; }
+  };
+
+  const charts = {
+    revenue:     captureChart("rpRevenueWrap",      "rpRevenueCanvas"),
+    category:    captureChart("rpCategoryWrap",     "rpCategoryCanvas"),
+    hourly:      captureChart("rpHourlyWrap",       "rpHourlyCanvas"),
+    dow:         captureChart("rpDowWrap",          "rpDowCanvas"),
+    servHour:    captureChart("rpServingHourWrap",  "rpServingHourCanvas"),
+    servDay:     captureChart("rpServingDayWrap",   "rpServingDayCanvas"),
+  };
+
+  // ── Compare mode PDF ──────────────────────────────────────────────────
+  if (_compareModeActive && _cmpSalesA && _cmpSalesB) {
+    const sA = _computeSummaryFromSales(_cmpSalesA);
+    const sB = _computeSummaryFromSales(_cmpSalesB);
+    const labelA = _cmpRangeA?.label ?? "Period A";
+    const labelB = _cmpRangeB?.label ?? "Period B";
+    const topA = _computeTopItemsFromSales(_cmpSalesA, 8, "revenue");
+    const topB = _computeTopItemsFromSales(_cmpSalesB, 8, "revenue");
+    const cmpChart = captureChart("rpCompareResults", "rpCmpRevenueCanvas");
+    const now2 = new Date();
+    const eDate = now2.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    const eTime = now2.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+    const deltaCell = (a, b, invert = false) => {
+      if (a == null || b == null || b === 0) return `<td class="td-num td-muted">—</td>`;
+      const pct = Math.round(((a - b) / b) * 100);
+      const good = invert ? pct <= 0 : pct >= 0;
+      const arrow = pct >= 0 ? "↑" : "↓";
+      const col = good ? "#16a34a" : "#dc2626";
+      return `<td class="td-num" style="color:${col};font-weight:600">${arrow} ${Math.abs(pct)}%</td>`;
+    };
+
+    const kpiCard = (label, rawA, rawB, fmtA, fmtB, invert = false) => {
+      let aWins = false, bWins = false;
+      if (rawA != null && rawB != null) {
+        aWins = invert ? rawA < rawB : rawA > rawB;
+        bWins = invert ? rawB < rawA : rawB > rawA;
+      }
+      let badge = "";
+      if (rawA != null && rawB != null && rawB !== 0) {
+        const pct = Math.round(((rawA - rawB) / rawB) * 100);
+        const good = invert ? pct <= 0 : pct >= 0;
+        const arrow = pct >= 0 ? "↑" : "↓";
+        badge = `<span class="delta-pill ${good ? "delta-up" : "delta-dn"}">${arrow} ${Math.abs(pct)}%</span>`;
+      }
+      const bCls = bWins ? "kv-b kv-b--win" : (rawA != null && rawB != null && rawA !== rawB ? "kv-b kv-b--lose" : "kv-b kv-b--tie");
+      return `<div class="kpi-card">
+        <div class="kpi-lbl">${label}</div>
+        <div class="kpi-row"><span class="dot-a"></span><span class="kv-a">${fmtA}</span>${badge}</div>
+        <div class="kpi-row" style="margin-top:5px"><span class="dot-b"></span><span class="${bCls}">${fmtB}</span></div>
+      </div>`;
+    };
+
+    const cmpHtml = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/>
+<title>Pointy Comparison — ${esc(labelA)} vs ${esc(labelB)}</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;color:#111827;font-size:10.5pt;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+@page{size:A4;margin:13mm 16mm}
+.pdf-header{background:#22c55e;border-radius:14px;padding:20px 24px;color:#fff;display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pdf-logo{font-size:20pt;font-weight:800;letter-spacing:-0.02em}
+.pdf-period{font-size:10pt;opacity:.85;margin-top:3px}
+.pdf-meta{text-align:right;font-size:8.5pt;opacity:.8;line-height:1.7}
+.section-heading{font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#22c55e;margin:0 0 10px;padding-bottom:6px;border-bottom:2px solid #dcfce7}
+.table-wrap{border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:18px;break-inside:avoid}
+table{width:100%;border-collapse:collapse;font-size:8.5pt}
+th{background:#f9fafb;padding:8px 10px;text-align:left;font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;border-bottom:1.5px solid #e5e7eb}
+td{padding:8px 10px;border-bottom:1px solid #f3f4f6;color:#374151}
+tr:last-child td{border-bottom:none}
+.td-num{text-align:right;font-variant-numeric:tabular-nums}
+.td-muted{color:#9ca3af}
+.td-metric{font-weight:600;color:#111827;width:110px}
+.dot-a{display:inline-block;width:9px;height:9px;border-radius:50%;background:#22c55e;flex-shrink:0}
+.dot-b{display:inline-block;width:9px;height:9px;border-radius:50%;background:#3b82f6;flex-shrink:0}
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+.kpi-card{border:1.5px solid #e5e7eb;border-radius:12px;padding:14px 16px;break-inside:avoid}
+.kpi-lbl{font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:10px}
+.kpi-row{display:flex;align-items:center;gap:8px}
+.kv-a{font-size:14pt;font-weight:700;line-height:1;color:#16a34a;font-variant-numeric:tabular-nums}
+.kv-b{font-size:13pt;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.kv-b--win{color:#16a34a}.kv-b--lose{color:#dc2626}.kv-b--tie{color:#6b7280}
+.delta-pill{display:inline-flex;align-items:center;gap:2px;font-size:7.5pt;font-weight:700;padding:2px 7px;border-radius:6px;line-height:1.5}
+.delta-up{background:#dcfce7;color:#16a34a}
+.delta-dn{background:#fee2e2;color:#dc2626}
+.chart-wrap{border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:18px}
+.chart-label{padding:9px 13px;border-bottom:1px solid #f3f4f6;font-size:8pt;font-weight:600;color:#374151;background:#f9fafb}
+.chart-wrap img{width:100%;display:block}
+.top-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.top-card{border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden}
+.top-card th,.top-card td{padding:7px 10px}
+.pdf-footer{margin-top:14px;padding-top:10px;border-top:1px solid #e5e7eb;font-size:7.5pt;color:#9ca3af;text-align:center}
+.period-legend{display:flex;align-items:center;gap:10px;margin-bottom:18px;padding:9px 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:8.5pt;color:#374151;background:#f9fafb}
+.period-lbl{font-weight:600;color:#374151}
+.period-sep{color:#9ca3af;margin:0 4px}
+.period-tag{font-size:6.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:1px 6px;border-radius:4px;line-height:1.6}
+.period-tag-a{background:#dcfce7;color:#16a34a}
+.period-tag-b{background:#dbeafe;color:#2563eb}
+</style></head><body>
+
+<div class="pdf-header">
+  <div>
+    <div class="pdf-logo">Pointy</div>
+    <div class="pdf-period">Comparison Report</div>
+  </div>
+  <div class="pdf-meta"><div>${eDate}</div><div>${eTime}</div></div>
+</div>
+
+<div class="period-legend">
+  <span class="dot-a"></span><span class="period-tag period-tag-a">A</span><span class="period-lbl">${esc(labelA)}</span>
+  <span class="period-sep">vs</span>
+  <span class="dot-b"></span><span class="period-tag period-tag-b">B</span><span class="period-lbl">${esc(labelB)}</span>
+</div>
+
+<div class="section-heading">KPI Summary</div>
+<div class="kpi-grid">
+  ${kpiCard("Revenue",       sA.revenue,           sB.revenue,           fmt(sA.revenue),               fmt(sB.revenue))}
+  ${kpiCard("Transactions",  sA.transactions,      sB.transactions,      String(sA.transactions),       String(sB.transactions))}
+  ${kpiCard("Avg. Order",    sA.avgOrder,          sB.avgOrder,          fmt(sA.avgOrder),              fmt(sB.avgOrder))}
+  ${kpiCard("Avg. Serving",  sA.avgServingMinutes, sB.avgServingMinutes, fmtServ(sA.avgServingMinutes), fmtServ(sB.avgServingMinutes), true)}
+</div>
+
+${cmpChart ? `<div class="section-heading">Revenue Over Time</div>
+<div class="chart-wrap"><div class="chart-label">${esc(labelA)} vs ${esc(labelB)}</div><img src="${cmpChart}" alt="Compare chart"/></div>` : ""}
+
+<div class="section-heading">Top Items by Revenue</div>
+<div class="top-grid">
+  <div class="top-card"><table>
+    <thead><tr><th><span class="dot-a"></span>${esc(labelA)}</th><th class="td-num">Revenue</th></tr></thead>
+    <tbody>${topA.map(i => `<tr><td>${esc(i.name)}</td><td class="td-num">${fmt(i.revenue)}</td></tr>`).join("") || '<tr><td colspan="2" class="td-muted" style="text-align:center;padding:14px">No data</td></tr>'}</tbody>
+  </table></div>
+  <div class="top-card"><table>
+    <thead><tr><th><span class="dot-b"></span>${esc(labelB)}</th><th class="td-num">Revenue</th></tr></thead>
+    <tbody>${topB.map(i => `<tr><td>${esc(i.name)}</td><td class="td-num">${fmt(i.revenue)}</td></tr>`).join("") || '<tr><td colspan="2" class="td-muted" style="text-align:center;padding:14px">No data</td></tr>'}</tbody>
+  </table></div>
+</div>
+
+<div class="pdf-footer">Pointy POS &nbsp;·&nbsp; ${esc(labelA)} vs ${esc(labelB)} &nbsp;·&nbsp; Exported ${eDate} at ${eTime}</div>
+</body></html>`;
+
+    const pop = window.open("", "pointy-pdf-report", "width=960,height=720");
+    if (!pop) { showToast("Pop-up blocked. Allow pop-ups for this site to export PDF.", "error"); return; }
+    pop.document.write(cmpHtml);
+    pop.document.close();
+    pop.focus();
+    setTimeout(() => pop.print(), 700);
+    return;
+  }
+
+  // ── Regular mode PDF ──────────────────────────────────────────────────
+  const chartBlock = (img, label, full = false) => !img ? "" : `
+    <div class="chart-block${full ? " chart-block--full" : ""}">
+      <div class="chart-label">${label}</div>
+      <img src="${img}" alt="${label}"/>
+    </div>`;
+
+  const topItemsRows = topItems.map((item, i) => `
+    <tr>
+      <td class="td-rank">${i + 1}</td>
+      <td>${esc(item.name)}</td>
+      <td class="td-num">${item.quantity}</td>
+      <td class="td-num">${fmt(item.revenue)}</td>
+    </tr>`).join("");
+
+  const staffRows = staff.map(p => `
+    <tr>
+      <td>${esc(p.name)}</td>
+      <td class="td-num">${p.transactions}</td>
+      <td class="td-num">${fmt(p.revenue)}</td>
+      <td class="td-num">${fmt(p.transactions > 0 ? p.revenue / p.transactions : 0)}</td>
+    </tr>`).join("");
+
+  const salesRows = sales.slice(0, 50).map(s => `
+    <tr>
+      <td>${esc(fmtDate(s.sale_date))}</td>
+      <td>${esc(fmtTime(s.sale_date))}</td>
+      <td>${esc((s.items ?? []).map(i => `${i.itemName} ×${i.quantity}`).join(", "))}</td>
+      <td class="td-num">${fmt(s.total_price)}</td>
+      <td>${esc(s.order_type ?? "—")}</td>
+      <td>${esc(s.added_by ?? "—")}</td>
+    </tr>`).join("");
+
+  const now = new Date();
+  const exportDate = now.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const exportTime = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Pointy Report — ${esc(periodLabel)}</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fff;color:#111827;font-size:10.5pt;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+@page{size:A4;margin:13mm 16mm}
+.pdf-header{background:#22c55e;border-radius:14px;padding:20px 24px;color:#fff;display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pdf-logo{font-size:20pt;font-weight:800;letter-spacing:-0.02em}
+.pdf-period{font-size:10pt;opacity:.85;margin-top:3px}
+.pdf-meta{text-align:right;font-size:8.5pt;opacity:.8;line-height:1.7}
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.kpi-card{border:1.5px solid #e5e7eb;border-radius:12px;padding:13px 15px}
+.kpi-label{font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:6px}
+.kpi-val{font-size:15pt;font-weight:700;color:#111827;line-height:1;font-variant-numeric:tabular-nums}
+.section-heading{font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#22c55e;margin:0 0 10px;padding-bottom:6px;border-bottom:2px solid #dcfce7}
+.charts-area{margin-bottom:18px}
+.charts-row{display:grid;gap:10px;margin-bottom:10px}
+.charts-row--2{grid-template-columns:1fr 1fr}
+.charts-row--1{grid-template-columns:1fr}
+.chart-block{border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;break-inside:avoid}
+.chart-label{padding:8px 13px;border-bottom:1px solid #f3f4f6;font-size:8pt;font-weight:600;color:#374151;background:#f9fafb}
+.chart-block img{width:100%;display:block}
+.table-wrap{border:1.5px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:18px;break-inside:avoid}
+table{width:100%;border-collapse:collapse;font-size:8.5pt}
+th{background:#f9fafb;padding:8px 10px;text-align:left;font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;border-bottom:1.5px solid #e5e7eb}
+td{padding:7px 10px;border-bottom:1px solid #f3f4f6;color:#374151}
+tr:last-child td{border-bottom:none}
+.td-num{text-align:right;font-variant-numeric:tabular-nums}
+.td-rank{color:#9ca3af;font-weight:600;width:28px}
+.pdf-footer{margin-top:14px;padding-top:10px;border-top:1px solid #e5e7eb;font-size:7.5pt;color:#9ca3af;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="pdf-header">
+  <div>
+    <div class="pdf-logo">Pointy</div>
+    <div class="pdf-period">${esc(periodLabel)}</div>
+  </div>
+  <div class="pdf-meta">
+    <div>${exportDate}</div>
+    <div>${exportTime}</div>
+  </div>
+</div>
+
+<div class="kpi-strip">
+  <div class="kpi-card"><div class="kpi-label">Revenue</div><div class="kpi-val">${fmt(summary.revenue)}</div></div>
+  <div class="kpi-card"><div class="kpi-label">Transactions</div><div class="kpi-val">${summary.transactions}</div></div>
+  <div class="kpi-card"><div class="kpi-label">Avg. Order</div><div class="kpi-val">${fmt(summary.avgOrder)}</div></div>
+  <div class="kpi-card"><div class="kpi-label">Avg. Serving</div><div class="kpi-val">${fmtServ(summary.avgServingMinutes)}</div></div>
+</div>
+
+${charts.revenue ? `<div class="section-heading">Charts</div><div class="charts-area">
+  <div class="charts-row charts-row--1">${chartBlock(charts.revenue, "Revenue Over Time")}</div>
+  <div class="charts-row charts-row--2">${chartBlock(charts.category, "Category Mix")}${chartBlock(charts.hourly, "Hourly Breakdown")}</div>
+  ${(charts.dow || charts.servHour || charts.servDay) ? `<div class="charts-row charts-row--2">${chartBlock(charts.dow, "Day of Week")}${chartBlock(charts.servHour, "Avg. Serving by Hour")}</div>` : ""}
+  ${charts.servDay ? `<div class="charts-row charts-row--1">${chartBlock(charts.servDay, "Avg. Serving by Day")}</div>` : ""}
+</div>` : ""}
+
+<div class="section-heading">Top Items</div>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>#</th><th>Item</th><th class="td-num">Qty Sold</th><th class="td-num">Revenue</th></tr></thead>
+    <tbody>${topItemsRows || '<tr><td colspan="4" style="color:#9ca3af;text-align:center;padding:16px">No item data</td></tr>'}</tbody>
+  </table>
+</div>
+
+${staff.length ? `<div class="section-heading">Staff Performance</div>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Cashier</th><th class="td-num">Transactions</th><th class="td-num">Revenue</th><th class="td-num">Avg. Order</th></tr></thead>
+    <tbody>${staffRows}</tbody>
+  </table>
+</div>` : ""}
+
+<div class="section-heading">Transactions ${sales.length > 50 ? "(showing first 50)" : ""}</div>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Date</th><th>Time</th><th>Items</th><th class="td-num">Total</th><th>Type</th><th>Cashier</th></tr></thead>
+    <tbody>${salesRows}</tbody>
+  </table>
+</div>
+
+<div class="pdf-footer">Pointy POS &nbsp;·&nbsp; ${esc(periodLabel)} &nbsp;·&nbsp; Exported ${exportDate} at ${exportTime}</div>
+
+</body>
+</html>`;
+
+  const popup = window.open("", "pointy-pdf-report", "width=960,height=720");
+  if (!popup) { showToast("Pop-up blocked. Allow pop-ups for this site to export PDF.", "error"); return; }
+  popup.document.write(html);
+  popup.document.close();
+  popup.focus();
+  setTimeout(() => popup.print(), 700);
+};
+
+const _renderReportsData = async function (period, startISO, endISO, label, prevTotals, vsLabel) {
+  ReportsView.setPeriodLabel(label);
+  const summary = _computeReportsSummary();
+  ReportsView.renderSummary(summary);
+  if (prevTotals) ReportsView.renderComparison(summary, prevTotals, vsLabel);
+  ReportsView.renderTopItems(_computeTopItems());
+  const staff = _computeStaffPerformance();
+  ReportsView.renderStaff(staff);
+  _reportSnapshot = { sales: modelState.reportsSales, staff, periodLabel: label };
+  await ReportsView.renderCharts({
+    revenueOverTime: _computeRevenueOverTime(period, startISO, endISO),
+    categoryMix:     _computeCategoryMix(),
+    hourlyBreakdown: _computeHourlyBreakdown(),
+    dayOfWeek:       _computeDayOfWeek(period),
+    servingTime:     _computeServingTimeStats(),
+  });
+};
+
+const controlOpenReports = async function () {
+  ReportsView.open();
+  ReportsView.renderLoading();
+  try {
+    const { startISO, endISO, label } = _getCashflowRange("today");
+    const { prevStart, prevEnd, vsLabel } = _getPreviousPeriodRange("today", startISO, endISO);
+    const [, prevTotals] = await Promise.all([
+      model.fetchReportsSales(startISO, endISO),
+      model.fetchPeriodTotals(prevStart, prevEnd),
+    ]);
+    await _renderReportsData("today", startISO, endISO, label, prevTotals, vsLabel);
+  } catch (err) {
+    showToast(err.message ?? err);
+  }
+};
+
+const controlCloseReports = function () {
+  if (_compareModeActive) { _compareModeActive = false; ReportsView.exitCompareMode(); }
+  ReportsView.close();
+};
+
+const controlReportsPeriodChange = async function ({ period, from, to }) {
+  ReportsView.renderLoading();
+  try {
+    const { startISO, endISO, label } = _getCashflowRange(period, from, to);
+    const { prevStart, prevEnd, vsLabel } = _getPreviousPeriodRange(period, startISO, endISO, from, to);
+    const [, prevTotals] = await Promise.all([
+      model.fetchReportsSales(startISO, endISO),
+      model.fetchPeriodTotals(prevStart, prevEnd),
+    ]);
+    await _renderReportsData(period, startISO, endISO, label, prevTotals, vsLabel);
+  } catch (err) {
+    showToast(err.message ?? err);
+  }
+};
+
 const _wireApp = function () {
   //MenuList
   MenuListView._addHandlerShowModal(controlMenuList);
@@ -1339,6 +2244,10 @@ const _wireApp = function () {
   CashflowView._addHandlerDeleteExpense(controlDeleteExpense);
   CashflowView._addHandlerOpenSaleReceipt(controlOpenSaleReceipt);
   CashflowView._addHandlerExport(controlExportCSV);
+  CashflowView._addHandlerVoid(controlVoidTransaction);
+  CashflowView._addHandlerRestore(controlRestoreTransaction);
+  CashflowView._addHandlerTabChange();
+  CashflowView._addHandlerOverrideModal();
 
   //New Order Check Out
   OrderCheckOutView._addHandlerShowCheckout(controlOrderCheckout);
@@ -1380,6 +2289,18 @@ const _wireApp = function () {
   DiscountView._addHandlerEdit(controlEditDiscountCode);
   DiscountView._addHandlerDelete(controlDeleteDiscountCode);
   DiscountView._addHandlerToggleStatus(controlToggleDiscountStatus);
+
+  // Reports
+  ReportsView._addHandlerOpen(controlOpenReports);
+  ReportsView._addHandlerClose(controlCloseReports);
+  ReportsView._addHandlerPeriodChange(controlReportsPeriodChange);
+  ReportsView._addHandlerCustomRange(controlReportsPeriodChange);
+  ReportsView._addHandlerExport(controlExportReports, controlExportReportsPDF);
+  ReportsView._addHandlerCompareToggle(controlToggleCompare);
+  ReportsView._addHandlerRunComparison(controlRunComparison);
+  ReportsView._addHandlerCmpTopItemsSort(controlCmpSortTopItems);
+  ReportsView._addHandlerTopItemsSort(controlSortTopItems);
+  ReportsView._addHandlerInfoTooltips();
 
   // Cashier switcher
   document.getElementById('cashierCard')?.addEventListener('click', controlSwitchCashier);

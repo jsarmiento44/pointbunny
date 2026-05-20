@@ -25,6 +25,7 @@
    - [5.12 Cashier Switcher](#512-cashier-switcher)
    - [5.13 Kitchen Display System (KDS)](#513-kitchen-display-system-kds)
    - [5.14 Customer Facing Display (CFD)](#514-customer-facing-display-cfd)
+   - [5.15 Reports / Analytics Dashboard](#515-reports--analytics-dashboard)
 
 ---
 
@@ -72,6 +73,7 @@ Controller re-renders the relevant View
 | `Views/kdsView.js` | `KDSView` | Home page Open Orders inline list: rows, timers, status badges, done button |
 | `Views/discountView.js` | `DiscountView` | Discount code management panel |
 | `Views/staffView.js` | `StaffView` | Staff management panel |
+| `Views/reportsView.js` | `ReportsView` | Reports/Analytics dashboard: KPI strip, charts, compare mode |
 
 ---
 
@@ -105,14 +107,16 @@ state = {
 
   // Sales & reporting
   salesBasket,       // Temporary holder (foundation for offline/sync mode)
-  cashflowSales,     // Sales fetched for the current cashflow date range
+  cashflowSales,     // Non-voided sales fetched for the current cashflow date range
+  voidedSales,       // Voided sales for current cashflow range (voided_at IS NOT NULL)
   expenses,          // Expense records fetched for current range
+  reportsSales,      // Sales for the current reports period → state.reportsSales (set by model.fetchReportsSales)
 
   // Discount codes
   discountCodes,     // [{ id, code, title, description, type, value, status, usageCount, usageLimit }]
 
   // KDS / Open Orders
-  orderQueue,        // [{ id, saleDate, items, startedAt, totalPrice, orderType }] — sales where prepared_at IS NULL
+  orderQueue,        // [{ id, saleDate, items, startedAt, totalPrice, orderType, ticketNumber }] — sales where prepared_at IS NULL
 
   // Settings
   settings: {
@@ -126,6 +130,7 @@ state = {
     kdsAutoCompleteThreshold, // seconds before order auto-completes
     kdsWindowSize,            // { width, height }
     cfdWindowSize,            // { width, height }
+    orderTypeEnabled,         // bool — show Dine In / Takeout selector on checkout
   }
 }
 ```
@@ -155,10 +160,12 @@ All external display windows use the same channel instance via the shared `chann
 | `KDS_QUEUE_SYNC` | Cashier → KDS | `{ queue, thresholds }` | New order placed, order done, KDS requests sync |
 | `KDS_REQUEST_SYNC` | KDS → Cashier | `{}` | KDS window opened / loaded |
 | `KDS_ORDER_DONE` | KDS → Cashier | `{ id }` | Cook taps Done button in KDS window |
+| `KDS_ORDER_VOIDED` | Cashier → KDS | `{ id }` | Transaction voided from cashflow panel — removes from KDS popup queue |
 
 **Controller message router** (`channel.onmessage`):
 - `KDS_REQUEST_SYNC` → sends current `state.orderQueue` + thresholds back
 - `KDS_ORDER_DONE` → calls `controlMarkOrderDone(id)`
+- `KDS_ORDER_VOIDED` → `kds-display.js` filters the order from its local queue
 - `CFD_REQUEST_SYNC` → calls `_broadcastCart()` with current cart
 
 ---
@@ -194,6 +201,7 @@ User submits login form
       → model.loadDiscountCodes()   → state.discountCodes
       → model.loadTodaySalesTotal() → #totalStr display
       → model.loadOrderQueue()      → state.orderQueue
+      → localStorage.setItem('pointy_business_id', state.businessId)  [used by KDS popup for direct DB load]
       → authView.hide()
       → _wireApp()  [wires all view handlers to controller functions]
 ```
@@ -748,6 +756,18 @@ User clicks settings gear icon
 
 Note: Category management was moved out of Settings and into the Menu List modal (§5.6).
 
+#### Toggle: Dine In / Takeout
+
+```
+User flips order type toggle
+  → settingsView._addHandlerToggleOrderType
+  → controlToggleOrderType(value)
+    → state.settings.orderTypeEnabled = value
+    → localStorage.setItem('pointy_order_type_enabled', value)
+```
+
+When off: the Dine In / Takeout selector is hidden from checkout, `orderType` is stored as `null`, and no type label appears on receipts, the Active Queue rows, or KDS cards.
+
 #### Toggle: Printing Enabled
 
 ```
@@ -838,6 +858,9 @@ User clicks remove
 | `syncTwoCopiesToggle(value)` | settingsView.js | Sets `#twoCopiesToggle` checkbox state |
 | `_addHandlerToggleTwoCopies(handler)` | settingsView.js | Listens on `#twoCopiesToggle` change |
 | `controlTogglePrintTwoCopies(value)` | controller.js | Updates `state.settings.printTwoCopies` + localStorage (`pointy_print_two_copies`) |
+| `syncOrderTypeToggle(value)` | settingsView.js | Sets `#orderTypeToggle` checkbox state |
+| `_addHandlerToggleOrderType(handler)` | settingsView.js | Listens on `#orderTypeToggle` change |
+| `controlToggleOrderType(value)` | controller.js | Updates `state.settings.orderTypeEnabled` + localStorage (`pointy_order_type_enabled`) |
 | `syncKDSThresholds(yellow, red, auto)` | settingsView.js | Populates threshold inputs from state |
 | `_addHandlerKDSThresholds(handler)` | settingsView.js | Listens on threshold input changes |
 | `controlSaveKDSThresholds({ yellow, red, auto })` | controller.js | Updates all three thresholds in state + localStorage |
@@ -952,20 +975,27 @@ User clicks delete
 
 #### Open Cashflow Panel
 
+The cashflow panel has three tabs: **Sales**, **Expenses**, **Voided**. `canEdit` (Admin or Manager) controls whether the "+ Add Expense" button is visible. The Void button on each sale row is always shown; non-editors see the override modal instead of a direct confirm.
+
 ```
 User clicks "Cash Flow" nav button
   → cashflowView._addHandlerOpen
   → controlOpenCashflow()
-    → cashflowView.open()  [shows panel]
+    → _cashflowCanEdit()  [true if role is Admin or Manager]
+    → cashflowView.open(canEdit)  [shows panel, hides/shows addExpenseBtn, resets to Sales tab]
     → cashflowView.renderLoading()
     → _getCashflowRange('today')  [returns { startISO, endISO, label }]
     → model.fetchCashflowData(startISO, endISO)
-        → supabase.from('sales').select() for range → state.cashflowSales
-        → supabase.from('expenses').select() for range → state.expenses
+        → 3 parallel Supabase queries:
+            sales (voided_at IS NULL) → state.cashflowSales
+            expenses → state.expenses
+            sales (voided_at IS NOT NULL) → state.voidedSales
     → cashflowView.renderSummary(_cashflowSummary())
-        → _cashflowSummary() returns { gross, expenses, net }
-    → cashflowView.renderSalesList(state.cashflowSales)
-    → cashflowView.renderExpensesList(state.expenses)
+        → _cashflowSummary() returns { gross, expenses, net }  (gross excludes voided)
+    → _renderCashflowLists()
+        → cashflowView.renderSalesList(state.cashflowSales, canEdit)
+        → cashflowView.renderExpensesList(state.expenses, canEdit)
+        → cashflowView.renderVoidedList(state.voidedSales, canEdit)
     → cashflowView.setPeriodLabel(label)
 ```
 
@@ -975,12 +1005,66 @@ User clicks "Cash Flow" nav button
 User clicks period button (Today / Yesterday / Week / Month / Custom)
   → cashflowView._addHandlerPeriodChange  (or _addHandlerCustomRange for date picker)
   → controlChangePeriod({ period, from, to })
-    → cashflowView.setLoading(true)  [disables buttons]
+    → cashflowView.setLoading(true)  [disables all buttons including tabs]
     → _getCashflowRange(period, from, to)
     → model.fetchCashflowData(startISO, endISO)
-    → cashflowView.renderSummary(...) + renderSalesList(...) + renderExpensesList(...)
+    → cashflowView.renderSummary(...) + _renderCashflowLists()
     → cashflowView.setActivePeriod(period)
     → cashflowView.setLoading(false)
+```
+
+#### Void Transaction
+
+Any staff can initiate a void. Admin/Manager get a confirmation dialog; Cashiers must supply a manager's email + password via the override modal.
+
+```
+User clicks "Void" on a sale row
+  → cashflowView._addHandlerVoid
+  → controlVoidTransaction(id)
+    → if _cashflowCanEdit():
+        cashflowView.showConfirmModal(...)
+          → on confirm: _executeVoid(id, staffName)
+    → else:
+        cashflowView.showOverrideModal(async (email, password) => {
+          model.verifyOverrideCredentials(email, password)
+            → creates temp Supabase client (persistSession: false)
+            → signs in, checks staff.roles.permissions.cashflow
+            → signs out (scope: 'local' — does NOT affect other sessions)
+            → returns authorizer's display name
+          cashflowView.hideOverrideModal()
+          _executeVoid(id, authorizerName)
+        })
+
+_executeVoid(id, voidedBy)
+  → model.voidSale(id, voidedBy)
+      → supabase UPDATE sales SET voided_at=now, voided_by=name WHERE id AND user_id
+      → removes from state.orderQueue + state.cashflowSales
+      → prepends to state.voidedSales
+  → KDSView.renderQueue(state.orderQueue)
+  → channel.postMessage(KDS_ORDER_VOIDED, { id })  [removes from KDS popup]
+  → cashflowView.renderSummary(...) + _renderCashflowLists()
+  → if sale was today: refreshTodaySalesDisplay() + decrement transaction badge
+```
+
+#### Restore Transaction
+
+Restores a voided sale. Same Admin/Manager vs override pattern as Void.
+
+```
+User clicks "Restore" on a voided row (Voided tab)
+  → cashflowView._addHandlerRestore
+  → controlRestoreTransaction(id)
+    → confirm or override modal (same pattern as Void)
+    → _executeRestore(id)
+        → model.restoreSale(id)
+            → supabase UPDATE sales SET voided_at=NULL, voided_by=NULL
+            → removes from state.voidedSales
+            → prepends to state.cashflowSales (sorted by sale_date desc)
+            → returns restored sale row
+        → if restored sale has prepared_at=NULL: re-inserts into state.orderQueue
+            → KDSView.renderQueue() + channel.postMessage(KDS_QUEUE_SYNC)
+        → cashflowView.renderSummary(...) + _renderCashflowLists()
+        → if sale was today: refreshTodaySalesDisplay() + increment transaction badge
 ```
 
 #### Add Expense
@@ -1050,14 +1134,24 @@ User clicks "Export CSV"
 |---|---|---|
 | `_addHandlerOpen(handler)` | cashflowView.js | Listens on `[data-action='cash-flow']` click |
 | `controlOpenCashflow()` | controller.js | Fetches today's data, renders full cashflow panel |
-| `cashflowView.open()` | cashflowView.js | Shows `#cashflowPanel`, resets period buttons |
-| `cashflowView.renderLoading()` | cashflowView.js | Shows spinner while data loads |
+| `cashflowView.open(canEdit)` | cashflowView.js | Shows `#cashflowPanel`, toggles addExpenseBtn, resets to Sales tab |
+| `cashflowView.renderLoading()` | cashflowView.js | Shows spinner in all three tab lists |
 | `_getCashflowRange(period, from, to)` | controller.js | Calculates ISO date range from period name or custom dates |
-| `model.fetchCashflowData(startISO, endISO)` | model.js | Fetches sales + expenses for range → `state.cashflowSales`, `state.expenses` |
-| `_cashflowSummary()` | controller.js | Computes `{ gross, expenses, net }` from current state arrays |
-| `cashflowView.renderSummary({ gross, expenses, net })` | cashflowView.js | Updates summary stat cards |
-| `cashflowView.renderSalesList(sales)` | cashflowView.js | Renders clickable sale rows list |
-| `cashflowView.renderExpensesList(expenses)` | cashflowView.js | Renders expense rows with delete buttons |
+| `model.fetchCashflowData(startISO, endISO)` | model.js | 3 parallel queries → `state.cashflowSales`, `state.expenses`, `state.voidedSales` |
+| `_cashflowSummary()` | controller.js | Computes `{ gross, expenses, net }` — gross excludes voided sales |
+| `_renderCashflowLists()` | controller.js | Calls renderSalesList + renderExpensesList + renderVoidedList with canEdit |
+| `cashflowView.renderSummary({ gross, expenses, net })` | cashflowView.js | Updates summary stat cards with count-up animation |
+| `cashflowView.renderSalesList(sales, canEdit)` | cashflowView.js | Renders clickable sale rows with ticket badge + Void button |
+| `cashflowView.renderExpensesList(expenses, canEdit)` | cashflowView.js | Renders expense rows; delete button only shown when canEdit |
+| `cashflowView.renderVoidedList(voidedSales, canEdit)` | cashflowView.js | Renders voided sale rows with voided-by info + Restore button |
+| `controlVoidTransaction(id)` | controller.js | Confirm or override modal → `_executeVoid(id, voidedBy)` |
+| `controlRestoreTransaction(id)` | controller.js | Confirm or override modal → `_executeRestore(id)` |
+| `model.voidSale(id, voidedBy)` | model.js | Sets `voided_at` + `voided_by`; mutates state arrays; returns `{ wasInQueue }` |
+| `model.restoreSale(id)` | model.js | Clears `voided_at`/`voided_by`; moves between state arrays; returns restored row |
+| `model.verifyOverrideCredentials(email, password)` | model.js | Temp Supabase client: verifies email+password, checks `cashflow` permission, returns name |
+| `cashflowView.showOverrideModal(onSubmit)` | cashflowView.js | Shows `#cashflowOverrideModal`, wires form submit to callback |
+| `cashflowView.hideOverrideModal()` | cashflowView.js | Hides modal, resets form and error |
+| `cashflowView.setOverrideError(msg)` | cashflowView.js | Shows/hides error text inside override modal |
 | `cashflowView.setPeriodLabel(label)` | cashflowView.js | Updates `#cashflowPeriodLabel` text |
 | `cashflowView.setActivePeriod(period)` | cashflowView.js | Toggles active class on period buttons |
 | `_addHandlerPeriodChange(handler)` | cashflowView.js | Listens on `.period-btn` click (non-custom) |
@@ -1288,12 +1382,12 @@ On initApp:
 
 Structure (index.html):
   <section class="open-orders-section">
-    <h2>Open Orders</h2>         ← always visible
+    <h2 class="open-orders-title">Active Queue</h2>   ← always visible
     <ul id="openOrdersList">     ← KDSView renders rows here
-    <button id="openOrdersViewAll">  ← appears when queue > 5
+    <button id="openOrdersViewAll">  ← appears when queue.length > PREVIEW_COUNT (8)
 ```
 
-Each row shows: order #, type (Dine In / Takeout), item count, time placed, status badge, Done button. Up to 8 rows shown; "View All (N)" button appears when there are more, and the expand icon (⤢) opens the All Orders Modal.
+Each row shows: order #, type badge (Dine In / Takeout — hidden when setting is off), item count, time placed, status badge, Done button. Up to `PREVIEW_COUNT` (8) rows shown; "View All" button appears when there are more, and the expand icon (⤢) opens the All Orders Modal.
 
 #### Status Badges (update every second via `_tickKDS`)
 
@@ -1309,14 +1403,17 @@ Each row shows: order #, type (Dine In / Takeout), item count, time placed, stat
 User clicks "Open KDS Window" (in Settings or nav)
   → controlOpenKDSWindow()
     → window.open('kds-display.html', 'kds', `width=...,height=...`)
-    → KDS window loads, awaits channel.ready
-    → sends KDS_REQUEST_SYNC via both transports (Supabase + BroadcastChannel)
-    → controller receives it, responds with KDS_QUEUE_SYNC (full queue + thresholds)
-    → KDS popup receives via BroadcastChannel (fast, same-browser) or Supabase Realtime
-    → sets _syncReceived = true, renders card grid
-    → if no KDS_QUEUE_SYNC arrives within 2.5 s: retries KDS_REQUEST_SYNC (up to 3×)
+    → KDS window loads
+    → loadFromDB() queries Supabase directly:
+        → reads pointy_business_id from localStorage
+        → fetches today's sales where prepared_at IS NULL
+        → populates queue, renders card grid
+        → header flips from pulsing amber "Syncing…" dot → solid green "Live" dot
+    → After initial load, real-time deltas arrive via channel (KDS_QUEUE_SYNC)
     → KDS popup timer emojis: plain time (fresh), ⏰ time (warn), 🔥 time (urgent)
 ```
+
+**KDS popup status indicator:** Header shows a pulsing amber "Syncing…" dot until `loadFromDB()` resolves, then flips to a solid green "Live" dot. The dot stays green for subsequent `KDS_QUEUE_SYNC` channel messages (real-time updates only).
 
 #### New Order Placed
 
@@ -1342,7 +1439,18 @@ _tickKDS() called every 1000ms
   → if state.orderQueue is empty: _stopKDSTick()
 ```
 
-#### Mark Order Done
+#### Ticket Numbers
+
+Every order gets a ticket number assigned at `controlConcludeTransaction` time via `_generateTicketNumber()`. It picks a random number 1–999 that is not already in the active queue. The number is stored as `ticket_number` in the DB and displayed as `#N` on:
+- The Active Queue home page row (`oq-num`)
+- The KDS popup card header
+- The cashflow sale row badge
+- The undo toast label
+- The receipt (large bold section above the item list)
+
+#### Mark Order Done (with Undo Window)
+
+Marking done is **non-destructive for 30 seconds** — the order is removed from the visible queue immediately but the DB write is deferred. The staff member can undo within the window.
 
 ```
 Cook taps "Done" button (home page list or KDS popup window)
@@ -1350,15 +1458,29 @@ Cook taps "Done" button (home page list or KDS popup window)
   KDS popup: sends KDS_ORDER_DONE (both transports) → channel.onmessage → controlMarkOrderDone(id)
   Auto-complete: _tickKDS → controlMarkOrderDone(id, timedOut: true)
 
-controlMarkOrderDone(id, timedOut)
-  → splices order from state.orderQueue
-  → model.recordServeTime(id, timedOut)
-      → supabase.from('sales').update({ prepared_at: now, timed_out: timedOut })
-      → requires GRANT UPDATE ON sales TO authenticated + RLS policy allowing staff
-  → KDSView.renderQueue(state.orderQueue)
-  → channel.postMessage(KDS_QUEUE_SYNC)  [syncs KDS popup]
+controlMarkOrderDone(id, timedOut)  [synchronous — no await]
+  → splices order from state.orderQueue at idx
+  → KDSView.renderQueue(state.orderQueue)  [queue updates immediately]
+  → channel.postMessage(KDS_QUEUE_SYNC)  [KDS popup updates immediately]
   → if queue empty: _stopKDSTick()
+  → KDSView.showUndoToast(order, onUndo, UNDO_WINDOW_MS=30000)
+      → creates toast DOM, shows countdown, returns dismiss()
+  → setTimeout(30s):
+      → model.recordServeTime(id, timedOut)
+          → supabase UPDATE sales SET prepared_at=now, timed_out=timedOut
+      → dismissToast()
+  → stores { timer, order, idx, timedOut, dismissToast } in _pendingDone Map
+
+If staff taps "Undo" within 30s:
+  → _undoMarkDone(id)
+    → clearTimeout(timer)
+    → dismissToast()
+    → splices order back into state.orderQueue at original idx
+    → KDSView.renderQueue + channel.postMessage(KDS_QUEUE_SYNC)
+    → _ensureKDSTick()
 ```
+
+`KDSView.showUndoToast(order, onUndo, durationMs)` — creates a toast with countdown and Undo button; returns a `dismiss()` function. Lives in `kdsView.js` (not the controller).
 
 #### All Orders Modal
 
@@ -1396,7 +1518,7 @@ User clicks × or clicks backdrop
 | `KDSView._addHandlerModalDone(handler)` | kdsView.js | Event-delegated Done listener on `#allOrdersModalList` |
 | `KDSView._rowMarkup(order, num, hidden)` | kdsView.js | Generates `<li class="oq-row">` HTML for one order |
 | `KDSView.updateTimers(queue, now, yellow, red)` | kdsView.js | Updates badge text + row classes in inline list and modal list (when open) |
-| `KDSView._addHandlerViewAll()` | kdsView.js | Toggles `oq-row--hidden` on rows beyond index 4 |
+| `KDSView._addHandlerViewAll()` | kdsView.js | Toggles `oq-row--hidden` on rows at or beyond `PREVIEW_COUNT` (8); updates button text between "View All" / "Show Less" |
 | `KDSView._addHandlerDone(handler)` | kdsView.js | Event-delegated listener on `#openOrdersList` for `.oq-done-btn` clicks |
 | `KDSView.playNewOrderSound()` | kdsView.js | Web Audio API: C5-E5-G5 chord on new order |
 | `controlOpenKDSWindow()` | controller.js | `window.open('kds-display.html', ...)` with configured size |
@@ -1404,9 +1526,12 @@ User clicks × or clicks backdrop
 | `_ensureKDSTick()` | controller.js | Starts 1-second interval if not already running |
 | `_stopKDSTick()` | controller.js | Clears the interval when queue empties |
 | `_tickKDS()` | controller.js | Updates timers, triggers auto-complete past threshold (Infinity guard for 0) |
-| `controlMarkOrderDone(id, timedOut)` | controller.js | Removes from queue, records serve time in DB, re-renders + syncs popup |
+| `controlMarkOrderDone(id, timedOut)` | controller.js | Removes from queue immediately; defers DB write 30s (undo window) |
+| `_undoMarkDone(id)` | controller.js | Cancels pending done timer, reinserts order at original index, resyncs |
+| `KDSView.showUndoToast(order, onUndo, durationMs)` | kdsView.js | Countdown toast with Undo button; returns `dismiss()` |
+| `_generateTicketNumber()` | controller.js | Picks random 1–999 not already in active queue |
 | `model.recordServeTime(id, timedOut)` | model.js | Sets `prepared_at` + `timed_out` in DB |
-| `model.loadOrderQueue()` | model.js | Fetches today's sales where `prepared_at IS NULL` → `state.orderQueue` |
+| `model.loadOrderQueue()` | model.js | Fetches today's sales where `prepared_at IS NULL AND voided_at IS NULL` → `state.orderQueue` |
 | `channel.onmessage` handler | controller.js | Routes `KDS_ORDER_DONE` → `controlMarkOrderDone`, `KDS_REQUEST_SYNC` → queue sync |
 
 ---
@@ -1455,6 +1580,183 @@ _finaliseSale() → channel.postMessage(CFD_SALE_COMPLETE)
 
 ---
 
+### 5.15 Reports / Analytics Dashboard
+
+#### Open Reports
+
+```
+User clicks "Reports" nav button
+  → ReportsView._addHandlerOpen
+  → controlOpenReports()
+    → ReportsView.open()
+    → ReportsView.renderLoading()
+    → _getCashflowRange('today')  [returns { startISO, endISO, label }]
+    → _getPreviousPeriodRange('today', startISO, endISO)
+        → returns { prevStart, prevEnd, vsLabel }  ['yesterday']
+    → [model.fetchReportsSales(startISO, endISO), model.fetchPeriodTotals(prevStart, prevEnd)]
+        → fetchReportsSales → state.reportsSales (includes prepared_at)
+        → fetchPeriodTotals → { revenue, transactions, avgOrder }
+    → _renderReportsData('today', startISO, endISO, label, prevTotals, vsLabel)
+```
+
+#### `_renderReportsData(period, startISO, endISO, label, prevTotals, vsLabel)`
+
+The central render call. Called on every period change, including from the compare mode and reports view period buttons.
+
+```
+→ ReportsView.setPeriodLabel(label)
+→ _computeReportsSummary()  [{ revenue, transactions, avgOrder, avgServingMinutes }]
+→ ReportsView.renderSummary(summary)
+    → populates #reportsRevenue, #reportsTransactions, #reportsAvgOrder
+    → populates #reportsServingTime (formatted as "2m 34s"; "—" if no KDS data)
+→ ReportsView.renderComparison(summary, prevTotals, vsLabel)
+    → delta % badges: #reportsRevenueCmp, #reportsTransCmp, #reportsAvgCmp
+→ ReportsView.renderTopItems(_computeTopItems())
+→ ReportsView.renderStaff(_computeStaffPerformance())
+→ ReportsView.renderCharts({
+    revenueOverTime: _computeRevenueOverTime(period, startISO, endISO),
+    categoryMix:     _computeCategoryMix(),
+    hourlyBreakdown: _computeHourlyBreakdown(),
+    dayOfWeek:       _computeDayOfWeek(period),
+    servingTime:     _computeServingTimeStats(),
+  })
+```
+
+#### Change Period
+
+```
+User clicks period chip (Today / Yesterday / This Week / This Month / This Year / Custom)
+  → ReportsView._addHandlerPeriodChange
+  → controlChangeReportsPeriod({ period, from, to })
+    → ReportsView.renderLoading()
+    → _getCashflowRange(period, from, to)
+    → _getPreviousPeriodRange(period, startISO, endISO)
+    → model.fetchReportsSales(startISO, endISO)
+    → _renderReportsData(period, ...)
+```
+
+#### Compare Mode
+
+```
+User clicks "Compare" button
+  → ReportsView._addHandlerToggleCompare
+  → controlToggleCompare()
+    → _compareModeActive = !_compareModeActive
+    → ReportsView.enterCompareMode() or ReportsView.exitCompareMode()
+
+User selects compare type (Day vs Day / Week vs Week / Month vs Month / Year vs Year / Custom)
+  → type-specific A and B pickers shown/hidden via showWrappers(type)
+  → VS label updates to "Day vs Day" etc.
+
+User clicks "Run"
+  → ReportsView._addHandlerRunComparison
+  → controlRunComparison({ type, aValue, bValue }) or ({ type, fromA, toA, fromB, toB })
+    → _getRangeFromValue(type, value)  [converts picker value to { startISO, endISO, label }]
+        → day: local midnight → 23:59:59.999
+        → week: snaps to Mon–Sun containing that date
+        → month: Jan 1 – Dec 31 of the input month
+        → year: full calendar year
+    → model.fetchReportsSalesRaw(rangeA) + model.fetchReportsSalesRaw(rangeB)  [parallel]
+    → _computeCompareRevenue(sales, type, startISO, endISO)
+        → type 'day': hourly revenue array (24 slots)
+        → type 'week': daily Mon–Sun array
+        → type 'month': daily array (1–31)
+        → type 'year': monthly array (Jan–Dec)
+        → returns { labels, dataA/B, totalA/B }
+    → ReportsView.renderCompareResults({ summaryA, summaryB, revA, revB })
+        → KPI values colored: winner = green (.rp-cmp-kpi-val--up), loser = red (.rp-cmp-kpi-val--down)
+        → delta % badge between each A/B pair
+        → overlapping line chart with two datasets
+```
+
+#### KPI Strip (Summary Cards)
+
+Four cards in a `repeat(4, 1fr)` grid (collapses to 2×2 at 640px, Revenue spans full width at 480px):
+- **Revenue** (`#reportsRevenue`) — total sales for period; green primary card (`rp-kpi--primary`)
+- **Transactions** (`#reportsTransactions`) — count of sales
+- **Avg. Order** (`#reportsAvgOrder`) — revenue ÷ transactions
+- **Avg. Serving** (`#reportsServingTime`) — average `prepared_at − sale_date` formatted as `2m 34s`; shows `—` (muted) if no orders have been marked done in KDS
+
+All four show a delta badge vs the previous equivalent period via `renderComparison`. Badge color rules:
+- Revenue / Transactions / Avg. Order: **up = green, down = red** (standard)
+- Avg. Serving: **down = green (faster = better), up = red (slower = worse)** — achieved via `invert = true` flag in `renderComparison`
+
+**Primary card badge CSS gotcha:** The Revenue card (green background) overrides badge colors. `rp-kpi-cmp--up` stays translucent white. `rp-kpi-cmp--down` uses `background: rgba(255,255,255,0.92); color: #ef4444` — a white pill with red text — so it reads clearly against the green without color-mixing issues. Dark red on green looks muddy; white pill avoids this.
+
+#### Charts
+
+| Chart | `_charts` key | Canvas ID | Color | Notes |
+|---|---|---|---|---|
+| Revenue Over Time | `revenue` | `rpRevenueCanvas` | Green `#22c55e` | Hourly for day; daily for week/month; monthly for year |
+| Category Mix | `category` | `rpCategoryCanvas` | Green | Donut or bar by category; empty state if no data |
+| Hourly Breakdown | `hourly` | `rpHourlyCanvas` | Green | Revenue by hour of day (0–23) |
+| Day of Week | `dow` | `rpDowCanvas` | Green | Revenue Mon–Sun; `isEmpty: true` when period < 2 days |
+| Serving Time by Hour | `servingHour` | `rpServingHourCanvas` | Orange `#f59e0b` | Avg minutes by hour; empty if no `prepared_at` data |
+| Serving Time by Day | `servingDay` | `rpServingDayCanvas` | Orange | Avg minutes Mon–Sun; peak bar fully highlighted |
+
+**Canvas destruction rule:** Never replace innerHTML of a container holding a `<canvas>`. Use `canvas.style.display` toggle + a lazily-created sibling `<p class="rp-empty">` for empty states. Destroying the canvas node causes `querySelector('#canvasId')` to return `null` on subsequent renders.
+
+#### `_computeServingTimeStats()`
+
+```js
+// Input: state.reportsSales (must include prepared_at)
+// Filter: prepared_at is set, 0 < minutes < 120 (sanity bounds)
+// Returns: { avgMinutes, byHour: { labels, data }, byDay: { labels, data } } | null
+```
+
+Serving time = `(new Date(prepared_at) − new Date(sale_date)) / 60000` minutes. The `byHour` and `byDay` arrays hold the per-bucket average (0 for buckets with no data).
+
+#### Export (CSV & PDF)
+
+The Export button in the report header is a **dropdown** with two options: "Download CSV" and "Save as PDF". Clicking outside closes it. `_addHandlerExport(csvHandler, pdfHandler)` wires both.
+
+**CSV export** (`controlExportReports`) — same as before: sales rows + staff summary block, downloads `reports-<period>.csv`.
+
+**PDF export** (`controlExportReportsPDF`) — opens a styled print popup (`window.open`) then calls `popup.print()` after 700ms. The browser's print dialog offers "Save as PDF". Branches on `_compareModeActive`:
+
+- **Regular mode PDF** — Pointy green header, 4 KPI cards (Revenue / Transactions / Avg. Order / Avg. Serving), chart images captured live via `canvas.toDataURL()` (Revenue full-width, Category + Hourly side-by-side, DOW + Serving Time if visible), Top Items table (up to 10), Staff Performance table, Transactions table (capped at 50). Charts are only included if their wrap element does not have the `hidden` class and the canvas `style.display !== 'none'`.
+
+- **Compare mode PDF** (active when `_compareModeActive && _cmpSalesA && _cmpSalesB`) — "Comparison Report" header, **KPI card grid** (2×2) styled to match the UI: green dot + Period A value (green text) + delta badge pill (green/red) + blue dot + Period B value (colored green if B won, red if B lost); inverted logic for Avg. Serving. Below the cards: the live compare revenue chart image, then Top Items side-by-side for A and B.
+
+**`captureChart(wrapId, canvasId)`** — checks the wrap is not hidden and the canvas is not `display:none`, then returns `canvas.toDataURL('image/png')` or `null`. All chart images use this.
+
+**Pop-up blocker note:** If the browser blocks the popup, `controlExportReportsPDF` shows a toast: "Pop-up blocked. Allow pop-ups for this site to export PDF."
+
+#### Function Reference
+
+| Function | File | Purpose |
+|---|---|---|
+| `ReportsView._addHandlerOpen(handler)` | reportsView.js | Listens on `[data-action='reports']` click |
+| `controlOpenReports()` | controller.js | Fetches today data, renders dashboard |
+| `ReportsView.open()` | reportsView.js | Shows `#reportsPanel` |
+| `ReportsView.renderLoading()` | reportsView.js | Shows loading skeleton placeholders |
+| `ReportsView.setPeriodLabel(label)` | reportsView.js | Updates period label display |
+| `_computeReportsSummary()` | controller.js | Returns `{ revenue, transactions, avgOrder, avgServingMinutes }` |
+| `ReportsView.renderSummary(summary)` | reportsView.js | Populates all 4 KPI cards including Avg. Serving |
+| `ReportsView.renderComparison(current, prev, vsLabel)` | reportsView.js | Delta % badges on all 4 KPIs; `invert=true` for Avg. Serving (down = green) |
+| `_computeTopItems(limit, sortKey)` | controller.js | Aggregates item qty/revenue across all sales in period |
+| `ReportsView.renderTopItems(items)` | reportsView.js | Renders ranked item list with bar tracks |
+| `_computeStaffPerformance()` | controller.js | Groups sales by `cashier_name` → `{ name, revenue, transactions }[]` |
+| `ReportsView.renderStaff(staff)` | reportsView.js | Renders staff performance list |
+| `ReportsView.renderCharts(data)` | reportsView.js | Calls all 6 chart renderers |
+| `_computeRevenueOverTime(period, startISO, endISO)` | controller.js | Buckets revenue by time granularity matching the period |
+| `_computeCategoryMix()` | controller.js | Revenue totals per category |
+| `_computeHourlyBreakdown()` | controller.js | Revenue by hour of day (0–23) |
+| `_computeDayOfWeek(period)` | controller.js | Revenue Mon–Sun; returns `isEmpty: true` for day/yesterday |
+| `_computeServingTimeStats()` | controller.js | Avg serving time overall + by hour + by day; returns null if no KDS data |
+| `_getRangeFromValue(type, value)` | controller.js | Converts picker type + value to `{ startISO, endISO, label }` |
+| `controlToggleCompare()` | controller.js | Toggles `_compareModeActive`, enters/exits compare mode |
+| `controlRunComparison(params)` | controller.js | Fetches data for both periods, renders compare results |
+| `ReportsView.renderCompareResults(data)` | reportsView.js | KPI A/B values with green/red coloring + delta badges + overlay chart |
+| `model.fetchReportsSales(startISO, endISO)` | model.js | Fetches sales for period → `state.reportsSales` (includes `prepared_at`) |
+| `model.fetchReportsSalesRaw(startISO, endISO)` | model.js | Same query but returns rows without storing to state (used in compare mode) |
+| `model.fetchPeriodTotals(startISO, endISO)` | model.js | Returns `{ revenue, transactions, avgOrder, avgServingMinutes }` for a period (used for vs-yesterday badges; `avgServingMinutes` is null if no KDS data) |
+| `ReportsView._addHandlerExport(csvFn, pdfFn)` | reportsView.js | Wires Export dropdown — toggle on button click, close on outside click, route to csv/pdf handlers |
+| `controlExportReports()` | controller.js | CSV export: downloads `reports-<period>.csv` with sales rows + staff summary |
+| `controlExportReportsPDF()` | controller.js | PDF export: branches on `_compareModeActive`; opens print popup with branded HTML; captures charts via `canvas.toDataURL()` |
+
+---
+
 ## Adjustment Calculation Reference
 
 `model.calculateAdjustments(subtotal, adjustments)` — called every time checkout totals need to refresh.
@@ -1476,4 +1778,4 @@ Steps:
 
 ---
 
-*Last updated: 2026-05-13. Updated §4 (dual-channel transport), §5.13 (KDS sync retry logic + All Orders Modal). Update this file when a new feature is added or a workflow changes.*
+*Last updated: 2026-05-20. Added void/restore transaction flow + override modal (§5.9); ticket numbers on orders, receipts, and KDS cards; undo-done 30-second window (§5.13); KDS_ORDER_VOIDED channel message (§4); voidedSales + reportsSales state fields (§3). Security: `esc()` HTML-escaping applied to all user-data innerHTML across cashflowView, receiptView, kds-display, controller; postMessage target scoped to origin; verifyOverrideCredentials signOut scoped to local session; safeParse guards JSON.parse at startup; MutationObserver bounded with timeout fallback. Update this file when a new feature is added or a workflow changes.*

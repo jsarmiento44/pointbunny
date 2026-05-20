@@ -51,7 +51,8 @@ export const MSG = {
   KDS_QUEUE_SYNC:   'KDS_QUEUE_SYNC',   // full queue snapshot
   // KDS: kitchen → cashier
   KDS_REQUEST_SYNC: 'KDS_REQUEST_SYNC', // kitchen window just opened, needs current queue
-  KDS_ORDER_DONE:   'KDS_ORDER_DONE',   // cook marked an order done
+  KDS_ORDER_DONE:   'KDS_ORDER_DONE',   // cook committed an order as done (after undo window)
+  KDS_ORDER_VOIDED: 'KDS_ORDER_VOIDED', // cashier/manager voided a transaction; remove from KDS
 
   // CFD: cashier → customer display
   CFD_CART_UPDATE:    'CFD_CART_UPDATE',    // cart changed (add/remove/clear)
