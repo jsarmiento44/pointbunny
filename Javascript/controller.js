@@ -17,6 +17,7 @@ import KDSView from "./Views/kdsView.js";
 import channel, { MSG } from "./channel.js";
 import { init as initAnalytics, destroy as destroyAnalytics } from "./analytics.js";
 import ReportsView from "./Views/reportsView.js";
+import SupportView from "./Views/supportView.js";
 import { fetchReportsSalesRaw } from "./model.js";
 
 const modelState = model.state;
@@ -526,7 +527,99 @@ const controlCloseOrderModal = function (close) {
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 
+// ── Help & Support ────────────────────────────────────────────────────────────
+
+const controlOpenSupport = async function () {
+  SupportView.open();
+  try {
+    await model.loadTickets();
+    SupportView.renderTicketList(model.state.tickets);
+    SupportView.syncUnreadBadge(model.state.tickets);
+  } catch (err) {
+    showToast(err.message ?? 'Could not load tickets.');
+  }
+};
+
+const controlOpenTicket = async function (ticketId) {
+  const ticket = model.state.tickets.find(t => t.id === ticketId);
+  if (!ticket) return;
+  SupportView.setCurrentTicket(ticketId);
+  try {
+    const replies = await model.loadTicketReplies(ticketId);
+    SupportView.renderThread(ticket, replies);
+    if (ticket.has_unread_reply) {
+      await model.markRepliesRead(ticketId);
+      SupportView.syncUnreadBadge(model.state.tickets);
+    }
+  } catch (err) {
+    showToast(err.message ?? 'Could not load ticket.');
+  }
+};
+
+const controlMarkTicketSolved = async function (ticketId) {
+  if (!ticketId) return;
+  const confirmed = confirm(
+    'Mark this ticket as solved?\n\nOnce solved it cannot be reopened — if the issue comes back you\'ll need to submit a new ticket.'
+  );
+  if (!confirmed) return;
+  try {
+    await model.markTicketSolved(ticketId);
+    const ticket = model.state.tickets.find(t => t.id === ticketId);
+    const replies = await model.loadTicketReplies(ticketId);
+    SupportView.renderThread(ticket, replies);
+    SupportView.renderTicketList(model.state.tickets);
+  } catch (err) {
+    showToast(err.message ?? 'Could not update ticket.');
+  }
+};
+
+const controlSubmitTicket = async function () {
+  const { category, subject, message, files } = SupportView._getTicketFormData();
+  if (!category) { SupportView.showTicketResult(false, 'Please select a category.'); return; }
+  if (!subject)  { SupportView.showTicketResult(false, 'Please enter a subject.'); return; }
+  if (!message)  { SupportView.showTicketResult(false, 'Please enter a message.'); return; }
+  const file = files[0];
+  if (file && file.size > 5 * 1024 * 1024) {
+    SupportView.showTicketResult(false, `"${file.name}" is over 5 MB. Please choose a smaller image.`);
+    return;
+  }
+  SupportView.setTicketSubmitting(true);
+  try {
+    await model.submitTicket({ category, subject, message, files });
+    SupportView.resetTicketForm();
+    await model.loadTickets();
+    SupportView.renderTicketList(model.state.tickets);
+    SupportView.syncUnreadBadge(model.state.tickets);
+    SupportView.showSuccessPanel();
+    setTimeout(() => SupportView.showListPanel(), 2500);
+  } catch (err) {
+    SupportView.showTicketResult(false, err.message ?? 'Something went wrong. Please try again.');
+  } finally {
+    SupportView.setTicketSubmitting(false);
+  }
+};
+
+const controlSaveBusinessInfo = async function ({ name, email, phone }) {
+  const btn = document.getElementById('saveBusinessInfoBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    await model.saveBusinessInfo({ name, email, phone });
+    SettingsView.showBusinessSaveStatus(true, 'Changes saved');
+  } catch (err) {
+    SettingsView.showBusinessSaveStatus(false, err.message ?? 'Failed to save');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+  }
+};
+
 const controlOpenSettings = function () {
+  if (model.state.role === 'Admin') {
+    SettingsView.syncBusinessInfo({
+      name:  model.state.businessName  ?? '',
+      email: model.state.businessEmail ?? model.state.currentStaff?.email ?? '',
+      phone: model.state.businessPhone ?? '',
+    });
+  }
   SettingsView.renderAdjustments(model.state.settings.adjustments);
   SettingsView.syncShowRemovedToggle(model.state.settings.showRemovedAdjustments);
   SettingsView.syncPrintingToggle(model.state.settings.printingEnabled);
@@ -542,6 +635,7 @@ const controlOpenSettings = function () {
     model.state.settings.kdsWindowSize,
     model.state.settings.cfdWindowSize,
   );
+  SettingsView.openWithRole(model.state.role);
 };
 
 const controlTogglePrinting = function (value) {
@@ -850,6 +944,7 @@ const initApp = async function (user) {
   document.body.classList.remove('role-admin', 'role-manager', 'role-cashier');
   document.body.classList.add(`role-${model.state.role.toLowerCase()}`);
   _updateCashierDisplay();
+  if (model.state.role === 'Admin') model.loadBusinessProfile().catch(() => {});
   await model.loadMenuItems();
   await model.loadMenuCategories();
   await model.loadAdjustments();
@@ -873,6 +968,7 @@ const initApp = async function (user) {
   initAnalytics(user.id);
   _loadYesterdayComparison();
   _loadTransactionCounts();
+  model.loadTickets().then(() => SupportView.syncUnreadBadge(model.state.tickets)).catch(() => {});
 };
 
 let _yesterdayTotal = null;
@@ -951,7 +1047,7 @@ const controlSignIn = async function (email, password) {
   _wireApp();
 };
 
-const controlSignUp = async function ({ firstName, lastName, email, password }) {
+const controlSignUp = async function ({ firstName, lastName, email, businessName, phone, password }) {
   AuthView.setSignUpLoading(true);
   const { error } = await supabase.auth.signUp({
     email,
@@ -961,6 +1057,8 @@ const controlSignUp = async function ({ firstName, lastName, email, password }) 
         first_name: firstName,
         last_name: lastName,
         display_name: `${firstName} ${lastName}`,
+        business_name: businessName,
+        phone: phone || null,
       },
     },
   });
@@ -2212,6 +2310,8 @@ const _wireApp = function () {
   // Settings
   SettingsView._addHandlerOpen(controlOpenSettings);
   SettingsView._addHandlerClose();
+  SettingsView._addHandlerNavTabs();
+  SettingsView._addHandlerSaveBusinessInfo(controlSaveBusinessInfo);
   MenuListView._addHandlerAddCategory(controlAddCategoryFromSettings);
   MenuListView._addHandlerDeleteCategory(controlDeleteCategory);
   SettingsView._addHandlerAdd();
@@ -2274,6 +2374,16 @@ const _wireApp = function () {
   SettingsView._addHandlerDisplaySizes(controlSaveKDSWindowSize, controlSaveCFDWindowSize);
   SettingsView._addHandlerCFDAdUpload(controlUploadCFDAd);
   SettingsView._addHandlerCFDAdRemove(controlRemoveCFDAd);
+  // Support
+  SupportView._addHandlerOpen(controlOpenSupport);
+  SupportView._addHandlerClose();
+  SupportView._addHandlerNewTicket(() => SupportView.showNewTicketPanel());
+  SupportView._addHandlerCloseNewTicket(() => { SupportView.closeNewTicketModal(); SupportView.resetTicketForm(); });
+  SupportView._addHandlerBackToList(() => SupportView.showListPanel());
+  SupportView._addHandlerTicketClick(controlOpenTicket);
+  SupportView._addHandlerMarkSolved(controlMarkTicketSolved);
+  SupportView._addHandlerSubmitTicket(controlSubmitTicket);
+  SupportView._addHandlerTicketFiles();
   const kdsWindowBtn = document.getElementById('kdsWindowBtn');
   const cfdWindowBtn = document.getElementById('cfdWindowBtn');
   kdsWindowBtn?.classList.remove('hidden');

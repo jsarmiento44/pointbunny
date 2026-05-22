@@ -1,5 +1,8 @@
-﻿class SettingsView {
-  _modal = document.getElementById("settingsModal");
+﻿import { initPhoneInput } from '../phoneInput.js';
+
+class SettingsView {
+  _modal    = document.getElementById("settingsModal");
+  _phoneIti = null;
   _openBtn = document.getElementById("settingsBtn");
   _closeBtn = document.getElementById("settingsCloseBtn");
   _addBtn = document.getElementById("addAdjustmentBtn");
@@ -12,6 +15,70 @@
   _kdsYellowInput = document.getElementById("kdsYellowInput");
   _kdsRedInput = document.getElementById("kdsRedInput");
   _kdsAutoInput = document.getElementById("kdsAutoInput");
+
+  // ── Tab navigation ────────────────────────────────────────────────────────────
+
+  openWithRole(role) {
+    this._switchTab(role === 'Admin' ? 'business' : 'pos');
+    this.showBusinessSaveStatus(false, '');
+    if (role === 'Admin' && !this._phoneIti) {
+      this._phoneIti = initPhoneInput('settingsBusinessPhoneNumber');
+    }
+  }
+
+  _switchTab(name) {
+    document.querySelectorAll('.settings-nav-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.settingsTab === name);
+    });
+    const tabId = `settingsTab${name.charAt(0).toUpperCase() + name.slice(1)}`;
+    document.querySelectorAll('.settings-tab').forEach(tab => {
+      tab.classList.toggle('hidden', tab.id !== tabId);
+    });
+  }
+
+  _addHandlerNavTabs() {
+    document.querySelector('.settings-nav')?.addEventListener('click', e => {
+      const btn = e.target.closest('.settings-nav-btn[data-settings-tab]');
+      if (!btn) return;
+      this._switchTab(btn.dataset.settingsTab);
+    });
+  }
+
+  // ── Business info ─────────────────────────────────────────────────────────────
+
+  syncBusinessInfo({ name, email, phone }) {
+    const n = document.getElementById('settingsBusinessName');
+    const e = document.getElementById('settingsBusinessEmail');
+    if (n) n.value = name ?? '';
+    if (e) e.value = email ?? '';
+    if (this._phoneIti) this._phoneIti.setNumber(phone ?? '');
+  }
+
+  _getBusinessFormData() {
+    const phone = this._phoneIti ? this._phoneIti.getNumber() : '';
+    return {
+      name:  document.getElementById('settingsBusinessName')?.value.trim() ?? '',
+      email: document.getElementById('settingsBusinessEmail')?.value.trim() ?? '',
+      phone,
+    };
+  }
+
+  _addHandlerSaveBusinessInfo(handler) {
+    document.getElementById('saveBusinessInfoBtn')?.addEventListener('click', () => {
+      const data = this._getBusinessFormData();
+      if (!data.name) { this.showBusinessSaveStatus(false, 'Business name is required.'); return; }
+      handler(data);
+    });
+  }
+
+  showBusinessSaveStatus(success, msg) {
+    const el = document.getElementById('businessSaveStatus');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = `settings-save-status${success ? ' settings-save-status--ok' : msg ? ' settings-save-status--err' : ''}`;
+    if (success) setTimeout(() => { el.textContent = ''; el.className = 'settings-save-status'; }, 3000);
+  }
+
   // ── Open / Close ─────────────────────────────────────────────────────────────
 
   _addHandlerOpen(handler) {

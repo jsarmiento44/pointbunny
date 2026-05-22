@@ -157,6 +157,50 @@ onReady(function () {
   applyTheme(initialTheme());
   wireTheme();
 
+  /* ========= Mobile hamburger nav ========= */
+  (function () {
+    var menuBtn = document.getElementById("navMenuBtn");
+    var navHeader = document.querySelector("header");
+    var navActions = document.getElementById("navActions");
+    if (!menuBtn || !navHeader) return;
+
+    function openMenu() {
+      navHeader.classList.add("is-nav-open");
+      menuBtn.setAttribute("aria-expanded", "true");
+    }
+    function closeMenu() {
+      navHeader.classList.remove("is-nav-open");
+      menuBtn.setAttribute("aria-expanded", "false");
+    }
+    function toggleMenu() {
+      navHeader.classList.contains("is-nav-open") ? closeMenu() : openMenu();
+    }
+
+    menuBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      toggleMenu();
+    });
+
+    // Close when clicking outside the nav
+    document.addEventListener("click", function (e) {
+      if (navHeader.classList.contains("is-nav-open") && !navHeader.contains(e.target)) {
+        closeMenu();
+      }
+    });
+
+    // Close on ESC
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && navHeader.classList.contains("is-nav-open")) closeMenu();
+    });
+
+    // Close after any nav action item is clicked (except the menu btn itself)
+    if (navActions) {
+      navActions.addEventListener("click", function (e) {
+        if (e.target !== menuBtn && !menuBtn.contains(e.target)) closeMenu();
+      });
+    }
+  })();
+
   // Minimal debug hook so you can verify quickly from DevTools:
   window.__pointyTheme = {
     get: function () {

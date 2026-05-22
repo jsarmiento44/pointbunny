@@ -26,7 +26,16 @@
           <span class="brand">Pointy POS</span>
         </div>
 
-        <div class="nav-actions">
+        <button class="btn icon-btn nav-menu-btn" type="button" id="navMenuBtn" aria-label="Open navigation menu" aria-expanded="false">
+          <svg class="nav-menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+          <svg class="nav-menu-close-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+
+        <div class="nav-actions" id="navActions">
           <button class="btn nav-display-btn hidden" type="button" id="kdsWindowBtn" aria-label="Open Kitchen Display" title="Kitchen Display">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
               <rect x="2" y="3" width="20" height="14" rx="2"/>
@@ -108,213 +117,209 @@
       <div class="modal-backdrop hidden" id="settingsModal">
         <div class="modal-container settings-modal-container">
           <button class="modal-close-btn" id="settingsCloseBtn">&times;</button>
-          <h2 class="edit-form-title">Settings</h2>
+          <div class="settings-layout">
 
-          <div class="settings-body">
-            <!-- Receipt Adjustments -->
-            <section class="settings-section" data-min-role="manager">
-              <div class="settings-section-header">
+            <!-- Left nav -->
+            <nav class="settings-nav">
+              <h3 class="settings-nav-title">Settings</h3>
+              <button class="settings-nav-btn" data-settings-tab="business" data-min-role="admin">Business</button>
+              <button class="settings-nav-btn" data-settings-tab="pos">POS</button>
+              <button class="settings-nav-btn" data-settings-tab="kds">Order Queue Timers</button>
+              <button class="settings-nav-btn" data-settings-tab="displays">Displays</button>
+            </nav>
+
+            <!-- Right content -->
+            <div class="settings-content">
+
+              <!-- Business tab -->
+              <div class="settings-tab hidden" id="settingsTabBusiness" data-min-role="admin">
                 <div>
-                  <h3 class="settings-section-title">
-                    Automatic Receipt Adjustments
-                  </h3>
-                  <p class="settings-section-hint">
-                    Auto-applied to every new receipt. Fees and discounts.
-                  </p>
+                  <h3 class="settings-tab-title">Business Profile</h3>
+                  <p class="settings-tab-hint">Edit your details below and hit Save to update.</p>
                 </div>
-                <button class="btn primary" id="addAdjustmentBtn" type="button">
-                  + Add
-                </button>
-              </div>
-
-              <!-- Populated by settingsView.js -->
-              <ul class="adjustment-list" id="adjustmentList">
-                <li class="adjustment-empty">No adjustments yet.</li>
-              </ul>
-            </section>
-
-            <!-- Show removed adjustments toggle -->
-            <section class="settings-section">
-              <div class="settings-toggle-row">
-                <div>
-                  <p class="settings-toggle-label">Receipt Printing</p>
-                  <p class="settings-toggle-hint">
-                    When on, the checkout will print a receipt before recording
-                    the sale. Turn this off to push transactions through without
-                    printing.
-                  </p>
+                <div class="settings-field">
+                  <label for="settingsBusinessName">Business name</label>
+                  <input type="text" id="settingsBusinessName" placeholder="My Business" autocomplete="organization" />
                 </div>
-                <label class="switch">
-                  <input type="checkbox" id="printingToggle" checked />
-                  <span class="slider round"></span>
-                </label>
-              </div>
-            </section>
-
-            <section class="settings-section">
-              <div class="settings-toggle-row">
-                <div>
-                  <p class="settings-toggle-label">Confirm before finalizing</p>
-                  <p class="settings-toggle-hint">
-                    After printing, ask "Did the receipt print?" before
-                    recording the sale. Turn this on if your printer is
-                    unreliable — it gives you a chance to reprint before the
-                    transaction is saved.
-                  </p>
+                <div class="settings-field">
+                  <label for="settingsBusinessEmail">Contact email</label>
+                  <input type="email" id="settingsBusinessEmail" placeholder="contact@example.com" autocomplete="email" />
                 </div>
-                <label class="switch">
-                  <input type="checkbox" id="confirmPrintToggle" checked />
-                  <span class="slider round"></span>
-                </label>
-              </div>
-            </section>
-
-            <section class="settings-section">
-              <div class="settings-toggle-row">
-                <div>
-                  <p class="settings-toggle-label">Print 2 Copies</p>
-                  <p class="settings-toggle-hint">
-                    Print a customer copy and a business copy for every sale.
-                  </p>
+                <div class="settings-field">
+                  <label for="settingsBusinessPhoneNumber">Phone number</label>
+                  <input type="tel" id="settingsBusinessPhoneNumber" placeholder="912 345 6789" autocomplete="tel" />
+                  <p class="settings-phone-note">SMS verification will be required when updating this — coming soon.</p>
                 </div>
-                <label class="switch">
-                  <input type="checkbox" id="twoCopiesToggle" />
-                  <span class="slider round"></span>
-                </label>
-              </div>
-            </section>
-
-            <section class="settings-section">
-              <div class="settings-toggle-row">
-                <div>
-                  <p class="settings-toggle-label">Dine In / Takeout</p>
-                  <p class="settings-toggle-hint">
-                    When on, staff can choose the order type on each transaction. Turn this off for service businesses where the distinction doesn't apply.
-                  </p>
-                </div>
-                <label class="switch">
-                  <input type="checkbox" id="orderTypeToggle" checked />
-                  <span class="slider round"></span>
-                </label>
-              </div>
-            </section>
-
-            <section class="settings-section">
-              <div class="settings-toggle-row">
-                <div>
-                  <p class="settings-toggle-label">
-                    Show removed adjustments on receipt
-                  </p>
-                  <p class="settings-toggle-hint">
-                    When on, removed line items appear crossed out on the
-                    receipt.
-                  </p>
-                </div>
-                <label class="switch">
-                  <input type="checkbox" id="showRemovedToggle" checked />
-                  <span class="slider round"></span>
-                </label>
-              </div>
-            </section>
-
-            <!-- Displays -->
-            <section class="settings-section">
-              <div class="settings-section-header">
-                <div>
-                  <h3 class="settings-section-title">Displays</h3>
-                  <p class="settings-section-hint">
-                    Configure the Kitchen Display and Customer Display windows.
-                  </p>
+                <div class="settings-save-row">
+                  <span class="settings-save-status" id="businessSaveStatus"></span>
+                  <button class="btn primary" id="saveBusinessInfoBtn" type="button">Save Changes</button>
                 </div>
               </div>
 
-              <!-- Kitchen Display -->
-              <div class="display-settings-group">
-                <p class="settings-toggle-label">Kitchen Display</p>
-                <p class="settings-section-hint" style="margin-bottom: 10px">Screen size for the kitchen window.</p>
-                <div class="display-size-row">
-                  <select class="display-size-select" id="kdsWindowSizeSelect">
-                    <option value="1024x768">Tablet — 1024×768</option>
-                    <option value="1280x720">HD — 1280×720</option>
-                    <option value="1920x1080" selected>Full HD — 1920×1080</option>
-                    <option value="custom">Custom…</option>
-                  </select>
-                  <div class="display-custom-inputs hidden" id="kdsCustomSize">
-                    <input type="number" id="kdsCustomW" placeholder="Width" min="640" class="display-custom-input" />
-                    <span class="display-custom-sep">×</span>
-                    <input type="number" id="kdsCustomH" placeholder="Height" min="480" class="display-custom-input" />
+              <!-- POS tab -->
+              <div class="settings-tab hidden" id="settingsTabPos">
+                <h3 class="settings-tab-title">POS</h3>
+
+                <section class="settings-section" data-min-role="manager">
+                  <div class="settings-section-header">
+                    <div>
+                      <h3 class="settings-section-title">Receipt Adjustments</h3>
+                      <p class="settings-section-hint">Auto-applied to every new receipt. Fees and discounts.</p>
+                    </div>
+                    <button class="btn primary" id="addAdjustmentBtn" type="button">+ Add</button>
                   </div>
-                </div>
-              </div>
+                  <ul class="adjustment-list" id="adjustmentList">
+                    <li class="adjustment-empty">No adjustments yet.</li>
+                  </ul>
+                </section>
 
-              <!-- Customer Display -->
-              <div class="display-settings-group" style="margin-top: 20px">
-                <p class="settings-toggle-label">Customer Display</p>
-                <p class="settings-section-hint" style="margin-bottom: 10px">Screen size for the customer-facing window.</p>
-                <div class="display-size-row">
-                  <select class="display-size-select" id="cfdWindowSizeSelect">
-                    <option value="1024x768">Tablet — 1024×768</option>
-                    <option value="1280x720">HD — 1280×720</option>
-                    <option value="1920x1080" selected>Full HD — 1920×1080</option>
-                    <option value="custom">Custom…</option>
-                  </select>
-                  <div class="display-custom-inputs hidden" id="cfdCustomSize">
-                    <input type="number" id="cfdCustomW" placeholder="Width" min="640" class="display-custom-input" />
-                    <span class="display-custom-sep">×</span>
-                    <input type="number" id="cfdCustomH" placeholder="Height" min="480" class="display-custom-input" />
-                  </div>
-                </div>
-
-                <!-- Ad image upload -->
-                <div class="display-ad-section" data-min-role="manager">
-                  <p class="settings-toggle-label" style="margin-top: 16px">Advertisement Image</p>
-                  <p class="settings-section-hint">Shown below the cart on the customer display. Recommended size: <strong>1920×400px</strong>.</p>
-                  <div class="display-ad-row">
-                    <label class="file-upload-label display-ad-upload">
-                      <input type="file" id="cfdAdInput" accept="image/*" />
-                      <span class="file-upload-btn">Upload Image</span>
-                      <span class="file-upload-name" id="cfdAdFileName">No file chosen</span>
+                <section class="settings-section">
+                  <div class="settings-toggle-row">
+                    <div>
+                      <p class="settings-toggle-label">Receipt Printing</p>
+                      <p class="settings-toggle-hint">When on, the checkout will print a receipt before recording the sale. Turn this off to push transactions through without printing.</p>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" id="printingToggle" checked />
+                      <span class="slider round"></span>
                     </label>
-                    <button class="btn display-ad-remove hidden" id="cfdAdRemoveBtn" type="button">Remove</button>
                   </div>
-                  <div class="display-ad-preview hidden" id="cfdAdPreview">
-                    <img id="cfdAdPreviewImg" alt="Ad preview" />
-                  </div>
-                </div>
-              </div>
-            </section>
+                </section>
 
-            <!-- Order Queue Timer Settings -->
-            <section class="settings-section">
-              <div class="settings-section-header">
-                <div>
-                  <h3 class="settings-section-title">Order Queue Timers</h3>
-                  <p class="settings-section-hint">
-                    Set when order cards change color and auto-complete. Values are in seconds.
-                  </p>
-                </div>
-              </div>
-              <div class="kds-threshold-fields">
-                <div class="kds-threshold-row">
-                  <p class="settings-toggle-label">Yellow warning (sec)</p>
-                  <input type="number" id="kdsYellowInput" min="1" value="180" class="kds-threshold-input" />
-                </div>
-                <div class="kds-threshold-row">
-                  <p class="settings-toggle-label">Red urgent (sec)</p>
-                  <input type="number" id="kdsRedInput" min="1" value="300" class="kds-threshold-input" />
-                </div>
-                <div class="kds-threshold-row">
-                  <div>
-                    <p class="settings-toggle-label">Auto-remove order (sec)</p>
-                    <p class="settings-toggle-hint">
-                      If an order is still in the queue after this many seconds,
-                      it will be automatically marked done and removed.
-                    </p>
+                <section class="settings-section">
+                  <div class="settings-toggle-row">
+                    <div>
+                      <p class="settings-toggle-label">Confirm before finalizing</p>
+                      <p class="settings-toggle-hint">After printing, ask "Did the receipt print?" before recording the sale. Useful if your printer is unreliable.</p>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" id="confirmPrintToggle" checked />
+                      <span class="slider round"></span>
+                    </label>
                   </div>
-                  <input type="number" id="kdsAutoInput" min="1" value="900" class="kds-threshold-input" />
+                </section>
+
+                <section class="settings-section">
+                  <div class="settings-toggle-row">
+                    <div>
+                      <p class="settings-toggle-label">Print 2 Copies</p>
+                      <p class="settings-toggle-hint">Print a customer copy and a business copy for every sale.</p>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" id="twoCopiesToggle" />
+                      <span class="slider round"></span>
+                    </label>
+                  </div>
+                </section>
+
+                <section class="settings-section">
+                  <div class="settings-toggle-row">
+                    <div>
+                      <p class="settings-toggle-label">Dine In / Takeout</p>
+                      <p class="settings-toggle-hint">When on, staff can choose the order type on each transaction. Turn off for businesses where the distinction doesn't apply.</p>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" id="orderTypeToggle" checked />
+                      <span class="slider round"></span>
+                    </label>
+                  </div>
+                </section>
+
+                <section class="settings-section">
+                  <div class="settings-toggle-row">
+                    <div>
+                      <p class="settings-toggle-label">Show removed adjustments on receipt</p>
+                      <p class="settings-toggle-hint">When on, removed line items appear crossed out on the receipt.</p>
+                    </div>
+                    <label class="switch">
+                      <input type="checkbox" id="showRemovedToggle" checked />
+                      <span class="slider round"></span>
+                    </label>
+                  </div>
+                </section>
+              </div>
+
+              <!-- KDS / Order Queue tab -->
+              <div class="settings-tab hidden" id="settingsTabKds">
+                <h3 class="settings-tab-title">Order Queue Timers</h3>
+                <p class="settings-tab-hint">Set when order cards change color and auto-complete. Values are in seconds.</p>
+                <div class="kds-threshold-fields">
+                  <div class="kds-threshold-row">
+                    <p class="settings-toggle-label">Yellow warning (sec)</p>
+                    <input type="number" id="kdsYellowInput" min="1" value="180" class="kds-threshold-input" />
+                  </div>
+                  <div class="kds-threshold-row">
+                    <p class="settings-toggle-label">Red urgent (sec)</p>
+                    <input type="number" id="kdsRedInput" min="1" value="300" class="kds-threshold-input" />
+                  </div>
+                  <div class="kds-threshold-row">
+                    <div>
+                      <p class="settings-toggle-label">Auto-remove order (sec)</p>
+                      <p class="settings-toggle-hint">If an order is still in the queue after this many seconds, it is automatically marked done and removed.</p>
+                    </div>
+                    <input type="number" id="kdsAutoInput" min="1" value="900" class="kds-threshold-input" />
+                  </div>
                 </div>
               </div>
-            </section>
+
+              <!-- Displays tab -->
+              <div class="settings-tab hidden" id="settingsTabDisplays">
+                <h3 class="settings-tab-title">Displays</h3>
+                <p class="settings-tab-hint">Configure the Kitchen Display and Customer Display windows.</p>
+
+                <div class="display-settings-group">
+                  <p class="settings-toggle-label">Kitchen Display</p>
+                  <p class="settings-section-hint" style="margin-bottom: 10px">Screen size for the kitchen window.</p>
+                  <div class="display-size-row">
+                    <select class="display-size-select" id="kdsWindowSizeSelect">
+                      <option value="1024x768">Tablet — 1024×768</option>
+                      <option value="1280x720">HD — 1280×720</option>
+                      <option value="1920x1080" selected>Full HD — 1920×1080</option>
+                      <option value="custom">Custom…</option>
+                    </select>
+                    <div class="display-custom-inputs hidden" id="kdsCustomSize">
+                      <input type="number" id="kdsCustomW" placeholder="Width" min="640" class="display-custom-input" />
+                      <span class="display-custom-sep">×</span>
+                      <input type="number" id="kdsCustomH" placeholder="Height" min="480" class="display-custom-input" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="display-settings-group">
+                  <p class="settings-toggle-label">Customer Display</p>
+                  <p class="settings-section-hint" style="margin-bottom: 10px">Screen size for the customer-facing window.</p>
+                  <div class="display-size-row">
+                    <select class="display-size-select" id="cfdWindowSizeSelect">
+                      <option value="1024x768">Tablet — 1024×768</option>
+                      <option value="1280x720">HD — 1280×720</option>
+                      <option value="1920x1080" selected>Full HD — 1920×1080</option>
+                      <option value="custom">Custom…</option>
+                    </select>
+                    <div class="display-custom-inputs hidden" id="cfdCustomSize">
+                      <input type="number" id="cfdCustomW" placeholder="Width" min="640" class="display-custom-input" />
+                      <span class="display-custom-sep">×</span>
+                      <input type="number" id="cfdCustomH" placeholder="Height" min="480" class="display-custom-input" />
+                    </div>
+                  </div>
+                  <div class="display-ad-section" data-min-role="manager">
+                    <p class="settings-toggle-label" style="margin-top: 16px">Advertisement Image</p>
+                    <p class="settings-section-hint">Shown below the cart on the customer display. Recommended size: <strong>1920×400px</strong>.</p>
+                    <div class="display-ad-row">
+                      <label class="file-upload-label display-ad-upload">
+                        <input type="file" id="cfdAdInput" accept="image/*" />
+                        <span class="file-upload-btn">Upload Image</span>
+                        <span class="file-upload-name" id="cfdAdFileName">No file chosen</span>
+                      </label>
+                      <button class="btn display-ad-remove hidden" id="cfdAdRemoveBtn" type="button">Remove</button>
+                    </div>
+                    <div class="display-ad-preview hidden" id="cfdAdPreview">
+                      <img id="cfdAdPreviewImg" alt="Ad preview" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </div>
         </div>
       </div>
@@ -681,20 +686,20 @@
             </button>
           </article>
 
-          <article class="card home-util-card card--locked" tabindex="-1" aria-disabled="true">
+          <article class="card home-util-card support-card" tabindex="0">
             <span class="ring" aria-hidden="true"></span>
-            <span class="coming-soon-badge" aria-hidden="true">Soon</span>
-            <button class="btn-main" data-action="inventory" aria-label="View inventory" tabindex="-1">
+            <span class="support-unread-badge hidden" id="supportUnreadBadge" aria-hidden="true"></span>
+            <button class="btn-main" data-action="support" aria-label="Help and support">
               <span class="card-icon" aria-hidden="true">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
-                  <path d="m3.3 7 8.7 5 8.7-5"/>
-                  <line x1="12" y1="22" x2="12" y2="12"/>
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
                 </svg>
               </span>
               <div>
-                <div class="title">Inventory</div>
-                <div class="hint">Stock &amp; tracking</div>
+                <div class="title">Help &amp; Support</div>
+                <div class="hint">Get help or report an issue</div>
               </div>
             </button>
           </article>
@@ -1560,6 +1565,22 @@
               />
             </div>
 
+            <div class="auth-field">
+              <label for="signUpBusinessName">Business name</label>
+              <input
+                type="text"
+                id="signUpBusinessName"
+                placeholder="e.g. Maria's Bakery"
+                required
+                autocomplete="organization"
+              />
+            </div>
+
+            <div class="auth-field">
+              <label for="signUpPhoneNumber">Phone <span class="auth-optional">(optional)</span></label>
+              <input type="tel" id="signUpPhoneNumber" placeholder="912 345 6789" autocomplete="tel" />
+            </div>
+
             <div class="auth-col-pair">
               <div class="auth-field">
                 <label for="signUpPassword">Password</label>
@@ -1596,6 +1617,132 @@
               <a href="#" id="showSignInLink">Sign in</a>
             </p>
           </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help & Support Modal -->
+    <div class="modal-backdrop hidden" id="supportModal">
+      <div class="support-shell">
+
+        <!-- Top bar -->
+        <header class="support-topbar">
+          <span class="support-topbar-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Help &amp; Support
+          </span>
+          <button class="support-topbar-close" id="supportCloseBtn" aria-label="Close">&times;</button>
+        </header>
+
+        <!-- Body -->
+        <div class="support-body">
+
+          <!-- Sidebar -->
+          <aside class="support-sidebar" id="supportSidebar">
+            <div class="support-sidebar-top">
+              <button type="button" class="support-new-btn" id="supportNewTicketBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                New Ticket
+              </button>
+            </div>
+            <ul class="support-ticket-list" id="supportTicketList">
+              <li class="support-empty">No tickets yet.</li>
+            </ul>
+            <p class="support-sidebar-hint">Solved tickets disappear after 7 days.</p>
+          </aside>
+
+          <!-- Main area -->
+          <div class="support-main" id="supportMain">
+
+            <!-- Welcome state -->
+            <div class="support-main-panel" id="supportWelcomePanel">
+              <div class="support-welcome">
+                <div class="support-welcome-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <p class="support-welcome-title">How can we help?</p>
+                <p class="support-welcome-sub">Select a ticket from the sidebar or create a new one.</p>
+              </div>
+            </div>
+
+            <!-- New ticket panel (unused — form lives in #newTicketModal) -->
+            <div class="support-main-panel hidden" id="supportNewPanel"></div>
+
+            <!-- Ticket thread -->
+            <div class="support-main-panel hidden" id="supportDetailPanel">
+              <div class="support-detail-header">
+                <div class="support-detail-header-left">
+                  <button type="button" class="support-back-btn" id="supportBackToListBtn2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    Back
+                  </button>
+                  <div>
+                    <h3 class="support-detail-title" id="supportDetailTitle"></h3>
+                    <div class="support-detail-chips">
+                      <span class="support-chip" id="supportDetailCategory"></span>
+                      <span class="support-status-chip" id="supportDetailStatus"></span>
+                    </div>
+                  </div>
+                </div>
+                <button type="button" class="btn support-solved-btn" id="supportMarkSolvedBtn">Mark as Solved</button>
+              </div>
+              <div class="support-thread" id="supportThread"></div>
+            </div>
+
+            <!-- Success state -->
+            <div class="support-main-panel hidden" id="supportSuccessPanel">
+              <div class="support-welcome">
+                <div class="support-welcome-icon support-welcome-icon--green">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <p class="support-welcome-title">Ticket Submitted!</p>
+                <p class="support-welcome-sub">We'll get back to you as soon as possible.</p>
+              </div>
+            </div>
+
+          </div><!-- end support-main -->
+        </div><!-- end support-body -->
+      </div><!-- end support-shell -->
+    </div>
+
+    <!-- New Ticket Modal -->
+    <div class="modal-backdrop hidden" id="newTicketModal">
+      <div class="modal-container new-ticket-modal-container">
+        <button class="modal-close-btn" id="newTicketCloseBtn">&times;</button>
+        <h2 class="edit-form-title">New Ticket</h2>
+        <div class="new-ticket-form-body">
+          <div class="edit-field">
+            <label for="ticketCategory">Category</label>
+            <select id="ticketCategory">
+              <option value="" disabled selected>Select a category</option>
+              <option value="billing">Billing</option>
+              <option value="bug_report">Bug Report</option>
+              <option value="feature_request">Feature Request</option>
+              <option value="account">Account</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="edit-field">
+            <label for="ticketSubject">Subject</label>
+            <input type="text" id="ticketSubject" placeholder="Brief description of your issue" />
+          </div>
+          <div class="edit-field">
+            <label for="ticketMessage">Message</label>
+            <textarea id="ticketMessage" rows="5" placeholder="Tell us more about your issue..."></textarea>
+          </div>
+          <div class="edit-field">
+            <label>Attachment <span class="support-field-hint">(optional — 1 image, max 5 MB)</span></label>
+            <label class="ticket-upload-btn" for="ticketFiles">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Choose image
+            </label>
+            <input type="file" id="ticketFiles" accept="image/*" class="hidden" />
+            <ul class="ticket-file-list" id="ticketFileList"></ul>
+          </div>
+          <div class="ticket-form-footer">
+            <p class="ticket-status-msg hidden" id="ticketStatusMsg"></p>
+            <button type="button" class="btn primary" id="ticketSubmitBtn">Send Message</button>
+          </div>
         </div>
       </div>
     </div>

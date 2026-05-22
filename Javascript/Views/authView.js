@@ -1,8 +1,11 @@
+import { initPhoneInput } from '../phoneInput.js';
+
 class AuthView {
   _overlay       = document.getElementById('authOverlay');
   _wrapper       = document.getElementById('authFormsWrapper');
   _loginForm     = document.getElementById('loginForm');
   _signUpForm    = document.getElementById('signUpForm');
+  _phoneIti      = null;
   _emailInput    = document.getElementById('loginEmail');
   _passwordInput = document.getElementById('loginPassword');
   _errorEl       = document.getElementById('loginError');
@@ -84,19 +87,22 @@ class AuthView {
       e.preventDefault();
       this._signUpErrorEl.textContent = '';
 
-      const firstName = document.getElementById('signUpFirstName')?.value.trim();
-      const lastName  = document.getElementById('signUpLastName')?.value.trim();
-      const email     = document.getElementById('signUpEmail')?.value.trim();
-      const password  = document.getElementById('signUpPassword')?.value;
-      const confirm   = document.getElementById('signUpConfirm')?.value;
+      const firstName    = document.getElementById('signUpFirstName')?.value.trim();
+      const lastName     = document.getElementById('signUpLastName')?.value.trim();
+      const email        = document.getElementById('signUpEmail')?.value.trim();
+      const businessName = document.getElementById('signUpBusinessName')?.value.trim();
+      const phone        = this._phoneIti ? this._phoneIti.getNumber() : '';
+      const password     = document.getElementById('signUpPassword')?.value;
+      const confirm      = document.getElementById('signUpConfirm')?.value;
 
-      if (!firstName)       { this._signUpErrorEl.textContent = 'Please enter your first name.'; return; }
-      if (!lastName)        { this._signUpErrorEl.textContent = 'Please enter your last name.'; return; }
-      if (!email)           { this._signUpErrorEl.textContent = 'Please enter your email.'; return; }
+      if (!firstName)          { this._signUpErrorEl.textContent = 'Please enter your first name.'; return; }
+      if (!lastName)           { this._signUpErrorEl.textContent = 'Please enter your last name.'; return; }
+      if (!email)              { this._signUpErrorEl.textContent = 'Please enter your email.'; return; }
+      if (!businessName)       { this._signUpErrorEl.textContent = 'Please enter your business name.'; return; }
       if (password.length < 6) { this._signUpErrorEl.textContent = 'Password must be at least 6 characters.'; return; }
       if (password !== confirm) { this._signUpErrorEl.textContent = 'Passwords do not match.'; return; }
 
-      handler({ firstName, lastName, email, password });
+      handler({ firstName, lastName, email, businessName, phone, password });
     });
   }
 
@@ -180,6 +186,9 @@ class AuthView {
       }));
 
       this._onSignUp = forward;
+      if (forward && !this._phoneIti) {
+        setTimeout(() => { this._phoneIti = initPhoneInput('signUpPhoneNumber'); }, DURATION + 20);
+      }
     }, DURATION);
   }
 }

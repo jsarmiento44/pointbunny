@@ -235,8 +235,38 @@ This is being built into a **full commercial POS product**. Keep in mind:
 - Data shapes should be maintained with an API contract in mind
 - Offline mode / sync is a future consideration (`salesBasket` kept as foundation)
 
+## Admin Panel Changelog (Required)
+
+Any time a backend change is made — new table, new column, new storage bucket, new RLS policy, schema change of any kind — **always add an entry to `pointy-admin-updates.md`** before finishing the task.
+
+This file is the admin panel team's source of truth for what migrations to run and what new data to handle. Every entry must include:
+- The SQL migration (full `CREATE TABLE` or `ALTER TABLE` statement)
+- Any required grants and RLS policies
+- What the admin panel needs to do with the new data (read, write, display)
+
+If a task has no backend changes, no entry is needed.
+
 ## Known Incomplete Features
 
-These have UI buttons but no implementation: Inventory, Scan Item, Drawer operations, Refund, Z Report.
+These have UI buttons but no implementation: Scan Item, Drawer operations, Refund, Z Report.
 
 Reports/Analytics is **implemented** (revenue, category, hourly, day-of-week, serving time charts + compare mode).
+
+## Queued Work (not started, do when user asks)
+
+### CSS Technical Debt Cleanup
+`pointy.css` has accumulated significant debt:
+- No z-index scale — values like 1060, 9999, 99999 scattered with no system. Plan: define a CSS custom property z-index ladder (`--z-modal`, `--z-dropdown`, `--z-toast`, etc.)
+- Duplicate rule blocks — `.modal-backdrop` and `.modal-overlay-form` each defined twice; second definition silently wins. The CLAUDE.md note "CSS cascade gotcha" documents this.
+- Excessive `!important` usage fighting specificity wars instead of a clean cascade
+- Orphaned/dead selectors from removed features
+
+**Do not mix this into feature work.** Dedicate a standalone pass when the user is ready.
+
+### Phone SMS Verification (settings)
+The Business tab phone field has a visible "SMS verification coming soon" note. When building this:
+- The hook point is `controlSaveBusinessInfo` in `controller.js` — add an OTP step there before calling `model.saveBusinessInfo`
+- No schema changes needed; the `businesses.phone` column already exists
+
+### PostHog Analytics (items 2, 4, 5 from todos)
+Waiting on the user's PostHog account setup before wiring in event tracking.

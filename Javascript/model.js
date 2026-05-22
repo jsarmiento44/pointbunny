@@ -13,6 +13,9 @@ const generateAdjustmentId = function () {
 export const state = {
   userId: null,         // logged-in user's own auth ID
   businessId: null,     // business this session belongs to (owner's user ID)
+  businessName: null,
+  businessEmail: null,
+  businessPhone: null,
   username: "Wowa",
   role: null,           // role name of the logged-in user
   currentStaff: null,   // logged-in user's staff record
@@ -27,6 +30,7 @@ export const state = {
   salesBasket: [],
   cashflowSales: [],
   voidedSales: [],
+  tickets: [],
   reportsSales: [],
   expenses: [],
   discountCodes: [],
@@ -54,10 +58,11 @@ const _initBusiness = async function (user) {
   const firstName    = user.user_metadata?.first_name || displayName.split(' ')[0] || '';
   const lastName     = user.user_metadata?.last_name  || displayName.split(' ').slice(1).join(' ') || '';
   const businessName = (user.user_metadata?.business_name ?? `${firstName} ${lastName}`.trim()) || user.email;
+  const phone        = user.user_metadata?.phone ?? null;
 
   const { error: bizError } = await supabase
     .from('businesses')
-    .upsert({ id: user.id, name: businessName });
+    .upsert({ id: user.id, name: businessName, email: user.email, phone });
   if (bizError) throw new Error(`businesses upsert failed: ${bizError.message}`);
 
   const { data: existingRole } = await supabase
@@ -160,6 +165,37 @@ export const loadBusinessContext = async function (user) {
   }
 
   state.currentCashier = state.currentStaff;
+
+  const { data: bizData } = await supabase
+    .from('businesses')
+    .select('name')
+    .eq('id', state.businessId)
+    .single();
+  if (bizData) state.businessName = bizData.name ?? null;
+};
+
+export const loadBusinessProfile = async function () {
+  const { data } = await supabase
+    .from('businesses')
+    .select('name, email, phone')
+    .eq('id', state.businessId)
+    .single();
+  if (data) {
+    state.businessName  = data.name  ?? null;
+    state.businessEmail = data.email ?? null;
+    state.businessPhone = data.phone ?? null;
+  }
+};
+
+export const saveBusinessInfo = async function ({ name, email, phone }) {
+  const { error } = await supabase
+    .from('businesses')
+    .update({ name, email: email || null, phone: phone || null })
+    .eq('id', state.businessId);
+  if (error) throw error;
+  state.businessName  = name;
+  state.businessEmail = email || null;
+  state.businessPhone = phone || null;
 };
 
 // ── DB ↔ app shape mapping ────────────────────────────────────────────────────
@@ -1070,4 +1106,73 @@ export const addRole = async function (name) {
   if (error) throw error;
   state.roles.push(data);
   return data;
+};
+
+export const loadTickets = async function () {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  const { data, error } = await supabase
+    .from('tickets')
+    .select('id, category, subject, message, status, has_unread_reply, created_at, solved_at, attachments')
+    .eq('business_id', state.businessId)
+    .or(`status.eq.open,and(status.eq.solved,solved_at.gte.${cutoff.toISOString()})`)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  state.tickets = data;
+};
+
+export const loadTicketReplies = async function (ticketId) {
+  const { data, error } = await supabase
+    .from('ticket_replies')
+    .select('id, sender_type, message, created_at')
+    .eq('ticket_id', ticketId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data;
+};
+
+export const markTicketSolved = async function (ticketId) {
+  const solvedAt = new Date().toISOString();
+  const { error } = await supabase
+    .from('tickets')
+    .update({ status: 'solved', solved_at: solvedAt })
+    .eq('id', ticketId)
+    .eq('business_id', state.businessId);
+  if (error) throw error;
+  const t = state.tickets.find(t => t.id === ticketId);
+  if (t) { t.status = 'solved'; t.solved_at = solvedAt; }
+};
+
+export const markRepliesRead = async function (ticketId) {
+  const { error } = await supabase
+    .from('tickets')
+    .update({ has_unread_reply: false })
+    .eq('id', ticketId)
+    .eq('business_id', state.businessId);
+  if (error) throw error;
+  const t = state.tickets.find(t => t.id === ticketId);
+  if (t) t.has_unread_reply = false;
+};
+
+export const submitTicket = async function ({ category, subject, message, files }) {
+  const attachments = [];
+  for (const file of files) {
+    const ext = file.name.split('.').pop();
+    const path = `${state.businessId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from('ticket-attachments')
+      .upload(path, file);
+    if (uploadError) throw uploadError;
+    const { data } = supabase.storage.from('ticket-attachments').getPublicUrl(path);
+    attachments.push(data.publicUrl);
+  }
+
+  const { error } = await supabase.from('tickets').insert({
+    business_id: state.businessId,
+    category,
+    subject,
+    message,
+    attachments,
+  });
+  if (error) throw error;
 };
