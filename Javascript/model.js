@@ -125,7 +125,7 @@ export const loadBusinessContext = async function (user) {
 
   let { data: staffRow } = await supabase
     .from('staff')
-    .select('id, business_id, first_name, last_name, email, roles(name)')
+    .select('id, business_id, first_name, last_name, email, pin, roles(name)')
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -133,7 +133,7 @@ export const loadBusinessContext = async function (user) {
   if (!staffRow) {
     const { data: pendingRow } = await supabase
       .from('staff')
-      .select('id, business_id, first_name, last_name, email, roles(name)')
+      .select('id, business_id, first_name, last_name, email, pin, roles(name)')
       .eq('email', user.email)
       .is('user_id', null)
       .maybeSingle();
@@ -156,6 +156,7 @@ export const loadBusinessContext = async function (user) {
       lastName:  staffRow.last_name,
       email:     staffRow.email,
       role:      state.role,
+      hasPin:    !!staffRow.pin,
     };
   } else {
     state.businessId   = user.id;
@@ -1044,12 +1045,14 @@ const dbToStaff = (row) => ({
   role:      row.roles?.name ?? 'Staff',
   roleId:    row.roles?.id ?? null,
   isSelf:    row.user_id === state.userId,
+  hasPin:    !!row.pin,
+  pin:       row.pin ?? null,
 });
 
 export const loadStaff = async function () {
   const { data, error } = await supabase
     .from('staff')
-    .select('id, first_name, last_name, email, is_active, joined_at, user_id, roles(id, name)')
+    .select('id, first_name, last_name, email, is_active, joined_at, user_id, pin, roles(id, name)')
     .eq('business_id', state.businessId)
     .order('invited_at', { ascending: true });
   if (error) throw error;
@@ -1076,10 +1079,35 @@ export const inviteStaff = async function ({ firstName, lastName, email, roleId 
       email:       email.toLowerCase().trim(),
       role_id:     roleId,
     })
-    .select('id, first_name, last_name, email, is_active, joined_at, user_id, roles(id, name)')
+    .select('id, first_name, last_name, email, is_active, joined_at, user_id, pin, roles(id, name)')
     .single();
   if (error) throw error;
   state.staff.push(dbToStaff(data));
+};
+
+export const updateStaffRole = async function (staffId, roleId) {
+  const { error, count } = await supabase
+    .from('staff')
+    .update({ role_id: roleId }, { count: 'exact' })
+    .eq('id', staffId)
+    .eq('business_id', state.businessId);
+  if (error) throw error;
+  if (count === 0) throw new Error('Permission denied — check staff RLS update policy.');
+  const role = state.roles.find(r => r.id === roleId);
+  const s = state.staff.find(s => s.id === staffId);
+  if (s && role) { s.roleId = roleId; s.role = role.name; }
+};
+
+export const setStaffPin = async function (staffId, pin) {
+  const { error, count } = await supabase
+    .from('staff')
+    .update({ pin: pin || null }, { count: 'exact' })
+    .eq('id', staffId)
+    .eq('business_id', state.businessId);
+  if (error) throw error;
+  if (count === 0) throw new Error('Permission denied — check staff RLS update policy.');
+  const s = state.staff.find(s => s.id === staffId);
+  if (s) { s.pin = pin || null; s.hasPin = !!pin; }
 };
 
 export const removeStaff = async function (id) {
@@ -1113,7 +1141,7 @@ export const loadTickets = async function () {
   cutoff.setDate(cutoff.getDate() - 7);
   const { data, error } = await supabase
     .from('tickets')
-    .select('id, category, subject, message, status, has_unread_reply, created_at, solved_at, attachments')
+    .select('id, category, subject, message, status, has_unread_reply, created_at, solved_at, attachments, rating')
     .eq('business_id', state.businessId)
     .or(`status.eq.open,and(status.eq.solved,solved_at.gte.${cutoff.toISOString()})`)
     .order('created_at', { ascending: false });
@@ -1175,4 +1203,30 @@ export const submitTicket = async function ({ category, subject, message, files 
     attachments,
   });
   if (error) throw error;
+};
+
+export const submitTicketReply = async function (ticketId, message) {
+  const { error } = await supabase.from('ticket_replies').insert({
+    ticket_id: ticketId,
+    sender_type: 'business',
+    message,
+  });
+  if (error) throw error;
+  const { error: flagError } = await supabase
+    .from('tickets')
+    .update({ has_business_reply: true })
+    .eq('id', ticketId)
+    .eq('business_id', state.businessId);
+  if (flagError) throw flagError;
+};
+
+export const submitTicketRating = async function (ticketId, rating, comment) {
+  const { error } = await supabase
+    .from('tickets')
+    .update({ rating, rating_comment: comment || null, rated_at: new Date().toISOString() })
+    .eq('id', ticketId)
+    .eq('business_id', state.businessId);
+  if (error) throw error;
+  const t = state.tickets.find(t => t.id === ticketId);
+  if (t) { t.rating = rating; t.rating_comment = comment || null; }
 };

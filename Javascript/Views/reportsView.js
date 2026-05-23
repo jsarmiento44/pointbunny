@@ -5,11 +5,47 @@ const fmt = (n) =>
 
 const PALETTE = ['#22c55e','#60a5fa','#f59e0b','#f87171','#a78bfa','#34d399','#fb923c','#818cf8'];
 
+const makeOuterLabelPlugin = (mutedColor, textColor) => ({
+  id: 'outerLabels',
+  afterDraw(chart) {
+    const { ctx } = chart;
+    const meta = chart.getDatasetMeta(0);
+    const ds = chart.data.datasets[0];
+    const total = ds.data.reduce((s, v) => s + v, 0);
+    if (!total) return;
+    ctx.save();
+    ctx.textBaseline = 'middle';
+    meta.data.forEach((arc, i) => {
+      const pct = (ds.data[i] / total) * 100;
+      if (pct < 5) return;
+      const mid = (arc.startAngle + arc.endAngle) / 2;
+      const r = arc.outerRadius + 22;
+      const x = arc.x + Math.cos(mid) * r;
+      const y = arc.y + Math.sin(mid) * r;
+      const align = x >= arc.x ? 'left' : 'right';
+      ctx.textAlign = align;
+
+      const raw = chart.data.labels[i] ?? '';
+      const label = raw.length > 11 ? raw.slice(0, 10) + '…' : raw;
+
+      ctx.font = '700 11px system-ui, sans-serif';
+      ctx.fillStyle = textColor ?? mutedColor;
+      ctx.fillText(`${pct.toFixed(1)}%`, x, y - 8);
+
+      ctx.font = '11px system-ui, sans-serif';
+      ctx.fillStyle = mutedColor;
+      ctx.fillText(label, x, y + 8);
+    });
+    ctx.restore();
+  }
+});
+
 class ReportsView extends View {
   _parentElement = document.querySelector("#reportsPanel");
   _Chart = null;
   _charts = {};
   _observers = {};
+  _activeSection = "overview";
 
   // ── Panel open / close ───────────────────────────────────────────────────
 
@@ -26,6 +62,27 @@ class ReportsView extends View {
       btn.classList.toggle("active", btn.dataset.period === "today");
     });
     document.querySelector("#reportsCustomRange").classList.add("hidden");
+    this._switchSection("overview");
+  }
+
+  // ── Sidebar section switching ─────────────────────────────────────────────
+
+  _switchSection(section) {
+    this._activeSection = section;
+    this._parentElement.querySelectorAll(".rp-nav-tab").forEach(btn => {
+      btn.classList.toggle("rp-nav-tab--active", btn.dataset.section === section);
+    });
+    this._parentElement.querySelectorAll(".rp-section").forEach(sec => {
+      sec.classList.toggle("hidden", sec.dataset.section !== section);
+    });
+  }
+
+  _addHandlerSections() {
+    this._parentElement.querySelector(".rp-sidebar")?.addEventListener("click", e => {
+      const btn = e.target.closest(".rp-nav-tab");
+      if (!btn) return;
+      this._switchSection(btn.dataset.section);
+    });
   }
 
   close() {
@@ -68,6 +125,7 @@ class ReportsView extends View {
 
   renderSummary({ revenue, transactions, avgOrder, avgServingMinutes }) {
     document.querySelector("#reportsRevenue").textContent = fmt(revenue);
+    const sgEl = document.querySelector("#salesGrossIncome"); if (sgEl) sgEl.textContent = fmt(revenue);
     document.querySelector("#reportsTransactions").textContent = transactions;
     document.querySelector("#reportsAvgOrder").textContent = fmt(avgOrder);
     const servEl = document.querySelector("#reportsServingTime");
@@ -84,32 +142,64 @@ class ReportsView extends View {
     }
   }
 
+  // ── Full-list modal ──────────────────────────────────────────────────────
+
+  _openListModal(title, bodyHtml) {
+    const modal = document.querySelector("#rpListModal");
+    if (!modal) return;
+    document.querySelector("#rpListModalTitle").textContent = title;
+    document.querySelector("#rpListModalBody").innerHTML = bodyHtml;
+    modal.classList.remove("hidden");
+
+    const close = () => modal.classList.add("hidden");
+    document.querySelector("#rpListModalClose").onclick = close;
+    modal.onclick = (e) => { if (e.target === modal) close(); };
+  }
+
   // ── Top items list ───────────────────────────────────────────────────────
 
-  renderTopItems(items) {
+  renderTopItems(items, sortKey = "quantity") {
     const el = document.querySelector("#reportsTopItems");
     if (!items.length) {
       el.innerHTML = `<p class="rp-empty">No sales data for this period.</p>`;
       return;
     }
+    const LIMIT = 6;
+    const preview = items.slice(0, LIMIT);
     const maxQty = items[0].quantity;
-    el.innerHTML = `
-      <div class="rp-item-list">
-        ${items.map((item, i) => `
-          <div class="rp-item-row">
-            <span class="rp-item-rank">${i + 1}</span>
-            <div class="rp-item-main">
-              <div class="rp-item-row-top">
-                <span class="rp-item-name">${item.name}</span>
-                <span class="rp-item-rev">${fmt(item.revenue)}</span>
-              </div>
-              <div class="rp-item-bar-track">
-                <div class="rp-item-bar" style="width:${Math.round((item.quantity / maxQty) * 100)}%"></div>
-              </div>
-              <span class="rp-item-qty">${item.quantity} sold</span>
-            </div>
-          </div>`).join("")}
+    const maxRev = items[0].revenue;
+    const byQty = sortKey === "quantity";
+
+    const MEDALS = ['🥇', '🥈', '🥉'];
+    const rowHtml = (item, i) => `
+      <div class="rp-item-row">
+        <span class="rp-item-rank">${MEDALS[i] ?? i + 1}</span>
+        <div class="rp-item-main">
+          <div class="rp-item-row-top">
+            <span class="rp-item-name">${item.name}</span>
+            <span class="rp-item-rev">${byQty ? item.quantity : fmt(item.revenue)}</span>
+          </div>
+          <div class="rp-item-bar-track">
+            <div class="rp-item-bar" style="width:${byQty ? Math.round((item.quantity / maxQty) * 100) : Math.round((item.revenue / maxRev) * 100)}%"></div>
+          </div>
+          <span class="rp-item-qty">${byQty ? fmt(item.revenue) : `${item.quantity} sold`}</span>
+        </div>
       </div>`;
+
+    el.innerHTML = `
+      <div class="rp-item-list rp-item-list--grid">
+        ${preview.map((item, i) => rowHtml(item, i)).join("")}
+      </div>
+      ${items.length > LIMIT ? `<button class="rp-top-items-toggle">View full list (${items.length} items)</button>` : ""}`;
+
+    if (items.length > LIMIT) {
+      el.querySelector(".rp-top-items-toggle").addEventListener("click", () => {
+        this._openListModal("Top Items", `
+          <div class="rp-item-list">
+            ${items.map((item, i) => rowHtml(item, i)).join("")}
+          </div>`);
+      });
+    }
   }
 
   // ── Charts ───────────────────────────────────────────────────────────────
@@ -137,10 +227,10 @@ class ReportsView extends View {
 
   // ── Charts ───────────────────────────────────────────────────────────────
 
-  async renderCharts({ revenueOverTime, categoryMix, hourlyBreakdown, dayOfWeek, servingTime }) {
+  async renderCharts({ categoryMix, itemMix, hourlyBreakdown, dayOfWeek, servingTime }) {
     const Chart = await this._ensureChart();
-    this._renderRevenueChart(Chart, revenueOverTime);
     this._renderCategoryChart(Chart, categoryMix);
+    this._renderItemMixChart(Chart, itemMix ?? []);
     this._renderHourlyChart(Chart, hourlyBreakdown);
     this._renderDowChart(Chart, dayOfWeek);
     this._renderServingHourChart(Chart, servingTime);
@@ -207,51 +297,134 @@ class ReportsView extends View {
     obs.observe(target);
   }
 
-  _renderRevenueChart(Chart, { labels, data }) {
+  async renderOverviewChart({ labels, datasets }) {
+    const Chart = await this._ensureChart();
     this._activateCard("rpRevenueCard", "rpRevenuePh", "rpRevenueWrap", "rpRevenueBadge");
+
+    // Cancel any pending observer so we can render immediately (canvas is visible)
+    this._observers['rpRevenueCanvas']?.disconnect();
+    delete this._observers['rpRevenueCanvas'];
     if (this._charts.revenue) { this._charts.revenue.destroy(); this._charts.revenue = null; }
 
-    const brand = "#22c55e";
-    const gridColor = this._css("--line");
-    const mutedColor = this._css("--muted");
+    const canvas = document.querySelector('#rpRevenueCanvas');
+    if (!canvas) return;
 
-    this._observeChart("rpRevenueCanvas", (canvas) => {
-      this._charts.revenue = new Chart(canvas, {
-        type: "bar",
-        data: {
-          labels,
-          datasets: [{
-            data,
-            backgroundColor: this._withAlpha(brand, 0.75),
-            borderColor: brand,
-            borderWidth: 0,
-            borderRadius: 5,
-            borderSkipped: false,
-          }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: this._barAnim(),
-          plugins: { legend: { display: false }, tooltip: {
-            callbacks: { label: (ctx) => " " + fmt(ctx.raw) }
-          }},
-          scales: {
-            x: {
-              grid: { color: gridColor, drawTicks: false },
-              ticks: { color: mutedColor, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 },
+    // Empty state: no metrics selected
+    const wrap = canvas.parentElement;
+    let emptyEl = wrap.querySelector('.rp-chart-empty');
+    if (!emptyEl) {
+      emptyEl = document.createElement('div');
+      emptyEl.className = 'rp-chart-empty';
+      emptyEl.innerHTML = '<span>Select a card above to display it on the chart</span>';
+      wrap.appendChild(emptyEl);
+    }
+    if (datasets.length === 0) {
+      canvas.style.display = 'none';
+      emptyEl.style.display = '';
+      const titleEl = document.getElementById('rpOverviewChartTitle');
+      if (titleEl) titleEl.textContent = 'Overview';
+      return;
+    }
+    canvas.style.display = '';
+    emptyEl.style.display = 'none';
+
+    const gridColor  = this._css('--line');
+    const mutedColor = this._css('--muted');
+
+    const CURRENCY = new Set(['revenue', 'expenses', 'net', 'avgOrder']);
+    const hasCurrency    = datasets.some(d => CURRENCY.has(d._metric));
+    const hasNonCurrency = datasets.some(d => !CURRENCY.has(d._metric));
+
+    const mapped = datasets.map(d => ({ ...d, yAxisID: CURRENCY.has(d._metric) ? 'yLeft' : 'yRight' }));
+
+    // Update the title span
+    const titleEl = document.getElementById('rpOverviewChartTitle');
+    if (titleEl) {
+      const names = datasets.map(d => d.label);
+      titleEl.textContent = names.length <= 3 ? names.join(' · ') : 'Overview';
+    }
+
+    this._charts.revenue = new Chart(canvas, {
+      type: 'line',
+      data: { labels, datasets: mapped },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 350, easing: 'easeOutQuart' },
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            display: datasets.length > 1,
+            position: 'bottom',
+            labels: {
+              color: mutedColor,
+              boxWidth: 10,
+              boxHeight: 10,
+              borderRadius: 5,
+              useBorderRadius: true,
+              padding: 16,
             },
-            y: {
-              grid: { color: gridColor },
-              ticks: {
-                color: mutedColor,
-                callback: (v) => v === 0 ? "$0" : "$" + (v >= 1000 ? (v / 1000).toFixed(1) + "k" : v),
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const m = ctx.dataset._metric;
+                const v = ctx.raw;
+                if (m === 'transactions') return ` ${Math.round(v)} orders`;
+                return ' ' + fmt(v);
               },
-              beginAtZero: true,
             },
           },
         },
-      });
+        scales: {
+          x: {
+            grid: { color: gridColor, drawTicks: false },
+            ticks: { color: mutedColor, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 },
+          },
+          yLeft: {
+            display: hasCurrency,
+            position: 'left',
+            grid: { color: gridColor },
+            ticks: {
+              color: mutedColor,
+              callback: v => v === 0 ? '$0' : '$' + (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v.toFixed(0)),
+            },
+            beginAtZero: true,
+          },
+          yRight: {
+            display: hasNonCurrency,
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            ticks: { color: mutedColor, callback: v => Math.round(v) },
+            beginAtZero: true,
+          },
+        },
+      },
+    });
+  }
+
+  setSelectedMetrics(set) {
+    this._parentElement.querySelectorAll('.rp-kpi[data-metric]').forEach(card => {
+      const selected = set.has(card.dataset.metric);
+      card.classList.toggle('rp-kpi--selected', selected);
+      card.setAttribute('aria-pressed', String(selected));
+    });
+  }
+
+  _addHandlerKpiToggle(handler) {
+    const strip = this._parentElement.querySelector('.rp-kpi-strip');
+    if (!strip) return;
+    strip.addEventListener('click', e => {
+      const card = e.target.closest('[data-metric]');
+      if (!card || e.target.closest('button')) return;
+      handler(card.dataset.metric);
+    });
+    strip.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('[data-metric]');
+      if (!card) return;
+      e.preventDefault();
+      handler(card.dataset.metric);
     });
   }
 
@@ -279,9 +452,43 @@ class ReportsView extends View {
 
     canvas.style.display = "";
     catEmpty.style.display = "none";
-
     if (this._charts.category) { this._charts.category.destroy(); this._charts.category = null; }
-    const mutedColor = this._css("--muted");
+
+    const totalValue  = items.reduce((s, i) => s + i.value, 0);
+    const mutedColor  = this._css("--muted");
+    const textColor   = this._css("--text");
+    const gapColor    = this._css("--panel-strong");
+    const outerLabels = makeOuterLabelPlugin(mutedColor, textColor);
+
+    const centerPlugin = {
+      id: 'centerText',
+      afterDraw(chart) {
+        const { ctx, chartArea: { top, bottom, left, right } } = chart;
+        const cx = (left + right) / 2, cy = (top + bottom) / 2;
+        const active = chart.getActiveElements();
+        let l1, l2;
+        if (active.length > 0) {
+          const { datasetIndex, index } = active[0];
+          const v   = chart.data.datasets[datasetIndex].data[index];
+          const lbl = chart.data.labels[index];
+          l1 = fmt(v);
+          l2 = lbl.length > 13 ? lbl.slice(0, 11) + '…' : lbl;
+        } else {
+          l1 = fmt(totalValue);
+          l2 = 'total sales';
+        }
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = `bold 16px system-ui, sans-serif`;
+        ctx.fillStyle = textColor;
+        ctx.fillText(l1, cx, cy - 9);
+        ctx.font = `11px system-ui, sans-serif`;
+        ctx.fillStyle = mutedColor;
+        ctx.fillText(l2, cx, cy + 9);
+        ctx.restore();
+      }
+    };
 
     this._observeChart("rpCategoryCanvas", (cvs) => {
       this._charts.category = new Chart(cvs, {
@@ -291,33 +498,137 @@ class ReportsView extends View {
           datasets: [{
             data: items.map(i => i.value),
             backgroundColor: PALETTE.slice(0, items.length),
-            borderWidth: 0,
-            hoverOffset: 6,
+            borderWidth: 3,
+            borderColor: gapColor,
+            borderRadius: 6,
+            hoverOffset: 14,
+            hoverBorderColor: gapColor,
           }],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          cutout: "62%",
+          cutout: "70%",
+          layout: { padding: 52 },
           animation: this._donutAnim(),
           plugins: {
-            legend: {
-              position: "bottom",
-              labels: {
-                color: mutedColor,
-                boxWidth: 10,
-                boxHeight: 10,
-                borderRadius: 3,
-                padding: 12,
-                font: { size: 11 },
-              },
-            },
+            legend: { display: false },
             tooltip: {
-              callbacks: { label: (ctx) => ` ${ctx.label}: ${fmt(ctx.raw)}` }
+              callbacks: {
+                label: (ctx) => {
+                  const pct = totalValue > 0 ? ((ctx.raw / totalValue) * 100).toFixed(1) : 0;
+                  return ` ${ctx.label}: ${fmt(ctx.raw)} (${pct}%)`;
+                }
+              },
             },
           },
         },
+        plugins: [centerPlugin, outerLabels],
       });
+      requestAnimationFrame(() => this._charts.category?.resize());
+    });
+  }
+
+  _renderItemMixChart(Chart, items) {
+    this._activateCard("rpItemMixCard", "rpItemMixPh", "rpItemMixWrap", "rpItemMixBadge");
+    const canvas = document.querySelector("#rpItemMixCanvas");
+    if (!canvas) return;
+
+    const wrap = canvas.parentElement;
+    let emptyEl = wrap.querySelector(".rp-item-mix-empty");
+    if (!emptyEl) {
+      emptyEl = document.createElement("p");
+      emptyEl.className = "rp-empty rp-item-mix-empty";
+      wrap.appendChild(emptyEl);
+    }
+
+    if (!items.length) {
+      if (this._charts.itemMix) { this._charts.itemMix.destroy(); this._charts.itemMix = null; }
+      this._observers["rpItemMixCanvas"]?.disconnect();
+      canvas.style.display = "none";
+      emptyEl.textContent = "No data.";
+      emptyEl.style.display = "";
+      return;
+    }
+
+    canvas.style.display = "";
+    emptyEl.style.display = "none";
+    if (this._charts.itemMix) { this._charts.itemMix.destroy(); this._charts.itemMix = null; }
+
+    const top         = items.slice(0, 8);
+    const totalQty    = top.reduce((s, i) => s + i.quantity, 0);
+    const mutedColor  = this._css("--muted");
+    const textColor   = this._css("--text");
+    const gapColor    = this._css("--panel-strong");
+    const outerLabels = makeOuterLabelPlugin(mutedColor, textColor);
+
+    const centerPlugin = {
+      id: 'centerText',
+      afterDraw(chart) {
+        const { ctx, chartArea: { top, bottom, left, right } } = chart;
+        const cx = (left + right) / 2, cy = (top + bottom) / 2;
+        const active = chart.getActiveElements();
+        let l1, l2;
+        if (active.length > 0) {
+          const { datasetIndex, index } = active[0];
+          const v   = chart.data.datasets[datasetIndex].data[index];
+          const lbl = chart.data.labels[index];
+          const pct = totalQty > 0 ? ((v / totalQty) * 100).toFixed(1) : 0;
+          l1 = `${pct}%`;
+          l2 = lbl.length > 13 ? lbl.slice(0, 11) + '…' : lbl;
+        } else {
+          l1 = String(totalQty);
+          l2 = 'items sold';
+        }
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = `bold 16px system-ui, sans-serif`;
+        ctx.fillStyle = textColor;
+        ctx.fillText(l1, cx, cy - 9);
+        ctx.font = `11px system-ui, sans-serif`;
+        ctx.fillStyle = mutedColor;
+        ctx.fillText(l2, cx, cy + 9);
+        ctx.restore();
+      }
+    };
+
+    this._observeChart("rpItemMixCanvas", (cvs) => {
+      this._charts.itemMix = new Chart(cvs, {
+        type: "doughnut",
+        data: {
+          labels: top.map(i => i.name),
+          datasets: [{
+            data: top.map(i => i.quantity),
+            backgroundColor: PALETTE.slice(0, top.length),
+            borderWidth: 3,
+            borderColor: gapColor,
+            borderRadius: 6,
+            hoverOffset: 14,
+            hoverBorderColor: gapColor,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "70%",
+          layout: { padding: 52 },
+          animation: this._donutAnim(),
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const pct = totalQty > 0 ? ((ctx.raw / totalQty) * 100).toFixed(1) : 0;
+                  return ` ${ctx.label}: ${ctx.raw} sold (${pct}%)`;
+                },
+              },
+            },
+          },
+        },
+        plugins: [centerPlugin, outerLabels],
+      });
+      requestAnimationFrame(() => this._charts.itemMix?.resize());
     });
   }
 
@@ -594,31 +905,49 @@ class ReportsView extends View {
 
   // ── Staff performance ────────────────────────────────────────────────────
 
-  renderStaff(staff) {
+  renderStaff(staff, sortKey = "revenue") {
     const el = document.querySelector("#reportsStaff");
     if (!el) return;
     if (!staff.length) {
       el.innerHTML = `<p class="rp-empty">No sales data for this period.</p>`;
       return;
     }
+    const LIMIT = 6;
+    const preview = staff.slice(0, LIMIT);
     const maxRev = staff[0].revenue;
-    el.innerHTML = `
-      <div class="rp-staff-list">
-        ${staff.map((s, i) => `
-          <div class="rp-staff-row">
-            <span class="rp-item-rank">${i + 1}</span>
-            <div class="rp-item-main">
-              <div class="rp-item-row-top">
-                <span class="rp-item-name">${s.name}</span>
-                <span class="rp-item-rev">${fmt(s.revenue)}</span>
-              </div>
-              <div class="rp-item-bar-track">
-                <div class="rp-item-bar rp-item-bar--staff" style="width:${Math.round((s.revenue / maxRev) * 100)}%"></div>
-              </div>
-              <span class="rp-item-qty">${s.transactions} transaction${s.transactions !== 1 ? "s" : ""}</span>
-            </div>
-          </div>`).join("")}
+    const maxTx  = staff[0].transactions;
+    const byQty  = sortKey === "quantity";
+
+    const MEDALS = ['🥇', '🥈', '🥉'];
+    const rowHtml = (s, i) => `
+      <div class="rp-staff-row">
+        <span class="rp-item-rank">${MEDALS[i] ?? i + 1}</span>
+        <div class="rp-item-main">
+          <div class="rp-item-row-top">
+            <span class="rp-item-name">${s.name}</span>
+            <span class="rp-item-rev">${byQty ? s.transactions : fmt(s.revenue)}</span>
+          </div>
+          <div class="rp-item-bar-track">
+            <div class="rp-item-bar rp-item-bar--staff" style="width:${byQty ? Math.round((s.transactions / maxTx) * 100) : Math.round((s.revenue / maxRev) * 100)}%"></div>
+          </div>
+          <span class="rp-item-qty">${byQty ? fmt(s.revenue) : `${s.transactions} transaction${s.transactions !== 1 ? "s" : ""}`}</span>
+        </div>
       </div>`;
+
+    el.innerHTML = `
+      <div class="rp-staff-list rp-staff-list--grid">
+        ${preview.map((s, i) => rowHtml(s, i)).join("")}
+      </div>
+      ${staff.length > LIMIT ? `<button class="rp-top-items-toggle">View full list (${staff.length} members)</button>` : ""}`;
+
+    if (staff.length > LIMIT) {
+      el.querySelector(".rp-top-items-toggle").addEventListener("click", () => {
+        this._openListModal("Staff Performance", `
+          <div class="rp-staff-list">
+            ${staff.map((s, i) => rowHtml(s, i)).join("")}
+          </div>`);
+      });
+    }
   }
 
   // ── Sort pills ───────────────────────────────────────────────────────────
@@ -629,8 +958,22 @@ class ReportsView extends View {
     });
   }
 
+  setStaffSort(key) {
+    document.querySelectorAll("#staffSortPills .rp-sort-pill").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.sort === key);
+    });
+  }
+
   _addHandlerTopItemsSort(handler) {
     document.querySelector("#topItemsSortPills")?.addEventListener("click", (e) => {
+      const pill = e.target.closest(".rp-sort-pill");
+      if (!pill || pill.classList.contains("active")) return;
+      handler(pill.dataset.sort);
+    });
+  }
+
+  _addHandlerStaffSort(handler) {
+    document.querySelector("#staffSortPills")?.addEventListener("click", (e) => {
       const pill = e.target.closest(".rp-sort-pill");
       if (!pill || pill.classList.contains("active")) return;
       handler(pill.dataset.sort);
@@ -695,8 +1038,7 @@ class ReportsView extends View {
     document.querySelector("#reportsTabs")?.classList.add("hidden");
     document.querySelector("#reportsCustomRange")?.classList.add("hidden");
     document.querySelector("#reportsCompareBar")?.classList.remove("hidden");
-    document.querySelector(".rp-kpi-strip")?.classList.add("hidden");
-    document.querySelector(".rp-grid")?.classList.add("hidden");
+    this._parentElement.querySelectorAll(".rp-section").forEach(s => s.classList.add("hidden"));
     document.querySelector("#rpCompareResults")?.classList.add("hidden");
     const btn = document.querySelector("#reportsCompareBtn");
     if (btn) {
@@ -710,8 +1052,7 @@ class ReportsView extends View {
     document.querySelector("#reportsTabs")?.classList.remove("hidden");
     document.querySelector("#reportsCompareBar")?.classList.add("hidden");
     document.querySelector("#rpCompareResults")?.classList.add("hidden");
-    document.querySelector(".rp-kpi-strip")?.classList.remove("hidden");
-    document.querySelector(".rp-grid")?.classList.remove("hidden");
+    this._switchSection(this._activeSection);
     const btn = document.querySelector("#reportsCompareBtn");
     if (btn) {
       btn.classList.remove("active");
@@ -1045,6 +1386,67 @@ class ReportsView extends View {
       handler({ period: "custom", from, to });
     });
   }
+
+  // ── Expenses ──────────────────────────────────────────────────────────────
+
+  renderExpenseKpis({ expenses, net, avgGross = 0, avgNet = 0, avgSuffix = '', avgTooltip = '' }) {
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = fmt(val); };
+    setVal("reportsExpenses", expenses);
+    setVal("reportsNetIncome", net);
+    setVal("salesNetIncome", net);
+    setVal("salesAvgGross", avgGross);
+    setVal("salesAvgNet", avgNet);
+    const applyNetClass = (id) => {
+      const el = document.getElementById(id);
+      if (el) { el.classList.toggle("rp-kpi-val--positive", net >= 0); el.classList.toggle("rp-kpi-val--negative", net < 0); }
+    };
+    applyNetClass("reportsNetIncome");
+    applyNetClass("salesNetIncome");
+    const avgNetEl = document.getElementById("salesAvgNet");
+    if (avgNetEl) { avgNetEl.classList.toggle("rp-kpi-val--positive", avgNet >= 0); avgNetEl.classList.toggle("rp-kpi-val--negative", avgNet < 0); }
+    if (avgSuffix) {
+      const glEl = document.getElementById("salesAvgGrossLabel");
+      const nlEl = document.getElementById("salesAvgNetLabel");
+      if (glEl) glEl.textContent = `Avg. Gross ${avgSuffix}`;
+      if (nlEl) nlEl.textContent = `Avg. Net ${avgSuffix}`;
+    }
+    if (avgTooltip) {
+      const gi = document.getElementById("salesAvgGrossInfo");
+      const ni = document.getElementById("salesAvgNetInfo");
+      if (gi) gi.dataset.tip = avgTooltip;
+      if (ni) ni.dataset.tip = avgTooltip;
+    }
+  }
+
+  renderSalesKpis({ bestSeller, topCategory, topStaff }) {
+    const set = (valId, subId, val, sub) => {
+      const v = document.getElementById(valId);
+      const s = document.getElementById(subId);
+      if (v) v.textContent = val ?? '—';
+      if (s) s.textContent = sub ?? '';
+    };
+    set('salesBestSeller',    'salesBestSellerSub',   bestSeller?.name,    bestSeller  ? `${bestSeller.quantity} sold`  : '');
+    set('salesTopCategory',   'salesTopCategorySub',  topCategory?.label,  topCategory ? fmt(topCategory.value)         : '');
+    set('salesTopStaff',      'salesTopStaffSub',     topStaff?.name,      topStaff    ? fmt(topStaff.revenue)           : '');
+  }
+
+  renderTrafficKpis({ peakHour, peakDay, total, avgDaily }) {
+    const hourVal = document.getElementById('trafficPeakHour');
+    const hourSub = document.getElementById('trafficPeakHourSub');
+    const dayVal  = document.getElementById('trafficPeakDay');
+    const daySub  = document.getElementById('trafficPeakDaySub');
+    const avgVal  = document.getElementById('trafficAvgDaily');
+    const avgSub  = document.getElementById('trafficAvgDailySub');
+
+    if (hourVal) hourVal.textContent = peakHour ? peakHour.label : '—';
+    if (hourSub) hourSub.textContent = peakHour ? `${peakHour.count} orders` : '';
+    if (dayVal)  dayVal.textContent  = peakDay  ? peakDay.label  : '—';
+    if (daySub)  daySub.textContent  = peakDay  ? `${peakDay.count} orders` : '';
+    if (avgVal)  avgVal.textContent  = avgDaily > 0 ? (Number.isInteger(avgDaily) ? avgDaily : avgDaily.toFixed(1)) : '—';
+    if (avgSub)  avgSub.textContent  = total > 0 ? `${total} total` : '';
+  }
+
+
 }
 
 export default new ReportsView();

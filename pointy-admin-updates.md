@@ -5,6 +5,186 @@ that the admin panel needs to know about. Add new entries at the top as features
 
 ---
 
+> ### Sync Process
+> **Source of truth lives in the admin panel repo** (`pointy-admin`).
+>
+> When this file is updated, the admin panel team will send a copy renamed as:
+> `pointy-admin-updates.YYYY-MM-DD.update.md`
+>
+> **Pointy app team:** replace your `pointy-admin-updates.md` with the contents of that file, then delete the `.update.md` file. If you've made local edits, diff and merge manually before deleting.
+
+---
+
+## [2026-05-22] Cashier Sub-In System — PIN + Audit Trail
+
+### Schema changes
+
+```sql
+ALTER TABLE public.staff ADD COLUMN pin text;
+ALTER TABLE public.sales ADD COLUMN logged_in_cashier text;
+```
+
+> No new grants or RLS needed — new columns on existing tables inherit the table's grants.
+
+### How it works
+
+Businesses can now switch the active cashier at the register without logging out. The person physically at the register enters their 6-digit PIN to sub in. The sale record captures both:
+
+| Column | What it stores |
+|---|---|
+| `added_by` (existing) | The cashier who actually rang the sale (the sub-in person) |
+| `logged_in_cashier` (new) | The account that was logged into the app at the time |
+
+If `added_by` ≠ `logged_in_cashier`, the sale was rung under a sub-in.
+
+### What the admin panel can do with this
+
+- Show both fields on the transaction detail view for full accountability
+- Filter/group sales by `logged_in_cashier` to see activity per account
+- Flag transactions where a sub-in occurred (`added_by != logged_in_cashier`)
+
+### Staff PIN
+
+- `staff.pin` stores the 6-digit PIN (plaintext). **Each staff member sets their own PIN** on first login — the PIN setup screen is mandatory and cannot be dismissed.
+- Business owners can also reset/change a staff member's PIN via Staff management in the Pointy app.
+- Staff without a PIN appear greyed-out and are not selectable in the cashier switcher.
+- The PIN is only used for the register switch — not for login.
+
+> **Note:** Staff invitation emails are not yet implemented (pending company domain setup). Until then, staff members must sign up at the POS using the email address they were invited with. The mandatory PIN setup fires immediately after their first login.
+
+---
+
+## [2026-05-22] Business Reply Badge + Post-Ticket Rating
+
+### Schema changes
+
+```sql
+-- Signal admin panel when a business has sent a reply
+ALTER TABLE public.tickets ADD COLUMN has_business_reply boolean NOT NULL DEFAULT false;
+
+-- Post-ticket satisfaction rating (filled in by the business after ticket is solved)
+ALTER TABLE public.tickets ADD COLUMN rating smallint;
+ALTER TABLE public.tickets ADD COLUMN rating_comment text;
+ALTER TABLE public.tickets ADD COLUMN rated_at timestamptz;
+```
+
+> No new grants or RLS policies needed — new columns on existing tables inherit the table's grants.
+
+### Business reply badge (`has_business_reply`)
+
+When a business sends a reply from the Pointy app, `has_business_reply` is set to `true` on the ticket.
+
+**What the admin panel should do:**
+- Show a badge/indicator on ticket rows where `has_business_reply = true` (mirrors the existing `has_unread_reply` flag but in reverse)
+- When the admin opens the ticket thread, clear the flag:
+
+```js
+await supabase.from('tickets').update({ has_business_reply: false }).eq('id', ticketId)
+```
+
+### Post-ticket rating
+
+After a ticket is marked solved, the business is shown a 1–5 star rating prompt with an optional comment. Once submitted, `rating`, `rating_comment`, and `rated_at` are written to the ticket row.
+
+**What the admin panel should do:**
+- Display the rating and comment on the solved ticket detail view
+- The prompt only shows once — if `rating` is already set, it's hidden in the Pointy app
+- `rating` is `null` if the business never rated
+
+---
+
+## [2026-05-22] RLS Policies — Admin Panel Read Access
+
+The admin panel now reads the following Pointy app tables. These `SELECT` policies were added so the admin panel can display business data (menu counts, staff list, discount usage, employee count, adjustments) in the User Management view.
+
+**SQL that was run:**
+```sql
+-- staff
+CREATE POLICY "admin panel can read staff"
+  ON public.staff FOR SELECT TO authenticated
+  USING (true);
+
+-- menu_items
+CREATE POLICY "admin panel can read menu_items"
+  ON public.menu_items FOR SELECT TO authenticated
+  USING (true);
+
+-- discount_codes
+CREATE POLICY "admin panel can read discount_codes"
+  ON public.discount_codes FOR SELECT TO authenticated
+  USING (true);
+
+-- employees
+CREATE POLICY "admin panel can read employees"
+  ON public.employees FOR SELECT TO authenticated
+  USING (true);
+
+-- adjustments
+CREATE POLICY "admin panel can read adjustments"
+  ON public.adjustments FOR SELECT TO authenticated
+  USING (true);
+```
+
+> These are read-only — the admin panel never writes to these tables directly.
+> The Pointy app's own write policies are unchanged.
+
+---
+
+## [2026-05-22] Staff Deactivation — Pointy App Must Enforce
+
+The admin panel can now deactivate a staff member by setting `staff.is_active = false`. The **Pointy app must check this flag** on every login and session restore — if `is_active = false`, the staff member should be signed out and shown a clear message.
+
+**What the admin panel does:**
+```js
+await supabase.from('staff').update({ is_active: false }).eq('id', member.id)
+```
+
+**What the Pointy app needs to add** (on login + session restore):
+```js
+const { data: staffRecord } = await supabase
+  .from('staff')
+  .select('is_active')
+  .eq('user_id', currentUser.id)
+  .single()
+
+if (staffRecord && !staffRecord.is_active) {
+  await supabase.auth.signOut()
+  router.push('/login?reason=deactivated')
+  // Show: "Your account has been deactivated. Contact your business owner."
+}
+```
+
+> Business owners (not in the `staff` table) are unaffected.
+> Without this check, a deactivated staff member can still use the app until they manually log out.
+
+---
+
+## [2026-05-22] Subscription Status — Realtime Sync Needed
+
+The admin panel can override a business's `subscription_status` (free ↔ paid). Without a realtime listener in the Pointy app, the change won't take effect until the business owner logs out and back in.
+
+**What the Pointy app needs to add** (after login, while session is active):
+```js
+const channel = supabase
+  .channel('business-subscription-' + currentUser.id)
+  .on('postgres_changes', {
+    event: 'UPDATE',
+    schema: 'public',
+    table: 'businesses',
+    filter: `id=eq.${currentUser.id}`,
+  }, ({ new: updated }) => {
+    businessStore.subscriptionStatus = updated.subscription_status
+    // re-evaluate any feature gates that depend on plan
+  })
+  .subscribe()
+```
+
+Clean up on logout: `supabase.removeChannel(channel)`
+
+> Only matters once feature gating (paid vs free) is implemented in the Pointy app. Wire it now so it's ready.
+
+---
+
 ## [2026-05-22] Business Contact Info — Email & Phone
 
 ### Migration

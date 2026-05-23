@@ -19,11 +19,13 @@ class SupportView {
   _detailCategory = document.getElementById('supportDetailCategory');
   _unreadBadge    = document.getElementById('supportUnreadBadge');
   _currentTicketId = null;
+  _selectedRating  = 0;
 
   // ── Open / Close ──────────────────────────────────────────────────────────────
 
   open() {
     this._modal.classList.remove('hidden');
+    this._shell?.classList.remove('support-shell--detail');
     this._showMain('welcome');
   }
 
@@ -59,7 +61,7 @@ class SupportView {
     }, 220);
   }
 
-  showListPanel()    { this._showMain('welcome'); this._clearActiveRow(); }
+  showListPanel()    { this._shell?.classList.remove('support-shell--detail'); this._showMain('welcome'); this._clearActiveRow(); }
   showSuccessPanel() { this.closeNewTicketModal(); this._showMain('success'); }
 
   // ── Ticket list rendering ─────────────────────────────────────────────────────
@@ -106,13 +108,39 @@ class SupportView {
     this._detailStatus.textContent = ticket.status === 'solved' ? 'Solved' : 'Open';
     this._detailStatus.className = `support-status-chip support-chip--${ticket.status}`;
 
+    const ticketIdEl = document.getElementById('supportDetailTicketId');
+    if (ticketIdEl) ticketIdEl.textContent = '#' + ticket.id.replace(/-/g, '').slice(0, 8).toUpperCase();
+
     const solvedBtn = document.getElementById('supportMarkSolvedBtn');
     if (solvedBtn) solvedBtn.classList.toggle('hidden', ticket.status === 'solved');
+
+    const replyBar = document.getElementById('supportReplyBar');
+    if (replyBar) replyBar.classList.toggle('hidden', ticket.status === 'solved');
+
+    const ratingBar  = document.getElementById('supportRatingBar');
+    const ratingDone = document.getElementById('supportRatingDone');
+    const showPrompt = ticket.status === 'solved' && !ticket.rating;
+    if (ratingBar)  ratingBar.classList.toggle('hidden', !showPrompt);
+    if (ratingDone) ratingDone.classList.add('hidden');
+    if (showPrompt) this._resetStars();
+
+    const emojis = ['', '😤', '😕', '😐', '😊', '🤩'];
+    const labels = ['', 'Bad', 'Poor', 'OK', 'Good', 'Great'];
 
     const allMessages = [
       { sender_type: 'business', message: ticket.message, created_at: ticket.created_at, attachment: ticket.attachments?.[0] },
       ...replies,
     ];
+
+    const closureBlock = ticket.status === 'solved' ? `
+      <div class="support-closure">
+        <div class="support-closure-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <p class="support-closure-title">Ticket closed</p>
+        ${ticket.rating ? `<p class="support-closure-rating">You rated this conversation ${emojis[ticket.rating]} <strong>${labels[ticket.rating]}</strong></p>` : ''}
+      </div>
+    ` : '';
 
     this._thread.innerHTML = allMessages.map(msg => `
       <div class="support-msg support-msg--${msg.sender_type}">
@@ -122,8 +150,9 @@ class SupportView {
         </div>
         <span class="support-msg-time">${msg.sender_type === 'admin' ? 'Pointy Support' : 'You'} &middot; ${this._relativeDate(msg.created_at)}</span>
       </div>
-    `).join('');
+    `).join('') + closureBlock;
 
+    this._shell?.classList.add('support-shell--detail');
     this._showMain('detail');
     setTimeout(() => { this._thread.scrollTop = this._thread.scrollHeight; }, 0);
   }
@@ -228,6 +257,59 @@ class SupportView {
     document.getElementById('supportViewTicketsBtn')?.addEventListener('click', handler);
   }
 
+  _addHandlerSendReply(handler) {
+    document.getElementById('supportReplySendBtn')?.addEventListener('click', handler);
+    document.getElementById('supportReplyInput')?.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handler();
+    });
+  }
+
+  _addHandlerStarInteraction() {
+    const container = document.getElementById('supportStars');
+    if (!container) return;
+    container.addEventListener('mouseover', e => {
+      const star = e.target.closest('.support-star[data-value]');
+      if (!star) return;
+      container.querySelectorAll('.support-star').forEach(s => s.classList.toggle('support-star--hover', s === star));
+    });
+    container.addEventListener('mouseleave', () => {
+      container.querySelectorAll('.support-star').forEach(s => s.classList.remove('support-star--hover'));
+    });
+    container.addEventListener('click', e => {
+      const star = e.target.closest('.support-star[data-value]');
+      if (!star) return;
+      this._selectedRating = parseInt(star.dataset.value);
+      container.querySelectorAll('.support-star').forEach(s => s.classList.toggle('support-star--active', s === star));
+    });
+  }
+
+  _addHandlerSubmitRating(handler) {
+    document.getElementById('supportRatingSubmitBtn')?.addEventListener('click', handler);
+  }
+
+  getRatingData() {
+    return {
+      rating:  this._selectedRating,
+      comment: document.getElementById('supportRatingComment')?.value.trim() ?? '',
+    };
+  }
+
+  setRatingSubmitting(loading) {
+    const btn = document.getElementById('supportRatingSubmitBtn');
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.textContent = loading ? 'Submitting…' : 'Submit Rating';
+  }
+
+  _resetStars() {
+    this._selectedRating = 0;
+    document.querySelectorAll('.support-star').forEach(s => {
+      s.classList.remove('support-star--active', 'support-star--hover');
+    });
+    const comment = document.getElementById('supportRatingComment');
+    if (comment) comment.value = '';
+  }
+
   _addHandlerTicketFiles() {
     const input = document.getElementById('ticketFiles');
     const list  = document.getElementById('ticketFileList');
@@ -236,6 +318,22 @@ class SupportView {
       const files = Array.from(input.files).slice(0, 1);
       list.innerHTML = files.map(f => `<li class="ticket-file-item">${esc(f.name)}</li>`).join('');
     });
+  }
+
+  _getReplyText() {
+    return document.getElementById('supportReplyInput')?.value.trim() ?? '';
+  }
+
+  clearReplyInput() {
+    const el = document.getElementById('supportReplyInput');
+    if (el) el.value = '';
+  }
+
+  setReplySending(loading) {
+    const btn = document.getElementById('supportReplySendBtn');
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.textContent = loading ? 'Sending…' : 'Send';
   }
 
   setCurrentTicket(id) { this._currentTicketId = id; }

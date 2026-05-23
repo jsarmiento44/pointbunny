@@ -1,10 +1,30 @@
 class StaffView {
-  _panel     = document.querySelector('#staffPanel');
-  _list      = document.querySelector('#staffList');
-  _formModal = document.querySelector('#inviteStaffModal');
+  _panel      = document.querySelector('#staffPanel');
+  _list       = document.querySelector('#staffList');
+  _rolesEl    = document.querySelector('#staffRolesContent');
+  _formModal  = document.querySelector('#inviteStaffModal');
 
-  open() {
+  open(canManage = false) {
     this._panel.classList.remove('hidden', 'cashflow-exiting');
+    const inviteBtn = this._panel.querySelector('#inviteStaffBtn');
+    if (inviteBtn) inviteBtn.classList.toggle('hidden', !canManage);
+    this._switchTab('members');
+  }
+
+  _switchTab(tab) {
+    this._panel.querySelectorAll('.staff-tab').forEach(btn => {
+      btn.classList.toggle('staff-tab--active', btn.dataset.tab === tab);
+    });
+    this._list.classList.toggle('hidden', tab !== 'members');
+    this._rolesEl.classList.toggle('hidden', tab !== 'roles');
+  }
+
+  _addHandlerTabs() {
+    this._panel.querySelector('.staff-sidebar')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.staff-tab');
+      if (!btn) return;
+      this._switchTab(btn.dataset.tab);
+    });
   }
 
   close() {
@@ -15,18 +35,51 @@ class StaffView {
     }, 220);
   }
 
-  render(staff) {
-    this._list.innerHTML = this._generateListMarkup(staff);
+  render(staff, canManage = false) {
+    this._list.innerHTML = this._generateListMarkup(staff, canManage);
   }
 
-  _generateListMarkup(staff) {
+  renderRoles(roles) {
+    if (!roles?.length) {
+      this._rolesEl.innerHTML = `<p class="staff-empty">No roles defined.</p>`;
+      return;
+    }
+    this._rolesEl.innerHTML = roles.map(r => `
+      <div class="staff-role-card">
+        <div class="staff-role-card-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="staff-role-card-info">
+          <div class="staff-role-card-name">${r.name}</div>
+          <div class="staff-role-card-desc">${_roleDescription(r.name)}</div>
+        </div>
+      </div>
+    `).join('');
+
+    function _roleDescription(name) {
+      const map = {
+        Admin:   'Full access — manage staff, menu, sales, and settings.',
+        Manager: 'Manage menu and sales. Cannot change staff or settings.',
+        Cashier: 'Process sales only.',
+      };
+      return map[name] ?? 'Custom role.';
+    }
+  }
+
+  _generateListMarkup(staff, canManage) {
     if (!staff.length)
       return `<li class="staff-empty">No staff members yet. Hit "+ Invite" to add someone.</li>`;
 
-    return staff.map(s => `
+    const AVATAR_COLORS = ['#22c55e','#3b82f6','#f59e0b','#ec4899','#8b5cf6','#06b6d4'];
+
+    return staff.map((s, i) => {
+      const initials = `${s.firstName?.[0] ?? ''}${s.lastName?.[0] ?? ''}`.toUpperCase() || '?';
+      const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
+      return `
       <li class="staff-item" data-id="${s.id}">
+        <div class="staff-avatar" style="background:${color}">${initials}</div>
         <div class="staff-item-info">
-          <div class="staff-item-name">${s.firstName} ${s.lastName}</div>
+          <div class="staff-item-name">${s.firstName} ${s.lastName}${s.isSelf ? ' <span class="staff-you-tag">you</span>' : ''}</div>
           <div class="staff-item-email">${s.email}</div>
         </div>
         <div class="staff-item-meta">
@@ -35,9 +88,23 @@ class StaffView {
             ${s.isPending ? 'Pending' : 'Active'}
           </span>
         </div>
-        ${!s.isSelf ? `<button class="btn staff-remove-btn" data-id="${s.id}" type="button">Remove</button>` : ''}
-      </li>
-    `).join('');
+        ${canManage && !s.isSelf ? `
+        <div class="staff-item-actions">
+          <button class="staff-action-btn" data-id="${s.id}" data-action="edit" type="button" title="Edit role">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit
+          </button>
+          <button class="staff-action-btn staff-action-btn--pin" data-id="${s.id}" data-action="pin" type="button" title="${s.hasPin ? 'Change PIN' : 'Set PIN'}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            ${s.hasPin ? 'Change PIN' : 'Set PIN'}
+          </button>
+          <button class="staff-action-btn staff-action-btn--remove" data-id="${s.id}" data-action="remove" type="button" title="Remove">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            Remove
+          </button>
+        </div>` : ''}
+      </li>`;
+    }).join('');
   }
 
   showInviteForm(roles) {
@@ -133,11 +200,111 @@ class StaffView {
 
   _addHandlerRemove(handler) {
     this._list.addEventListener('click', (e) => {
-      const btn = e.target.closest('.staff-remove-btn');
+      const btn = e.target.closest('[data-action="remove"]');
       if (!btn) return;
       handler(btn.dataset.id);
     });
   }
+
+  _addHandlerEditRole(handler) {
+    this._list.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="edit"]');
+      if (!btn) return;
+      if (document.getElementById('staffEditRoleModal')) return;
+      const staffId = btn.dataset.id;
+      handler(staffId);
+    });
+  }
+
+  showEditRoleModal(staff, roles) {
+    const modal = document.createElement('div');
+    modal.className = 'cashier-picker-overlay';
+    modal.id = 'staffEditRoleModal';
+    modal.style.zIndex = '99999';
+    modal.innerHTML = `
+      <div class="cashier-picker-card" style="max-width:340px">
+        <div class="cashier-picker-header">
+          <div>
+            <h3 class="cashier-picker-title">Edit Staff</h3>
+            <p class="cashier-picker-subtitle">${staff.firstName} ${staff.lastName}</p>
+          </div>
+          <button class="modal-close-btn" id="editRoleCloseBtn" type="button">&times;</button>
+        </div>
+        <div class="edit-field" style="margin-top:8px">
+          <label for="editRoleSelect">Role</label>
+          <select id="editRoleSelect" class="settings-select">
+            ${roles.map(r => `<option value="${r.id}" ${r.id === staff.roleId ? 'selected' : ''}>${r.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="adj-form-actions" style="margin-top:16px">
+          <button type="button" class="btn" id="editRoleCancelBtn">Cancel</button>
+          <button type="button" class="btn primary" id="editRoleSaveBtn">Save</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    const close = () => modal.remove();
+    document.getElementById('editRoleCloseBtn')?.addEventListener('click', close);
+    document.getElementById('editRoleCancelBtn')?.addEventListener('click', close);
+    modal.addEventListener('click', e => { if (e.target === modal) close(); });
+    return {
+      onSave: (cb) => {
+        document.getElementById('editRoleSaveBtn')?.addEventListener('click', () => {
+          const roleId = document.getElementById('editRoleSelect')?.value;
+          close();
+          cb(roleId);
+        });
+      }
+    };
+  }
+
+  _addHandlerSetPin(handler) {
+    this._list.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="pin"]');
+      if (!btn) return;
+      if (document.querySelector('.cashier-picker-overlay')) return;
+      const staffId = btn.dataset.id;
+      const modal = document.createElement('div');
+      modal.className = 'cashier-picker-overlay';
+      modal.style.zIndex = '99999';
+      modal.innerHTML = `
+        <div class="cashier-picker-card" style="max-width:320px">
+          <div class="cashier-picker-header">
+            <div>
+              <h3 class="cashier-picker-title">Set PIN</h3>
+              <p class="cashier-picker-subtitle">6-digit cashier PIN</p>
+            </div>
+            <button class="modal-close-btn" data-action="pin-close" type="button">&times;</button>
+          </div>
+          <form class="edit-field" style="margin-top:8px" onsubmit="return false">
+            <input type="password" data-input="pin" placeholder="Enter 6-digit PIN" maxlength="6" inputmode="numeric" autocomplete="new-password" class="settings-input" style="font-size:1.4rem;letter-spacing:0.5rem;text-align:center" />
+          </form>
+          <div class="adj-form-actions" style="margin-top:16px">
+            <button type="button" class="btn" data-action="pin-cancel">Cancel</button>
+            <button type="button" class="btn primary" data-action="pin-save">Save PIN</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      const pinInput = modal.querySelector('[data-input="pin"]');
+      pinInput?.focus();
+      const close = () => modal.remove();
+      modal.querySelector('[data-action="pin-close"]')?.addEventListener('click', close);
+      modal.querySelector('[data-action="pin-cancel"]')?.addEventListener('click', close);
+      modal.addEventListener('click', e => { if (e.target === modal) close(); });
+      modal.querySelector('[data-action="pin-save"]')?.addEventListener('click', () => {
+        const pin = pinInput?.value.trim();
+        if (!pin || !/^\d{6}$/.test(pin)) {
+          pinInput?.classList.add('input-error');
+          return;
+        }
+        close();
+        handler(staffId, pin);
+      });
+    });
+  }
 }
 
-export default new StaffView();
+const _view = new StaffView();
+_view._addHandlerTabs();
+export default _view;

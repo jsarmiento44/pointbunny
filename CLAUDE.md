@@ -69,11 +69,23 @@ Wires model and views together. `initApp()` is the app entry point after auth. K
 
 **Reports helpers in controller:**
 - `_getRangeFromValue(type, value)` — converts a type (`"day"/"week"/"month"/"year"`) + raw input value into `{ startISO, endISO, label }`. Week snaps Mon–Sun.
-- `_computeRevenueOverTime(period, startISO, endISO)` — hourly buckets for day, daily for week/month, monthly for year
-- `_computeCategoryMix()` — revenue by category
+- `_computeAllTimeSeries(period, startISO, endISO)` — computes all 6 metric time series in one pass: `{ labels, series: { revenue, expenses, net, transactions, avgOrder, avgServing } }`. Used by the Overview multi-metric chart.
+- `_buildOverviewDatasets()` — maps `_selectedOverviewMetrics` + `_overviewTimeSeries` into Chart.js dataset objects (color, fill, tension, `_metric` tag).
+- `_renderOverviewChart()` — async; calls `ReportsView.renderOverviewChart(datasets)` then `ReportsView.setSelectedMetrics(set)`.
+- `controlToggleMetric(metric)` — adds/removes a metric from `_selectedOverviewMetrics`; always keeps at least one selected; calls `_renderOverviewChart()`.
+- `_computeTrafficPeaks(period)` — returns `{ peakHour, peakDay }` by transaction count. `peakDay` is `null` when `period === 'today'`.
+- `_computeCategoryMix()` — revenue by category; returns `[{ label, value }]`
+- `_computeTopItems(limit, sortKey)` — items sorted by quantity or revenue; returns `[{ name, quantity, revenue }]`
+- `_computeStaffPerformance()` — returns `[{ name, transactions, revenue }]` sorted by revenue
 - `_computeHourlyBreakdown()` — revenue by hour of day
 - `_computeDayOfWeek(period)` — revenue Mon–Sun; returns `{ labels, data, isEmpty: true }` when period is too narrow (today/yesterday)
 - `_computeServingTimeStats()` — avg serving minutes from `prepared_at - sale_date`; returns `{ avgMinutes, byHour: { labels, data }, byDay: { labels, data } }` or `null` if no KDS data; sanity filter: 0–120 min
+
+**Overview metric state:**
+- `_selectedOverviewMetrics` — `Set<string>` of active metrics; reset to `new Set(['revenue'])` on each period change
+- `_overviewTimeSeries` — cached result of `_computeAllTimeSeries` for the current period; `null` before first load
+- `METRIC_COLORS` — `{ revenue: '#22c55e', expenses: '#ef4444', net: '#3b82f6', transactions: '#8b5cf6', avgOrder: '#f59e0b' }`
+- `METRIC_LABELS` — display names for each metric key
 
 ### Entry point (`index.html`)
 All modal HTML templates are defined directly in `index.html` as hidden elements. Views target specific `id`/`class` selectors to render into or toggle visibility. The edit menu modal is an exception — dynamically injected into `.edit-form-parent` by `menuEditView.js`.
@@ -154,11 +166,18 @@ alter table public.your_table enable row level security;
 
 Without the grant, PostgREST returns a `42501` error and `supabase-js` queries silently fail.
 
+## Home Page Hero
+
+The hero section (`.hero`) uses a flex row layout with two halves:
+- **Left** (`.hero-left`) — greeting h1 + subtitle
+- **Right** (`.hero-datetime`) — live time (`#dateTimeStr`) and date (`#dateStr`), right-aligned, updated every 15s
+
+Date & Time was removed from the stat card grid and lives here instead.
+
 ## Home Page Stat Cards
 
-Four stat cards on the home page, each with a small `.stat-icon` pill (green-tinted, Lucide SVG):
+Three stat cards in `.home-stats-secondary`, each with a small `.stat-icon` pill (green-tinted, Lucide SVG):
 - **Today's Sales** — dollar sign icon; live total with animated count-up; trending arrow vs yesterday
-- **Date & Time** — clock icon; single combined card updated every 15s
 - **Transactions** — receipt icon; today's count with % badge vs yesterday; increments locally on each sale
 - **Cashier** — person icon; shows active cashier's first name; clickable to switch
 
@@ -205,19 +224,35 @@ Settings are persisted to `localStorage` and loaded into `model.state.settings` 
 
 ## Reports / Analytics Dashboard
 
-Full analytics panel in `reportsView.js`, opened via `controlOpenReports`. Data is fetched with `model.fetchReportsSales` and processed entirely in controller helpers before being passed to the view.
+Full analytics panel in `reportsView.js`, opened via `controlOpenReports`. Data is fetched with `model.fetchReportsSales` + `model.fetchCashflowData` (for expenses) in parallel and processed entirely in controller helpers before being passed to the view.
+
+### Layout
+`rp-layout` (flex row) → `rp-sidebar` (310px, `rp-nav-tab` buttons) + `rp-body` (scrollable content). Four sidebar sections, each a `<div class="rp-section" data-section="...">` toggled by `_switchSection()`:
+
+| Section | `data-section` | Contents |
+|---|---|---|
+| Overview | `overview` | 5 KPI toggle cards + multi-metric line/area chart |
+| Sales | `sales` | 3 peak cards (Best Seller, Top Category, Top Staff) + Top Items + Category Mix + Item Mix + Staff Performance |
+| Traffic | `traffic` | 2 peak cards (Most Active Hour, Most Active Day) + Hourly Breakdown + Day of Week |
+| Kitchen | `kitchen` | Avg Serving Time KPI + Serving Time by Hour + Serving Time by Day |
+
+### Overview KPI Cards (toggleable)
+The 5 cards in `.rp-kpi-strip` (Revenue, Expenses, Net Income, Transactions, Avg Order) each have `data-metric` + `style="--metric-color: #hex"`. Clicking a card calls `controlToggleMetric(metric)` which adds/removes it from `_selectedOverviewMetrics` and redraws the chart. The active card gets `.rp-kpi--selected` (colored bottom bar + border ring).
 
 ### Charts (all Chart.js, code-split via dynamic import)
 Chart instances are stored in `reportsView._charts = {}` and destroyed before redraw. **Never replace the innerHTML of a container holding a `<canvas>`** — this destroys the DOM node. Use `canvas.style.display` toggle + a lazily-created sibling `<p>` for empty states.
 
 | Chart | Key | Canvas ID | Notes |
 |---|---|---|---|
-| Revenue Over Time | `revenue` | `rpRevenueCanvas` | Green bars; hourly/daily/monthly axis depending on period |
-| Category Mix | `category` | `rpCategoryCanvas` | Green bars by category |
+| Overview (multi-metric) | `revenue` | `rpRevenueCanvas` | Smooth line/area; multi-dataset; dual Y-axes (currency left, transactions right); rendered by `renderOverviewChart()` not `renderCharts()` |
+| Category Mix | `category` | `rpCategoryCanvas` | Donut, revenue by category |
+| Item Mix | `itemMix` | `rpItemMixCanvas` | Donut, units sold per item (top 8); tooltip shows count + % |
 | Hourly Breakdown | `hourly` | `rpHourlyCanvas` | Green bars, 24h labels |
 | Day of Week | `dow` | `rpDowCanvas` | Green bars, Mon–Sun; `isEmpty` flag when period < 2 days |
 | Serving Time by Hour | `servingHour` | `rpServingHourCanvas` | Orange (`#f59e0b`) bars; Y-axis in minutes; null data = empty state |
 | Serving Time by Day | `servingDay` | `rpServingDayCanvas` | Orange bars, Mon–Sun; peak bar fully highlighted |
+
+`renderCharts()` renders category, itemMix, hourly, dow, servingHour, servingDay. The overview chart is rendered separately via `_renderOverviewChart()` after `renderCharts()` completes.
 
 ### Compare Mode
 Toggle via `_compareModeActive`. Type options: Day vs Day / Week vs Week / Month vs Month / Year vs Year / Custom Range. Both Period A and Period B are user-selectable with matching granularity pickers. `_getRangeFromValue(type, value)` converts picker values to ISO ranges. KPI values colored green (winner) / red (loser) via `.rp-cmp-kpi-val--up` / `.rp-cmp-kpi-val--down` CSS classes.
@@ -246,11 +281,7 @@ This file is the admin panel team's source of truth for what migrations to run a
 
 If a task has no backend changes, no entry is needed.
 
-## Known Incomplete Features
-
-These have UI buttons but no implementation: Scan Item, Drawer operations, Refund, Z Report.
-
-Reports/Analytics is **implemented** (revenue, category, hourly, day-of-week, serving time charts + compare mode).
+Reports/Analytics is **implemented** (multi-metric overview chart with KPI toggles, category mix, item mix, hourly, day-of-week, serving time charts + compare mode + sales/traffic/kitchen peak stat cards).
 
 ## Queued Work (not started, do when user asks)
 

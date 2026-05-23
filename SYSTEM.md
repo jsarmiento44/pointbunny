@@ -26,6 +26,7 @@
    - [5.13 Kitchen Display System (KDS)](#513-kitchen-display-system-kds)
    - [5.14 Customer Facing Display (CFD)](#514-customer-facing-display-cfd)
    - [5.15 Reports / Analytics Dashboard](#515-reports--analytics-dashboard)
+   - [5.16 Help & Support](#516-help--support)
 
 ---
 
@@ -74,6 +75,7 @@ Controller re-renders the relevant View
 | `Views/discountView.js` | `DiscountView` | Discount code management panel |
 | `Views/staffView.js` | `StaffView` | Staff management panel |
 | `Views/reportsView.js` | `ReportsView` | Reports/Analytics dashboard: KPI strip, charts, compare mode |
+| `Views/supportView.js` | `SupportView` | Help & Support panel: ticket list, thread view, reply composer, post-ticket rating |
 
 ---
 
@@ -114,6 +116,9 @@ state = {
 
   // Discount codes
   discountCodes,     // [{ id, code, title, description, type, value, status, usageCount, usageLimit }]
+
+  // Help & Support tickets
+  tickets,           // [{ id, category, subject, message, attachments, status, hasUnreadReply, hasBizReply, solvedAt, createdAt, rating, ratingComment, ratedAt, replies: [] }]
 
   // KDS / Open Orders
   orderQueue,        // [{ id, saleDate, items, startedAt, totalPrice, orderType, ticketNumber }] — sales where prepared_at IS NULL
@@ -1312,29 +1317,73 @@ User clicks "Remove" (hidden for own record via isSelf)
     → staffView.render(state.staff)
 ```
 
+#### Set / Change Staff PIN (owner-side)
+
+Business owners can set or reset any staff member's 6-digit PIN from the Staff panel. Each staff row (except the owner's own row) shows a "Set PIN" or "Change PIN" button.
+
+```
+Owner clicks "Set PIN" / "Change PIN" on a staff row
+  → staffView._addHandlerSetPin
+    → shows inline modal with a 6-digit password input (maxlength 6, inputmode numeric)
+    → validates /^\d{6}$/
+
+Owner saves
+  → controlSetStaffPin(staffId, pin)
+    → model.setStaffPin(staffId, pin)
+        → supabase.from('staff').update({ pin }).eq('id', staffId)
+        → updates hasPin flag in state.staff entry
+    → staffView.render(state.staff)  [button text flips to "Change PIN"]
+    → showToast('PIN updated', 'success')
+```
+
+#### First-Login Mandatory PIN Setup (staff-side)
+
+When a staff member logs in for the first time (or any time `currentStaff.hasPin === false`), a full-screen blocking overlay appears immediately after `_wireApp()`. They cannot dismiss it — the app is unusable until a PIN is set.
+
+```
+After sign-in or session restore:
+  _wireApp()
+  _maybeShowPinSetup()
+    → if !model.state.currentStaff || model.state.currentStaff.hasPin: return  [skip owners + staff who already have a PIN]
+    → renders full-screen overlay (z-index 99999) with PIN numpad
+
+Step 1 — Create PIN:
+  → staff enters 6 digits on numpad
+  → renderConfirm(firstPin)
+
+Step 2 — Confirm PIN:
+  → staff enters 6 digits again
+  → if match: model.setStaffPin(currentStaff.id, pin) → el.remove() → showToast('PIN set! You\'re all set.', 'success')
+  → if mismatch: shake animation + error text → renderCreate() [back to step 1]
+```
+
 #### Function Reference
 
 | Function | File | Purpose |
 |---|---|---|
 | `_addHandlerOpen(handler)` | staffView.js | Listens on `[data-action='staff']` click |
 | `controlOpenStaff()` | controller.js | Loads staff + roles from DB, renders panel |
-| `model.loadStaff()` | model.js | Fetches staff with joined roles → `state.staff` (includes `isSelf` flag) |
+| `model.loadStaff()` | model.js | Fetches staff with joined roles → `state.staff` (includes `isSelf`, `hasPin` flags) |
 | `model.loadRoles()` | model.js | Fetches roles for business → `state.roles` |
-| `model.dbToStaff(row)` | model.js | Maps DB row to staff shape, sets `isSelf` based on `state.userId` |
+| `model.dbToStaff(row)` | model.js | Maps DB row to staff shape; sets `isSelf`, `hasPin: !!row.pin`, `pin: row.pin ?? null` |
 | `staffView.open()` | staffView.js | Shows `#staffPanel` |
 | `staffView.render(staff)` | staffView.js | Renders staff list |
-| `_generateListMarkup(staff)` | staffView.js | HTML per row: name, role, status, remove button (hidden if `isSelf`) |
+| `_generateListMarkup(staff)` | staffView.js | HTML per row: name, role, status, "Set/Change PIN" + remove buttons (both hidden if `isSelf`) |
 | `_addHandlerInvite(handler)` | staffView.js | Listens on `#inviteStaffBtn` click |
 | `controlShowInviteForm()` | controller.js | Shows invite form with role dropdown |
-| `staffView.showInviteForm(roles)` | staffView.js | Renders invite form with populated role selector |
+| `staffView.showInviteForm(roles)` | staffView.js | Renders invite form with populated role selector (no PIN field — staff set their own) |
 | `_addHandlerSaveInvite(handler)` | staffView.js | Listens on `#inviteSaveBtn`, validates email format |
 | `staffView._getInviteData()` | staffView.js | Returns `{ firstName, lastName, email, roleId }` from form |
 | `controlInviteStaff(data)` | controller.js | Checks duplicate email, calls model, re-renders |
-| `model.inviteStaff(data)` | model.js | Inserts staff with `status: 'pending'` to DB, pushes to `state.staff` |
+| `model.inviteStaff(data)` | model.js | Inserts staff with `status: 'pending'` to DB (no PIN — staff set their own on first login) |
 | `staffView.closeForm()` | staffView.js | Hides invite form modal |
 | `_addHandlerRemove(handler)` | staffView.js | Listens on `.staff-remove-btn` click |
 | `controlRemoveStaff(id)` | controller.js | Shows confirm dialog, calls model, re-renders |
 | `model.removeStaff(id)` | model.js | Deletes from DB, splices `state.staff` |
+| `_addHandlerSetPin(handler)` | staffView.js | Listens on `.staff-pin-btn`; shows inline 6-digit PIN modal, validates `^\d{6}$`, calls handler |
+| `controlSetStaffPin(staffId, pin)` | controller.js | Calls `model.setStaffPin`, re-renders staff list, shows success toast |
+| `model.setStaffPin(staffId, pin)` | model.js | Updates `staff.pin` in DB; updates `hasPin` on the matching `state.staff` entry |
+| `_maybeShowPinSetup()` | controller.js | Full-screen mandatory PIN creation overlay for staff with no PIN; skips if owner or PIN already set |
 | `_addHandlerClose(handler)` | staffView.js | Listens on `.staff-back` click and backdrop click |
 | `controlCloseStaff()` | controller.js | Animates panel close |
 
@@ -1342,28 +1391,50 @@ User clicks "Remove" (hidden for own record via isSelf)
 
 ### 5.12 Cashier Switcher
 
-#### Switch Active Cashier
+Allows any staff member to sub in at the register without logging out. The sub-in person's name appears on the receipt (`added_by`), but the DB also records which account was logged in (`logged_in_cashier`) for an audit trail.
+
+#### Two-Step PIN Flow
 
 ```
 User clicks cashier name in header (#shiftStr)
   → controlSwitchCashier()
     → if state.staff is empty: model.loadStaff()
-    → creates picker overlay listing all active staff
-    → user selects a staff member
-    → state.currentCashier = { id, firstName, lastName, role }
-    → _updateCashierDisplay()
-        → _cashierDisplayName(currentCashier)  [formats "First L."]
-        → #shiftStr.textContent = formatted name
+    → Step 1 — staff list picker:
+        renders .cashier-picker-overlay with all active staff
+        staff without a PIN show "PIN not set" tag and are greyed-out / non-clickable (.cashier-picker-item--disabled)
+        currently active cashier highlighted (.cashier-picker-item--active)
+        avatar pill generated from name initials with color from AVATAR_COLORS[]
+
+User selects a staff member (must have PIN)
+    → Step 2 — PIN screen:
+        shows 6 dot indicators + numpad (no keyboard input)
+        back button returns to staff list
+        user enters 6 digits
+        if correct: state.currentCashier = chosen staff → _updateCashierDisplay() → showToast
+        if wrong: dots shake (.cashier-pin-shake) → dots + entered PIN reset → stays on PIN screen
 ```
+
+#### Audit Trail (Backend)
+
+Every finalised sale records two fields:
+
+| Field | What it stores |
+|---|---|
+| `added_by` (existing) | The sub-in cashier's name (appears on receipt) |
+| `logged_in_cashier` (new) | The account logged into the app at the time |
+
+`_buildSale()` sets `loggedInCashier: model.state.username || ''`. `_finaliseSale()` writes this to `sales.logged_in_cashier`. If `added_by ≠ logged_in_cashier`, a sub-in occurred.
 
 #### Function Reference
 
 | Function | File | Purpose |
 |---|---|---|
-| `controlSwitchCashier()` | controller.js | Loads staff if needed, creates picker overlay |
-| `model.loadStaff()` | model.js | Fetches staff (only if `state.staff` is empty) |
+| `controlSwitchCashier()` | controller.js | Two-step picker: staff list → PIN numpad; updates `state.currentCashier` on success |
+| `model.loadStaff()` | model.js | Fetches staff with PIN data (only if `state.staff` is empty) |
 | `_cashierDisplayName(c)` | controller.js | Formats staff object as `"First L."` string |
 | `_updateCashierDisplay()` | controller.js | Updates `#shiftStr` with current cashier name |
+| `_buildSale()` | controller.js | Assembles sale object; sets `loggedInCashier: state.username` |
+| `_finaliseSale()` | controller.js | Writes `logged_in_cashier` column on sale insert |
 
 ---
 
@@ -1757,6 +1828,145 @@ The Export button in the report header is a **dropdown** with two options: "Down
 
 ---
 
+### 5.16 Help & Support
+
+Businesses can submit support tickets, view admin replies, send follow-up messages, and rate the conversation after it's resolved.
+
+#### Open Support Panel
+
+```
+User clicks "Help & Support" nav button or card
+  → SupportView._addHandlerOpen
+  → controlOpenSupport()
+    → SupportView.open()
+    → model.loadTickets()
+        → supabase.from('tickets').select(*, ticket_replies(*))
+        → state.tickets = [...]
+    → SupportView.renderList(state.tickets)
+```
+
+#### Submit New Ticket
+
+```
+User clicks "+ New Ticket"
+  → SupportView shows new ticket form: category dropdown, subject, message, optional image
+
+User submits
+  → SupportView._addHandlerSubmitTicket
+  → controlSubmitTicket(data)
+    → if data.attachment: model.uploadTicketAttachment(file)
+        → supabase.storage.from('ticket-attachments').upload(path, file)
+        → returns public URL
+    → model.submitTicket({ category, subject, message, attachments })
+        → supabase.from('tickets').insert(...)
+        → pushes to state.tickets
+    → SupportView.renderList(state.tickets)
+    → SupportView.closeForm()
+```
+
+#### View Ticket Thread
+
+```
+User clicks a ticket row
+  → SupportView._addHandlerOpenTicket
+  → controlOpenTicket(ticketId)
+    → marks has_unread_reply = false if set:
+        model.clearUnreadFlag(ticketId)
+          → supabase.from('tickets').update({ has_unread_reply: false })
+          → mutates state.tickets entry
+    → SupportView.renderThread(ticket)
+        → renders original message
+        → renders each reply (business replies right-aligned, admin replies left-aligned)
+        → if ticket.status === 'solved': renders .support-closure block at bottom
+            shows "Ticket closed" + emoji + label if already rated
+        → shows reply composer if status === 'open'
+        → shows rating bar (#supportRatingBar) if status === 'solved' AND !ticket.rating
+```
+
+#### Send Reply (Business)
+
+```
+User types reply and clicks Send
+  → SupportView._addHandlerSendReply
+  → controlSendReply({ ticketId, message })
+    → model.submitTicketReply(ticketId, message)
+        → supabase.from('ticket_replies').insert({ sender_type: 'business', ... })
+        → supabase.from('tickets').update({ has_business_reply: true })  [signals admin panel]
+        → pushes reply to state.tickets[ticketId].replies
+    → SupportView.renderThread(updated ticket)
+```
+
+#### Post-Ticket Rating
+
+Shown automatically when a solved ticket is opened and has no rating yet (`ticket.rating === null`).
+
+```
+User hovers/clicks an emoji face in #supportRatingBar
+  → SupportView._addHandlerStarInteraction()
+    → hover: highlights hovered emoji at full opacity
+    → click: selects it with green border ring; stores _selectedRating (1–5)
+
+Emoji map: 😤=1 😕=2 😐=3 😊=4 🤩=5
+Labels:    Bad   Poor  OK   Good  Great
+
+User clicks "Submit Rating"
+  → SupportView._addHandlerSubmitRating
+  → controlSubmitRating({ ticketId, rating, comment })
+    → model.submitTicketRating(ticketId, rating, comment)
+        → supabase.from('tickets').update({ rating, rating_comment, rated_at })
+        → mutates ticket in state.tickets
+    → SupportView.renderThread(updated ticket)
+        → #supportRatingBar hidden
+        → closure block in thread now shows emoji + label
+    → showToast('Thanks for your feedback!', 'success')
+```
+
+Re-opening a rated solved ticket skips the rating bar — `ticket.rating` is already set so the prompt is not shown.
+
+#### Mark Ticket Solved (Business)
+
+```
+User clicks "Mark as Solved"
+  → SupportView._addHandlerMarkSolved
+  → controlMarkTicketSolved(ticketId)
+    → warns: "Cannot be reopened — create a new ticket if the issue returns"
+    → model.solveTicket(ticketId)
+        → supabase.from('tickets').update({ status: 'solved', solved_at: now })
+        → mutates ticket in state.tickets
+    → SupportView.renderThread(updated ticket)  [reply composer hidden; closure block + rating bar shown]
+```
+
+#### Unread Badge
+
+A red badge appears on the Help & Support home card when any ticket has `has_unread_reply = true`. Cleared when the business opens that ticket (`controlOpenTicket` → `model.clearUnreadFlag`).
+
+#### Function Reference
+
+| Function | File | Purpose |
+|---|---|---|
+| `SupportView._addHandlerOpen(handler)` | supportView.js | Listens on Help & Support card/nav click |
+| `controlOpenSupport()` | controller.js | Loads tickets, renders list |
+| `model.loadTickets()` | model.js | Fetches tickets with replies joined → `state.tickets` |
+| `SupportView.renderList(tickets)` | supportView.js | Renders ticket list with unread badges and status chips |
+| `SupportView._addHandlerOpenTicket(handler)` | supportView.js | Listens on ticket row clicks |
+| `controlOpenTicket(ticketId)` | controller.js | Clears unread flag, renders thread |
+| `model.clearUnreadFlag(ticketId)` | model.js | Sets `has_unread_reply = false`; mutates state |
+| `SupportView.renderThread(ticket)` | supportView.js | Full thread view: message, replies, closure block, rating bar |
+| `SupportView._addHandlerSendReply(handler)` | supportView.js | Listens on reply Send button |
+| `controlSendReply(data)` | controller.js | Calls model, re-renders thread |
+| `model.submitTicketReply(ticketId, message)` | model.js | Inserts reply with `sender_type: 'business'`; sets `has_business_reply: true` |
+| `SupportView._addHandlerStarInteraction()` | supportView.js | Emoji hover/click — highlights and selects rating; stores `_selectedRating` |
+| `SupportView._addHandlerSubmitRating(handler)` | supportView.js | Listens on Submit Rating button; reads `_selectedRating` and comment |
+| `controlSubmitRating(data)` | controller.js | Calls model, re-renders thread, shows success toast |
+| `model.submitTicketRating(ticketId, rating, comment)` | model.js | Updates `rating`, `rating_comment`, `rated_at` on ticket |
+| `SupportView._addHandlerMarkSolved(handler)` | supportView.js | Listens on Mark as Solved button |
+| `controlMarkTicketSolved(ticketId)` | controller.js | Confirms with user, calls model, re-renders thread |
+| `model.solveTicket(ticketId)` | model.js | Sets `status: 'solved'`, `solved_at: now` in DB + state |
+| `model.submitTicket(data)` | model.js | Inserts new ticket to DB, pushes to `state.tickets` |
+| `model.uploadTicketAttachment(file)` | model.js | Uploads to `ticket-attachments` bucket, returns public URL |
+
+---
+
 ## Adjustment Calculation Reference
 
 `model.calculateAdjustments(subtotal, adjustments)` — called every time checkout totals need to refresh.
@@ -1778,4 +1988,4 @@ Steps:
 
 ---
 
-*Last updated: 2026-05-20. Added void/restore transaction flow + override modal (§5.9); ticket numbers on orders, receipts, and KDS cards; undo-done 30-second window (§5.13); KDS_ORDER_VOIDED channel message (§4); voidedSales + reportsSales state fields (§3). Security: `esc()` HTML-escaping applied to all user-data innerHTML across cashflowView, receiptView, kds-display, controller; postMessage target scoped to origin; verifyOverrideCredentials signOut scoped to local session; safeParse guards JSON.parse at startup; MutationObserver bounded with timeout fallback. Update this file when a new feature is added or a workflow changes.*
+*Last updated: 2026-05-22. Added §5.16 Help & Support (ticket submission, thread view, business replies, post-ticket emoji rating, unread badge, closure block). Updated §5.11 Staff Management: PIN set/change by owner, mandatory first-login PIN setup overlay (`_maybeShowPinSetup`), `dbToStaff` now includes `hasPin`. Updated §5.12 Cashier Switcher: two-step flow (staff list → PIN numpad), disabled state for staff with no PIN, sub-in audit trail (`logged_in_cashier` column on sales). Updated §2 Module Map: added `supportView.js`. Updated §3 State Shape: added `tickets` array. Update this file when a new feature is added or a workflow changes.*

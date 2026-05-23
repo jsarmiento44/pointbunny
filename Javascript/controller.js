@@ -227,8 +227,8 @@ const controlOrderCheckout = function () {
 };
 
 const _buildSale = function () {
-  const cashierName =
-    _cashierDisplayName(model.state.currentCashier) || model.state.username || '';
+  const cashierName    = _cashierDisplayName(model.state.currentCashier) || model.state.username || '';
+  const loggedInCashier = model.state.username || '';
   return {
     id: crypto.randomUUID(),
     items: [...modelState.cart],
@@ -242,6 +242,7 @@ const _buildSale = function () {
     promoCode: model.state.currentPromoCode ?? null,
     storeName: model.state.username,
     cashierName,
+    loggedInCashier,
     orderType: OrderCheckOutView._orderType ?? 'dine-in',
     date: Date.now(),
   };
@@ -408,6 +409,7 @@ const _finaliseSale = async function (sale, note = null) {
     sale_date: new Date(sale.date).toISOString(),
     is_manual: false,
     added_by: sale.cashierName || null,
+    logged_in_cashier: sale.loggedInCashier || null,
     order_type: sale.orderType ?? 'dine-in',
     ticket_number: sale.ticketNumber ?? null,
   }).select('id').single();
@@ -570,6 +572,42 @@ const controlMarkTicketSolved = async function (ticketId) {
     SupportView.renderTicketList(model.state.tickets);
   } catch (err) {
     showToast(err.message ?? 'Could not update ticket.');
+  }
+};
+
+const controlSubmitRating = async function () {
+  const ticketId = SupportView._currentTicketId;
+  const { rating, comment } = SupportView.getRatingData();
+  if (!ticketId || !rating) return;
+  SupportView.setRatingSubmitting(true);
+  try {
+    await model.submitTicketRating(ticketId, rating, comment);
+    const ticket = model.state.tickets.find(t => t.id === ticketId);
+    const replies = await model.loadTicketReplies(ticketId);
+    SupportView.renderThread(ticket, replies);
+    showToast('Thanks for your feedback!');
+  } catch (err) {
+    showToast(err.message ?? 'Could not submit rating.');
+  } finally {
+    SupportView.setRatingSubmitting(false);
+  }
+};
+
+const controlSendReply = async function () {
+  const ticketId = SupportView._currentTicketId;
+  const message = SupportView._getReplyText();
+  if (!ticketId || !message) return;
+  SupportView.setReplySending(true);
+  try {
+    await model.submitTicketReply(ticketId, message);
+    SupportView.clearReplyInput();
+    const ticket = model.state.tickets.find(t => t.id === ticketId);
+    const replies = await model.loadTicketReplies(ticketId);
+    SupportView.renderThread(ticket, replies);
+  } catch (err) {
+    showToast(err.message ?? 'Could not send reply.');
+  } finally {
+    SupportView.setReplySending(false);
   }
 };
 
@@ -850,10 +888,9 @@ const _updateCashierDisplay = function () {
 };
 
 const controlSwitchCashier = async function () {
-  if (!model.state.staff.length) {
-    try { await model.loadStaff(); } catch (_) {}
-  }
-  const activeStaff = model.state.staff.filter(s => !s.isPending);
+  try { await model.loadStaff(); } catch (_) {}
+  const activeStaff = model.state.staff.filter(s => s.isActive);
+  const AVATAR_COLORS = ['#22c55e','#3b82f6','#f59e0b','#ec4899','#8b5cf6','#06b6d4'];
 
   const existing = document.getElementById('cashierPickerOverlay');
   if (existing) { existing.remove(); return; }
@@ -861,42 +898,140 @@ const controlSwitchCashier = async function () {
   const el = document.createElement('div');
   el.id = 'cashierPickerOverlay';
   el.className = 'cashier-picker-overlay';
-  el.innerHTML = `
-    <div class="cashier-picker-card">
+  const card = document.createElement('div');
+  card.className = 'cashier-picker-card';
+  el.appendChild(card);
+  document.body.appendChild(el);
+  el.addEventListener('click', e => { if (e.target === el) el.remove(); });
+
+  const staffMeta = (s, i) => {
+    const fullName    = _cashierDisplayName(s);
+    const displayName = fullName || (s.email ? s.email.split('@')[0] : '?');
+    const initials    = fullName
+      ? fullName.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()
+      : displayName.slice(0,2).toUpperCase();
+    return { displayName, initials, color: AVATAR_COLORS[i % AVATAR_COLORS.length] };
+  };
+
+  const renderStaffList = () => {
+    card.innerHTML = `
       <div class="cashier-picker-header">
-        <h3 class="cashier-picker-title">Switch Cashier</h3>
+        <div>
+          <h3 class="cashier-picker-title">Switch Cashier</h3>
+          <p class="cashier-picker-subtitle">Who's at the register right now?</p>
+        </div>
         <button class="modal-close-btn" id="cashierPickerCloseBtn" type="button">&times;</button>
       </div>
       <ul class="cashier-picker-list">
-        ${activeStaff.length ? activeStaff.map(s => {
-          const name = _cashierDisplayName(s) || s.email || '?';
+        ${activeStaff.length ? activeStaff.map((s, i) => {
+          const { displayName, initials, color } = staffMeta(s, i);
+          const isActive = model.state.currentCashier?.id === s.id;
           return `
-          <li class="cashier-picker-item${model.state.currentCashier?.id === s.id ? ' cashier-picker-item--active' : ''}"
-              data-id="${s.id}" role="button" tabindex="0">
-            <div class="cashier-picker-info">
-              <span class="cashier-picker-name">${esc(name)}</span>
-              <span class="cashier-picker-role">${esc(s.role)}</span>
-            </div>
-            ${model.state.currentCashier?.id === s.id ? '<span class="cashier-picker-check">✓</span>' : ''}
-          </li>`;
+            <li class="cashier-picker-item${isActive ? ' cashier-picker-item--active' : ''}${!s.hasPin ? ' cashier-picker-item--disabled' : ''}"
+                data-id="${s.id}" data-idx="${i}" role="button" tabindex="0">
+              <div class="cashier-picker-avatar" style="background:${color}">${esc(initials)}</div>
+              <div class="cashier-picker-info">
+                <span class="cashier-picker-name">${esc(displayName)}</span>
+                <span class="cashier-picker-role">${esc(s.role)}${s.hasPin ? '' : ' &middot; <em class="cashier-no-pin">PIN not set</em>'}</span>
+              </div>
+              ${isActive ? `<div class="cashier-picker-check"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>` : ''}
+            </li>`;
         }).join('') : '<li class="cashier-picker-empty">No active staff members yet.</li>'}
       </ul>
-    </div>
-  `;
-  document.body.appendChild(el);
-  document.getElementById('cashierPickerCloseBtn').addEventListener('click', () => el.remove());
-  el.addEventListener('click', (e) => {
-    if (e.target === el) { el.remove(); return; }
-    const item = e.target.closest('.cashier-picker-item');
-    if (!item?.dataset.id) return;
-    const chosen = activeStaff.find(s => s.id === item.dataset.id);
-    if (chosen) {
+    `;
+    card.querySelector('#cashierPickerCloseBtn')?.addEventListener('click', () => el.remove());
+    card.querySelector('.cashier-picker-list')?.addEventListener('click', e => {
+      const item = e.target.closest('.cashier-picker-item[data-id]');
+      if (!item || item.classList.contains('cashier-picker-item--disabled')) return;
+      const chosen = activeStaff.find(s => s.id === item.dataset.id);
+      if (chosen) renderPinScreen(chosen, parseInt(item.dataset.idx));
+    });
+  };
+
+  const renderPinScreen = (chosen, idx) => {
+    const { displayName, initials, color } = staffMeta(chosen, idx);
+
+    if (!chosen.hasPin) {
       model.state.currentCashier = chosen;
       _updateCashierDisplay();
-      showToast(`Cashier: ${_cashierDisplayName(chosen) || chosen.email}`, 'success');
+      showToast(`Switched to ${displayName} — set a PIN in Staff settings`, 'success');
       el.remove();
+      return;
     }
-  });
+
+    card.innerHTML = `
+      <div class="cashier-picker-header">
+        <div>
+          <h3 class="cashier-picker-title">Enter PIN</h3>
+          <p class="cashier-picker-subtitle">Switching to ${esc(displayName)}</p>
+        </div>
+        <button class="modal-close-btn" id="cashierPinCloseBtn" type="button">&times;</button>
+      </div>
+      <div class="cashier-pin-screen">
+        <div class="cashier-picker-avatar cashier-pin-avatar" style="background:${color}">${esc(initials)}</div>
+        <p class="cashier-pin-name">${esc(displayName)}</p>
+        <p class="cashier-pin-role">${esc(chosen.role)}</p>
+        <div class="cashier-pin-dots" id="cashierPinDots">
+          <span class="cashier-pin-dot"></span>
+          <span class="cashier-pin-dot"></span>
+          <span class="cashier-pin-dot"></span>
+          <span class="cashier-pin-dot"></span>
+          <span class="cashier-pin-dot"></span>
+          <span class="cashier-pin-dot"></span>
+        </div>
+        <p class="cashier-pin-error hidden" id="cashierPinError">Incorrect PIN. Try again.</p>
+        <div class="cashier-numpad">
+          ${[1,2,3,4,5,6,7,8,9].map(n => `<button class="cashier-numpad-btn" data-key="${n}">${n}</button>`).join('')}
+          <button class="cashier-numpad-btn cashier-numpad-nav" data-key="back">← Back</button>
+          <button class="cashier-numpad-btn" data-key="0">0</button>
+          <button class="cashier-numpad-btn cashier-numpad-del" data-key="del">⌫</button>
+        </div>
+      </div>
+    `;
+
+    let enteredPin = '';
+
+    const updateDots = () => {
+      card.querySelectorAll('.cashier-pin-dot').forEach((d, i) => {
+        d.classList.toggle('cashier-pin-dot--filled', i < enteredPin.length);
+      });
+    };
+
+    const shakeAndClear = () => {
+      const dotsEl = card.querySelector('#cashierPinDots');
+      const errEl  = card.querySelector('#cashierPinError');
+      dotsEl?.classList.add('cashier-pin-shake');
+      errEl?.classList.remove('hidden');
+      setTimeout(() => {
+        dotsEl?.classList.remove('cashier-pin-shake');
+        enteredPin = '';
+        updateDots();
+      }, 600);
+    };
+
+    card.querySelector('#cashierPinCloseBtn')?.addEventListener('click', () => el.remove());
+    card.querySelector('.cashier-numpad')?.addEventListener('click', e => {
+      const key = e.target.closest('.cashier-numpad-btn')?.dataset.key;
+      if (!key) return;
+      if (key === 'back') { renderStaffList(); return; }
+      if (key === 'del')  { enteredPin = enteredPin.slice(0, -1); updateDots(); return; }
+      if (enteredPin.length >= 6) return;
+      enteredPin += key;
+      updateDots();
+      if (enteredPin.length === 6) {
+        if (enteredPin === chosen.pin) {
+          model.state.currentCashier = chosen;
+          _updateCashierDisplay();
+          showToast(`Switched to ${displayName}`, 'success');
+          el.remove();
+        } else {
+          shakeAndClear();
+        }
+      }
+    });
+  };
+
+  renderStaffList();
 };
 
 const refreshTodaySalesDisplay = async function () {
@@ -943,6 +1078,7 @@ const initApp = async function (user) {
   localStorage.setItem('pointy_business_id', model.state.businessId);
   document.body.classList.remove('role-admin', 'role-manager', 'role-cashier');
   document.body.classList.add(`role-${model.state.role.toLowerCase()}`);
+  if (model.state.currentStaff) model.state.currentCashier = model.state.currentStaff;
   _updateCashierDisplay();
   if (model.state.role === 'Admin') model.loadBusinessProfile().catch(() => {});
   await model.loadMenuItems();
@@ -1045,6 +1181,7 @@ const controlSignIn = async function (email, password) {
   await initApp(data.user);
   hideLoadingScreen();
   _wireApp();
+  _maybeShowPinSetup();
 };
 
 const controlSignUp = async function ({ firstName, lastName, email, businessName, phone, password }) {
@@ -1136,6 +1273,19 @@ const _cashflowSummary = () => {
 };
 
 const _cashflowCanEdit = () => modelState.role === 'Admin' || modelState.role === 'Manager';
+const _staffCanManage  = () => modelState.role === 'Admin';
+
+let _currentReportsPeriod = { period: 'today' };
+let _currentPrevTotals = null;
+let _selectedOverviewMetrics = new Set();
+let _overviewTimeSeries = null;
+const METRIC_COLORS = { revenue: '#22c55e', expenses: '#ef4444', net: '#3b82f6', avgOrder: '#f59e0b' };
+const METRIC_LABELS = { revenue: 'Gross Income', expenses: 'Expenses', net: 'Net Income', avgOrder: 'Avg. Order' };
+const _reportsExpenseSummary = () => {
+  const gross    = (modelState.cashflowSales ?? []).reduce((s, r) => s + Number(r.total_price), 0);
+  const expenses = (modelState.expenses      ?? []).reduce((s, e) => s + e.amount, 0);
+  return { gross, expenses, net: gross - expenses };
+};
 
 let _currentCashflowPeriod = { period: "today" };
 
@@ -1185,6 +1335,11 @@ const controlChangePeriod = async function ({ period, from, to }) {
   }
 };
 
+const _refreshReportsExpenses = () => {
+  if (document.getElementById("reportsPanel")?.classList.contains("hidden")) return;
+  ReportsView.renderExpenseKpis(_reportsExpenseSummary());
+};
+
 const controlAddExpense = async function (data) {
   try {
     CashflowView.setSubmitting(true);
@@ -1193,6 +1348,7 @@ const controlAddExpense = async function (data) {
     CashflowView.renderSummary(_cashflowSummary());
     CashflowView.renderExpensesList(modelState.expenses, _cashflowCanEdit());
     CashflowView.scrollExpensesToTop();
+    _refreshReportsExpenses();
     showToast("Expense added.", "success");
   } catch (err) {
     showToast(err.message ?? err);
@@ -1401,6 +1557,7 @@ const controlDeleteExpense = async function (id) {
     await model.deleteExpense(id);
     CashflowView.renderSummary(_cashflowSummary());
     CashflowView.renderExpensesList(modelState.expenses, _cashflowCanEdit());
+    _refreshReportsExpenses();
     showToast("Expense deleted.", "success");
   } catch (err) {
     showToast(err.message ?? err);
@@ -1485,9 +1642,10 @@ const controlRemovePromoCode = function () {
 
 const controlOpenStaff = async function () {
   try {
+    StaffView.open(_staffCanManage());
     await Promise.all([model.loadStaff(), model.loadRoles()]);
-    StaffView.open();
-    StaffView.render(model.state.staff);
+    StaffView.render(model.state.staff, _staffCanManage());
+    StaffView.renderRoles(model.state.roles);
   } catch (err) {
     showToast(err.message ?? err);
   }
@@ -1495,6 +1653,137 @@ const controlOpenStaff = async function () {
 
 const controlCloseStaff = function () {
   StaffView.close();
+};
+
+const _maybeShowPinSetup = function () {
+  if (!model.state.currentStaff || model.state.currentStaff.hasPin) return;
+
+  const name = model.state.currentStaff.firstName || 'there';
+  const el = document.createElement('div');
+  el.className = 'cashier-picker-overlay';
+  el.style.zIndex = '99999';
+  const card = document.createElement('div');
+  card.className = 'cashier-picker-card';
+  card.style.maxWidth = '340px';
+  el.appendChild(card);
+  document.body.appendChild(el);
+
+  const renderCreate = () => {
+    card.innerHTML = `
+      <div class="cashier-picker-header" style="border-bottom:none;padding-bottom:0">
+        <div>
+          <h3 class="cashier-picker-title">Set Your PIN</h3>
+          <p class="cashier-picker-subtitle">Hi ${esc(name)}! Create a 6-digit PIN to use at the register.</p>
+        </div>
+      </div>
+      <div class="cashier-pin-screen">
+        <div class="cashier-pin-dots" id="pinSetupDots">
+          ${'<span class="cashier-pin-dot"></span>'.repeat(6)}
+        </div>
+        <p class="cashier-pin-error hidden" id="pinSetupError">PINs don't match. Try again.</p>
+        <div class="cashier-numpad">
+          ${[1,2,3,4,5,6,7,8,9].map(n => `<button class="cashier-numpad-btn" data-key="${n}">${n}</button>`).join('')}
+          <div></div>
+          <button class="cashier-numpad-btn" data-key="0">0</button>
+          <button class="cashier-numpad-btn cashier-numpad-del" data-key="del">⌫</button>
+        </div>
+      </div>
+    `;
+    let entered = '';
+    const updateDots = () => card.querySelectorAll('.cashier-pin-dot').forEach((d, i) => d.classList.toggle('cashier-pin-dot--filled', i < entered.length));
+    card.querySelector('.cashier-numpad')?.addEventListener('click', e => {
+      const key = e.target.closest('.cashier-numpad-btn')?.dataset.key;
+      if (!key) return;
+      if (key === 'del') { entered = entered.slice(0, -1); updateDots(); return; }
+      if (entered.length >= 6) return;
+      entered += key;
+      updateDots();
+      if (entered.length === 6) renderConfirm(entered);
+    });
+  };
+
+  const renderConfirm = (firstPin) => {
+    card.innerHTML = `
+      <div class="cashier-picker-header" style="border-bottom:none;padding-bottom:0">
+        <div>
+          <h3 class="cashier-picker-title">Confirm PIN</h3>
+          <p class="cashier-picker-subtitle">Enter your PIN one more time.</p>
+        </div>
+      </div>
+      <div class="cashier-pin-screen">
+        <div class="cashier-pin-dots" id="pinSetupDots">
+          ${'<span class="cashier-pin-dot"></span>'.repeat(6)}
+        </div>
+        <p class="cashier-pin-error hidden" id="pinSetupError">PINs don't match. Try again.</p>
+        <div class="cashier-numpad">
+          ${[1,2,3,4,5,6,7,8,9].map(n => `<button class="cashier-numpad-btn" data-key="${n}">${n}</button>`).join('')}
+          <button class="cashier-numpad-btn cashier-numpad-nav" data-key="back">← Back</button>
+          <button class="cashier-numpad-btn" data-key="0">0</button>
+          <button class="cashier-numpad-btn cashier-numpad-del" data-key="del">⌫</button>
+        </div>
+      </div>
+    `;
+    let entered = '';
+    const updateDots = () => card.querySelectorAll('.cashier-pin-dot').forEach((d, i) => d.classList.toggle('cashier-pin-dot--filled', i < entered.length));
+    const shakeAndRetry = () => {
+      const dotsEl = card.querySelector('#pinSetupDots');
+      const errEl  = card.querySelector('#pinSetupError');
+      dotsEl?.classList.add('cashier-pin-shake');
+      errEl?.classList.remove('hidden');
+      setTimeout(() => { dotsEl?.classList.remove('cashier-pin-shake'); renderCreate(); }, 800);
+    };
+    card.querySelector('.cashier-numpad')?.addEventListener('click', async e => {
+      const key = e.target.closest('.cashier-numpad-btn')?.dataset.key;
+      if (!key) return;
+      if (key === 'back') { renderCreate(); return; }
+      if (key === 'del')  { entered = entered.slice(0, -1); updateDots(); return; }
+      if (entered.length >= 6) return;
+      entered += key;
+      updateDots();
+      if (entered.length === 6) {
+        if (entered === firstPin) {
+          try {
+            await model.setStaffPin(model.state.currentStaff.id, entered);
+            model.state.currentCashier = model.state.currentStaff;
+            el.remove();
+            showToast('PIN set! You\'re all set.', 'success');
+          } catch (err) {
+            showToast(err.message ?? 'Could not save PIN. Try again.');
+            el.remove();
+          }
+        } else {
+          shakeAndRetry();
+        }
+      }
+    });
+  };
+
+  renderCreate();
+};
+
+const controlEditStaffRole = function (staffId) {
+  const staff = model.state.staff.find(s => s.id === staffId);
+  if (!staff) return;
+  const { onSave } = StaffView.showEditRoleModal(staff, model.state.roles);
+  onSave(async (roleId) => {
+    try {
+      await model.updateStaffRole(staffId, roleId);
+      StaffView.render(model.state.staff, _staffCanManage());
+      showToast('Role updated.', 'success');
+    } catch (err) {
+      showToast(err.message ?? 'Could not update role.');
+    }
+  });
+};
+
+const controlSetStaffPin = async function (staffId, pin) {
+  try {
+    await model.setStaffPin(staffId, pin);
+    StaffView.render(model.state.staff, _staffCanManage());
+    showToast('PIN updated.', 'success');
+  } catch (err) {
+    showToast(err.message ?? 'Could not update PIN.');
+  }
 };
 
 const controlShowInviteForm = function () {
@@ -1521,7 +1810,7 @@ const controlInviteStaff = async function (data) {
   try {
     await model.inviteStaff(data);
     StaffView.closeForm();
-    StaffView.render(model.state.staff);
+    StaffView.render(model.state.staff, _staffCanManage());
     showToast('Staff member added.', 'success');
   } catch (err) {
     showToast(err.message ?? err);
@@ -1532,7 +1821,7 @@ const controlRemoveStaff = async function (id) {
   if (!confirm('Remove this staff member? They will lose access to the system.')) return;
   try {
     await model.removeStaff(id);
-    StaffView.render(model.state.staff);
+    StaffView.render(model.state.staff, _staffCanManage());
     showToast('Staff member removed.', 'success');
   } catch (err) {
     showToast(err.message ?? err);
@@ -1571,7 +1860,7 @@ const _computeTopItems = function (limit = 10, sortKey = _topItemsSortKey) {
 const controlSortTopItems = function (key) {
   _topItemsSortKey = key;
   ReportsView.setTopItemsSort(key);
-  ReportsView.renderTopItems(_computeTopItems());
+  ReportsView.renderTopItems(_computeTopItems(), key);
 };
 
 const _computeCategoryMix = function () {
@@ -1627,6 +1916,147 @@ const _computeRevenueOverTime = function (period, startISO, endISO) {
     data.push(dmap.get(d.toISOString().slice(0, 10)) ?? 0);
   }
   return { labels, data };
+};
+
+const _computeAllTimeSeries = function(period, startISO, endISO) {
+  const sales    = modelState.reportsSales;
+  const expenses = modelState.expenses ?? [];
+  const MONTHS   = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const DAYS     = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const fmtHour  = i => i === 0 ? "12am" : i < 12 ? `${i}am` : i === 12 ? "12pm" : `${i - 12}pm`;
+
+  let labels, n, saleKeyFn, expKeyFn;
+
+  if (period === "today") {
+    labels = Array.from({ length: 24 }, (_, i) => fmtHour(i));
+    n = 24;
+    saleKeyFn = s => new Date(s.sale_date).getHours();
+    expKeyFn  = e => e.expenseDate ? new Date(e.expenseDate).getHours() : -1;
+  } else if (period === "year") {
+    const year = new Date(startISO).getFullYear();
+    labels = MONTHS;
+    n = 12;
+    const mKey = str => {
+      const yr = parseInt(str.slice(0, 4));
+      const mo = parseInt(str.slice(5, 7)) - 1;
+      return yr === year ? mo : -1;
+    };
+    saleKeyFn = s => mKey(s.sale_date);
+    expKeyFn  = e => e.expenseDate ? mKey(e.expenseDate) : -1;
+  } else {
+    const start = new Date(startISO);
+    const end   = new Date(endISO);
+    labels = [];
+    const dateStrs = [];
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      labels.push(period === "week" ? DAYS[d.getDay()] : `${d.getMonth() + 1}/${d.getDate()}`);
+      dateStrs.push(d.toISOString().slice(0, 10));
+    }
+    n = labels.length;
+    const dmap = new Map(dateStrs.map((s, i) => [s, i]));
+    saleKeyFn = s => dmap.get(s.sale_date.slice(0, 10)) ?? -1;
+    expKeyFn  = e => e.expenseDate ? (dmap.get(e.expenseDate.slice(0, 10)) ?? -1) : -1;
+  }
+
+  const revArr = Array(n).fill(0);
+  const expArr = Array(n).fill(0);
+  const txArr  = Array(n).fill(0);
+  const svcSum = Array(n).fill(0);
+  const svcCnt = Array(n).fill(0);
+
+  for (const s of sales) {
+    const i = saleKeyFn(s);
+    if (i < 0 || i >= n) continue;
+    revArr[i] += Number(s.total_price);
+    txArr[i]++;
+    if (s.prepared_at) {
+      const mins = (new Date(s.prepared_at) - new Date(s.sale_date)) / 60000;
+      if (mins >= 0 && mins <= 120) { svcSum[i] += mins; svcCnt[i]++; }
+    }
+  }
+  for (const e of expenses) {
+    const i = expKeyFn(e);
+    if (i < 0 || i >= n) continue;
+    expArr[i] += e.amount;
+  }
+
+  return {
+    labels,
+    series: {
+      revenue:      revArr,
+      expenses:     expArr,
+      net:          revArr.map((r, i) => r - expArr[i]),
+      transactions: txArr,
+      avgOrder:     revArr.map((r, i) => txArr[i] > 0 ? r / txArr[i] : 0),
+      avgServing:   svcSum.map((s, i) => svcCnt[i] > 0 ? +(s / svcCnt[i]).toFixed(1) : 0),
+    },
+  };
+};
+
+const _buildOverviewDatasets = function() {
+  if (!_overviewTimeSeries) return { labels: [], datasets: [] };
+  const { labels, series } = _overviewTimeSeries;
+  const datasets = [..._selectedOverviewMetrics].map(metric => {
+    const color = METRIC_COLORS[metric];
+    return {
+      label: METRIC_LABELS[metric],
+      data: series[metric] ?? [],
+      borderColor: color,
+      backgroundColor: color + '22',
+      fill: 'origin',
+      tension: 0.4,
+      pointRadius: 3,
+      pointHoverRadius: 7,
+      borderWidth: 2.5,
+      _metric: metric,
+    };
+  });
+  return { labels, datasets };
+};
+
+const _renderOverviewChart = async function() {
+  const { labels, datasets } = _buildOverviewDatasets();
+  await ReportsView.renderOverviewChart({ labels, datasets });
+  ReportsView.setSelectedMetrics(_selectedOverviewMetrics);
+};
+
+const controlToggleMetric = function(metric) {
+  if (!METRIC_COLORS[metric]) return;
+  if (_selectedOverviewMetrics.has(metric)) {
+    _selectedOverviewMetrics.delete(metric);
+  } else {
+    _selectedOverviewMetrics.add(metric);
+  }
+  _renderOverviewChart();
+};
+
+const _computeTrafficPeaks = function(period, startISO, endISO) {
+  const sales = modelState.reportsSales;
+  const fmtHour = i => i === 0 ? '12am' : i < 12 ? `${i}am` : i === 12 ? '12pm' : `${i - 12}pm`;
+  const FULLDAY = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  const hourCounts = Array(24).fill(0);
+  for (const s of sales) hourCounts[new Date(s.sale_date).getHours()]++;
+  const maxHour = Math.max(...hourCounts);
+  const peakHourIdx = maxHour > 0 ? hourCounts.indexOf(maxHour) : -1;
+
+  const dayCounts = Array(7).fill(0);
+  for (const s of sales) {
+    const d = new Date(s.sale_date).getDay();
+    dayCounts[d === 0 ? 6 : d - 1]++;
+  }
+  const maxDay = Math.max(...dayCounts);
+  const peakDayIdx = maxDay > 0 ? dayCounts.indexOf(maxDay) : -1;
+
+  const days = Math.max(1, Math.round((new Date(endISO) - new Date(startISO)) / 86400000));
+  const avgDaily = sales.length > 0 ? sales.length / days : 0;
+
+  return {
+    peakHour:  peakHourIdx >= 0 ? { label: fmtHour(peakHourIdx), count: maxHour } : null,
+    peakDay:   period !== 'today' && peakDayIdx >= 0 ? { label: FULLDAY[peakDayIdx], count: maxDay } : null,
+    total:     sales.length,
+    avgDaily,
+  };
 };
 
 const _computeHourlyBreakdown = function () {
@@ -1853,7 +2283,56 @@ const controlRunComparison = async function ({ type, aValue, bValue, fromA, toA,
   }
 };
 
-const _computeStaffPerformance = function () {
+const _getAvgDivisor = function (period, startISO, endISO) {
+  const now = new Date();
+  const end = new Date(endISO);
+  const isCurrentPeriod = end >= now;
+
+  if (period === 'today') {
+    if (isCurrentPeriod) return Math.max(1, now.getHours() + now.getMinutes() / 60);
+    return 24;
+  }
+  if (period === 'week') {
+    if (isCurrentPeriod) {
+      const start = new Date(startISO);
+      return Math.max(1, Math.min(7, Math.ceil((now - start) / 86400000)));
+    }
+    return 7;
+  }
+  if (period === 'month') {
+    if (isCurrentPeriod) return Math.max(1, now.getDate() / 7);
+    const start = new Date(startISO);
+    return new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate() / 7;
+  }
+  if (period === 'year') {
+    if (isCurrentPeriod) return Math.max(1, now.getMonth() + 1);
+    return 12;
+  }
+  // custom: days in range
+  const start = new Date(startISO);
+  return Math.max(1, Math.round((end - start) / 86400000));
+};
+
+const _getAvgUnitSuffix = function (period) {
+  if (period === 'today')  return '/ Hr';
+  if (period === 'week')   return '/ Day';
+  if (period === 'month')  return '/ Wk';
+  if (period === 'year')   return '/ Mo';
+  return '/ Day';
+};
+
+const _getAvgTooltip = function (period, divisor) {
+  const d = parseFloat(divisor.toFixed(1));
+  if (period === 'today')  return `Divided by hours elapsed today — not always 24 (currently ${d} hrs)`;
+  if (period === 'week')   return `Divided by days elapsed this week — not always 7 (currently ${d} days)`;
+  if (period === 'month')  return `Divided by weeks elapsed this month (currently ${d} wks)`;
+  if (period === 'year')   return `Divided by months elapsed this year (currently ${d} months)`;
+  return `Divided by days in this range (${d} days)`;
+};
+
+let _staffSortKey = "revenue";
+
+const _computeStaffPerformance = function (sortKey = _staffSortKey) {
   const map = new Map();
   for (const sale of modelState.reportsSales) {
     const name = sale.added_by || "Unknown";
@@ -1862,7 +2341,17 @@ const _computeStaffPerformance = function () {
     existing.revenue += Number(sale.total_price);
     map.set(name, existing);
   }
-  return [...map.values()].sort((a, b) => b.revenue - a.revenue);
+  const sorter = sortKey === "quantity"
+    ? (a, b) => b.transactions - a.transactions
+    : (a, b) => b.revenue - a.revenue;
+  return [...map.values()].sort(sorter);
+};
+
+const controlSortStaff = function (key) {
+  _staffSortKey = key;
+  ReportsView.setStaffSort(key);
+  const staff = _computeStaffPerformance(key);
+  ReportsView.renderStaff(staff, key);
 };
 
 let _reportSnapshot = null;
@@ -2061,23 +2550,23 @@ tr:last-child td{border-bottom:none}
 
 <div class="section-heading">KPI Summary</div>
 <div class="kpi-grid">
-  ${kpiCard("Revenue",       sA.revenue,           sB.revenue,           fmt(sA.revenue),               fmt(sB.revenue))}
+  ${kpiCard("Gross Income",  sA.revenue,           sB.revenue,           fmt(sA.revenue),               fmt(sB.revenue))}
   ${kpiCard("Transactions",  sA.transactions,      sB.transactions,      String(sA.transactions),       String(sB.transactions))}
   ${kpiCard("Avg. Order",    sA.avgOrder,          sB.avgOrder,          fmt(sA.avgOrder),              fmt(sB.avgOrder))}
   ${kpiCard("Avg. Serving",  sA.avgServingMinutes, sB.avgServingMinutes, fmtServ(sA.avgServingMinutes), fmtServ(sB.avgServingMinutes), true)}
 </div>
 
-${cmpChart ? `<div class="section-heading">Revenue Over Time</div>
+${cmpChart ? `<div class="section-heading">Gross Income Over Time</div>
 <div class="chart-wrap"><div class="chart-label">${esc(labelA)} vs ${esc(labelB)}</div><img src="${cmpChart}" alt="Compare chart"/></div>` : ""}
 
-<div class="section-heading">Top Items by Revenue</div>
+<div class="section-heading">Top Items by Gross Income</div>
 <div class="top-grid">
   <div class="top-card"><table>
-    <thead><tr><th><span class="dot-a"></span>${esc(labelA)}</th><th class="td-num">Revenue</th></tr></thead>
+    <thead><tr><th><span class="dot-a"></span>${esc(labelA)}</th><th class="td-num">Gross Income</th></tr></thead>
     <tbody>${topA.map(i => `<tr><td>${esc(i.name)}</td><td class="td-num">${fmt(i.revenue)}</td></tr>`).join("") || '<tr><td colspan="2" class="td-muted" style="text-align:center;padding:14px">No data</td></tr>'}</tbody>
   </table></div>
   <div class="top-card"><table>
-    <thead><tr><th><span class="dot-b"></span>${esc(labelB)}</th><th class="td-num">Revenue</th></tr></thead>
+    <thead><tr><th><span class="dot-b"></span>${esc(labelB)}</th><th class="td-num">Gross Income</th></tr></thead>
     <tbody>${topB.map(i => `<tr><td>${esc(i.name)}</td><td class="td-num">${fmt(i.revenue)}</td></tr>`).join("") || '<tr><td colspan="2" class="td-muted" style="text-align:center;padding:14px">No data</td></tr>'}</tbody>
   </table></div>
 </div>
@@ -2181,14 +2670,14 @@ tr:last-child td{border-bottom:none}
 </div>
 
 <div class="kpi-strip">
-  <div class="kpi-card"><div class="kpi-label">Revenue</div><div class="kpi-val">${fmt(summary.revenue)}</div></div>
+  <div class="kpi-card"><div class="kpi-label">Gross Income</div><div class="kpi-val">${fmt(summary.revenue)}</div></div>
   <div class="kpi-card"><div class="kpi-label">Transactions</div><div class="kpi-val">${summary.transactions}</div></div>
   <div class="kpi-card"><div class="kpi-label">Avg. Order</div><div class="kpi-val">${fmt(summary.avgOrder)}</div></div>
   <div class="kpi-card"><div class="kpi-label">Avg. Serving</div><div class="kpi-val">${fmtServ(summary.avgServingMinutes)}</div></div>
 </div>
 
 ${charts.revenue ? `<div class="section-heading">Charts</div><div class="charts-area">
-  <div class="charts-row charts-row--1">${chartBlock(charts.revenue, "Revenue Over Time")}</div>
+  <div class="charts-row charts-row--1">${chartBlock(charts.revenue, "Gross Income Over Time")}</div>
   <div class="charts-row charts-row--2">${chartBlock(charts.category, "Category Mix")}${chartBlock(charts.hourly, "Hourly Breakdown")}</div>
   ${(charts.dow || charts.servHour || charts.servDay) ? `<div class="charts-row charts-row--2">${chartBlock(charts.dow, "Day of Week")}${chartBlock(charts.servHour, "Avg. Serving by Hour")}</div>` : ""}
   ${charts.servDay ? `<div class="charts-row charts-row--1">${chartBlock(charts.servDay, "Avg. Serving by Day")}</div>` : ""}
@@ -2197,7 +2686,7 @@ ${charts.revenue ? `<div class="section-heading">Charts</div><div class="charts-
 <div class="section-heading">Top Items</div>
 <div class="table-wrap">
   <table>
-    <thead><tr><th>#</th><th>Item</th><th class="td-num">Qty Sold</th><th class="td-num">Revenue</th></tr></thead>
+    <thead><tr><th>#</th><th>Item</th><th class="td-num">Qty Sold</th><th class="td-num">Gross Income</th></tr></thead>
     <tbody>${topItemsRows || '<tr><td colspan="4" style="color:#9ca3af;text-align:center;padding:16px">No item data</td></tr>'}</tbody>
   </table>
 </div>
@@ -2205,7 +2694,7 @@ ${charts.revenue ? `<div class="section-heading">Charts</div><div class="charts-
 ${staff.length ? `<div class="section-heading">Staff Performance</div>
 <div class="table-wrap">
   <table>
-    <thead><tr><th>Cashier</th><th class="td-num">Transactions</th><th class="td-num">Revenue</th><th class="td-num">Avg. Order</th></tr></thead>
+    <thead><tr><th>Cashier</th><th class="td-num">Transactions</th><th class="td-num">Gross Income</th><th class="td-num">Avg. Order</th></tr></thead>
     <tbody>${staffRows}</tbody>
   </table>
 </div>` : ""}
@@ -2236,30 +2725,55 @@ const _renderReportsData = async function (period, startISO, endISO, label, prev
   const summary = _computeReportsSummary();
   ReportsView.renderSummary(summary);
   if (prevTotals) ReportsView.renderComparison(summary, prevTotals, vsLabel);
-  ReportsView.renderTopItems(_computeTopItems());
-  const staff = _computeStaffPerformance();
-  ReportsView.renderStaff(staff);
+  const topItems   = _computeTopItems();
+  const categoryMix = _computeCategoryMix();
+  const staff      = _computeStaffPerformance();
+  ReportsView.renderTopItems(topItems, _topItemsSortKey);
+  ReportsView.renderStaff(staff, _staffSortKey);
+  ReportsView.renderSalesKpis({
+    bestSeller:  topItems[0]   ?? null,
+    topCategory: categoryMix[0] ?? null,
+    topStaff:    staff[0]      ?? null,
+  });
+  const expSummary = _reportsExpenseSummary();
+  const avgDivisor = _getAvgDivisor(period, startISO, endISO);
+  const avgSuffix  = _getAvgUnitSuffix(period);
+  const avgTooltip = _getAvgTooltip(period, avgDivisor);
+  ReportsView.renderExpenseKpis({
+    ...expSummary,
+    avgGross: expSummary.gross / avgDivisor,
+    avgNet:   expSummary.net   / avgDivisor,
+    avgSuffix,
+    avgTooltip,
+  });
   _reportSnapshot = { sales: modelState.reportsSales, staff, periodLabel: label };
+  _selectedOverviewMetrics = new Set();
+  _overviewTimeSeries = _computeAllTimeSeries(period, startISO, endISO);
+  ReportsView.renderTrafficKpis(_computeTrafficPeaks(period, startISO, endISO));
   await ReportsView.renderCharts({
-    revenueOverTime: _computeRevenueOverTime(period, startISO, endISO),
-    categoryMix:     _computeCategoryMix(),
+    categoryMix,
+    itemMix:         topItems,
     hourlyBreakdown: _computeHourlyBreakdown(),
     dayOfWeek:       _computeDayOfWeek(period),
     servingTime:     _computeServingTimeStats(),
   });
+  await _renderOverviewChart();
 };
 
-const controlOpenReports = async function () {
+const controlOpenReports = async function (section = "overview") {
   ReportsView.open();
   ReportsView.renderLoading();
+  _currentReportsPeriod = { period: "today" };
   try {
     const { startISO, endISO, label } = _getCashflowRange("today");
     const { prevStart, prevEnd, vsLabel } = _getPreviousPeriodRange("today", startISO, endISO);
-    const [, prevTotals] = await Promise.all([
+    await Promise.all([
       model.fetchReportsSales(startISO, endISO),
-      model.fetchPeriodTotals(prevStart, prevEnd),
+      model.fetchPeriodTotals(prevStart, prevEnd).then(pt => { _currentPrevTotals = pt; }),
+      model.fetchCashflowData(startISO, endISO),
     ]);
-    await _renderReportsData("today", startISO, endISO, label, prevTotals, vsLabel);
+    await _renderReportsData("today", startISO, endISO, label, _currentPrevTotals, vsLabel);
+    if (section !== "overview") ReportsView._switchSection(section);
   } catch (err) {
     showToast(err.message ?? err);
   }
@@ -2272,14 +2786,16 @@ const controlCloseReports = function () {
 
 const controlReportsPeriodChange = async function ({ period, from, to }) {
   ReportsView.renderLoading();
+  _currentReportsPeriod = { period, from, to };
   try {
     const { startISO, endISO, label } = _getCashflowRange(period, from, to);
     const { prevStart, prevEnd, vsLabel } = _getPreviousPeriodRange(period, startISO, endISO, from, to);
-    const [, prevTotals] = await Promise.all([
+    await Promise.all([
       model.fetchReportsSales(startISO, endISO),
-      model.fetchPeriodTotals(prevStart, prevEnd),
+      model.fetchPeriodTotals(prevStart, prevEnd).then(pt => { _currentPrevTotals = pt; }),
+      model.fetchCashflowData(startISO, endISO),
     ]);
-    await _renderReportsData(period, startISO, endISO, label, prevTotals, vsLabel);
+    await _renderReportsData(period, startISO, endISO, label, _currentPrevTotals, vsLabel);
   } catch (err) {
     showToast(err.message ?? err);
   }
@@ -2383,6 +2899,9 @@ const _wireApp = function () {
   SupportView._addHandlerTicketClick(controlOpenTicket);
   SupportView._addHandlerMarkSolved(controlMarkTicketSolved);
   SupportView._addHandlerSubmitTicket(controlSubmitTicket);
+  SupportView._addHandlerSendReply(controlSendReply);
+  SupportView._addHandlerSubmitRating(controlSubmitRating);
+  SupportView._addHandlerStarInteraction();
   SupportView._addHandlerTicketFiles();
   const kdsWindowBtn = document.getElementById('kdsWindowBtn');
   const cfdWindowBtn = document.getElementById('cfdWindowBtn');
@@ -2400,6 +2919,20 @@ const _wireApp = function () {
   DiscountView._addHandlerDelete(controlDeleteDiscountCode);
   DiscountView._addHandlerToggleStatus(controlToggleDiscountStatus);
 
+  // Today's Sales stat card → open Reports on Sales section
+  const salesStatCard = document.querySelector(".home-sales-stat");
+  if (salesStatCard) {
+    salesStatCard.addEventListener("click", () => controlOpenReports("sales"));
+    salesStatCard.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); controlOpenReports("sales"); } });
+  }
+
+  // Transactions stat card → open Reports on Sales section
+  const transactionsCard = document.querySelector("#transactionsCard");
+  if (transactionsCard) {
+    transactionsCard.addEventListener("click", () => controlOpenReports("traffic"));
+    transactionsCard.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); controlOpenReports("traffic"); } });
+  }
+
   // Reports
   ReportsView._addHandlerOpen(controlOpenReports);
   ReportsView._addHandlerClose(controlCloseReports);
@@ -2410,7 +2943,10 @@ const _wireApp = function () {
   ReportsView._addHandlerRunComparison(controlRunComparison);
   ReportsView._addHandlerCmpTopItemsSort(controlCmpSortTopItems);
   ReportsView._addHandlerTopItemsSort(controlSortTopItems);
+  ReportsView._addHandlerStaffSort(controlSortStaff);
   ReportsView._addHandlerInfoTooltips();
+  ReportsView._addHandlerSections();
+  ReportsView._addHandlerKpiToggle(controlToggleMetric);
 
   // Cashier switcher
   document.getElementById('cashierCard')?.addEventListener('click', controlSwitchCashier);
@@ -2421,6 +2957,8 @@ const _wireApp = function () {
   StaffView._addHandlerInvite(controlShowInviteForm);
   StaffView._addHandlerSaveInvite(controlInviteStaff);
   StaffView._addHandlerRemove(controlRemoveStaff);
+  StaffView._addHandlerEditRole(controlEditStaffRole);
+  StaffView._addHandlerSetPin(controlSetStaffPin);
 };
 
 const initAuth = async function () {
@@ -2434,6 +2972,7 @@ const initAuth = async function () {
     await initApp(session.user);
     hideLoadingScreen();
     _wireApp();
+    _maybeShowPinSetup();
   } else {
     AuthView.show();
   }

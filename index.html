@@ -102,8 +102,14 @@
 
     <main>
       <section class="hero fade-up" aria-labelledby="greet">
-        <h1 id="greet" class="greet">👋 Hello, <span class="company-name">Wowa</span>!</h1>
-        <p class="sub">Ready to ring up sales and keep things moving.</p>
+        <div class="hero-left">
+          <h1 id="greet" class="greet">👋 Hello, <span class="company-name">Wowa</span>!</h1>
+          <p class="sub">Ready to ring up sales and keep things moving.</p>
+        </div>
+        <div class="hero-datetime">
+          <span class="hero-time" id="dateTimeStr">--:--</span>
+          <span class="hero-date" id="dateStr"></span>
+        </div>
       </section>
 
 
@@ -548,7 +554,7 @@
         </article>
 
           <div class="home-stats-panel">
-            <div class="stat-card stat-card--accent home-sales-stat">
+            <div class="stat-card stat-card--accent stat-card--btn home-sales-stat" role="button" tabindex="0" title="View Overview Report">
               <span class="stat-label">
                 <span class="stat-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -561,26 +567,6 @@
               </span>
             </div>
             <div class="home-stats-secondary">
-              <div class="stat-card">
-                <span class="stat-label">
-                  <span class="stat-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  </span>
-                  Date &amp; Time
-                </span>
-                <span class="stat-value" id="dateTimeStr">--:--</span>
-                <span class="stat-date" id="dateStr"></span>
-              </div>
-              <div class="stat-card">
-                <span class="stat-label">
-                  <span class="stat-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8H8"/><path d="M16 12H8"/><path d="M12 16H8"/></svg>
-                  </span>
-                  Transactions
-                </span>
-                <span class="stat-value" id="basketCountStr">—</span>
-                <span class="sales-vs-yesterday" id="basketsVsYesterday"><span class="svs-dot"></span></span>
-              </div>
               <div class="stat-card stat-card--btn home-cashier-stat" id="cashierCard" role="button" tabindex="0" title="Switch cashier">
                 <span class="stat-label">
                   <span class="stat-icon">
@@ -589,6 +575,16 @@
                   Cashier
                 </span>
                 <span class="stat-value" id="shiftStr">—</span>
+              </div>
+              <div class="stat-card stat-card--btn" id="transactionsCard" role="button" tabindex="0" title="View Sales Report">
+                <span class="stat-label">
+                  <span class="stat-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8H8"/><path d="M16 12H8"/><path d="M12 16H8"/></svg>
+                  </span>
+                  Transactions
+                </span>
+                <span class="stat-value" id="basketCountStr">—</span>
+                <span class="sales-vs-yesterday" id="basketsVsYesterday"><span class="svs-dot"></span></span>
               </div>
             </div>
           </div>
@@ -933,12 +929,28 @@
         <div class="cashflow-header-center">
           <h2 class="cashflow-title">Staff</h2>
         </div>
-        <div class="cashflow-header-actions">
-          <button class="btn primary" id="inviteStaffBtn" type="button">+ Invite</button>
-        </div>
+        <div class="cashflow-header-actions"></div>
       </div>
       <div class="staff-panel-body">
-        <ul class="staff-list" id="staffList"></ul>
+        <nav class="staff-sidebar">
+          <button class="btn primary staff-invite-btn hidden" id="inviteStaffBtn" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Invite Member
+          </button>
+          <p class="staff-sidebar-label">Manage</p>
+          <button class="staff-tab staff-tab--active" data-tab="members" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Members
+          </button>
+          <button class="staff-tab" data-tab="roles" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Roles
+          </button>
+        </nav>
+        <div class="staff-main" id="staffMain">
+          <ul class="staff-list" id="staffList"></ul>
+          <div class="staff-roles-list hidden" id="staffRolesContent"></div>
+        </div>
       </div>
     </div>
 
@@ -1060,16 +1072,40 @@
         </button>
       </div>
 
-      <div class="rp-body">
+      <div class="rp-layout">
 
-        <!-- Compare results (shown instead of normal grid) -->
+        <!-- Sidebar nav -->
+        <nav class="rp-sidebar">
+          <p class="rp-sidebar-label">View</p>
+          <button class="rp-nav-tab rp-nav-tab--active" data-section="overview" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Overview
+          </button>
+          <button class="rp-nav-tab" data-section="sales" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+            Sales
+          </button>
+          <button class="rp-nav-tab" data-section="traffic" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Traffic
+          </button>
+          <button class="rp-nav-tab" data-section="kitchen" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14.5 14.5"/><path d="M16.24 7.76A6 6 0 0 1 18 12"/></svg>
+            Kitchen
+          </button>
+          <div class="rp-sidebar-spacer"></div>
+        </nav>
+
+        <div class="rp-body">
+
+        <!-- Compare results (shown instead of sections in compare mode) -->
         <div class="rp-cmp-results hidden" id="rpCompareResults">
 
           <div class="rp-cmp-kpis">
             <div class="rp-cmp-kpi-block">
               <div class="rp-kpi-label-row">
-                <span class="rp-cmp-kpi-label">Revenue</span>
-                <button class="rp-info-btn" data-tip="Total revenue from all completed sales. Green dot = Period A, Blue dot = Period B." aria-label="Info" tabindex="-1">i</button>
+                <span class="rp-cmp-kpi-label">Gross Income</span>
+                <button class="rp-info-btn" data-tip="Total gross income from all completed sales. Green dot = Period A, Blue dot = Period B." aria-label="Info" tabindex="-1">i</button>
               </div>
               <div class="rp-cmp-kpi-vals">
                 <div class="rp-cmp-kpi-pair">
@@ -1138,7 +1174,7 @@
 
           <div class="rp-card rp-card--full">
             <div class="rp-card-head">
-              <h3>Revenue Over Time</h3>
+              <h3>Gross Income Over Time</h3>
               <div class="rp-card-head-right">
                 <div class="rp-cmp-legend">
                   <span class="rp-cmp-dot rp-cmp-dot--a"></span><span class="rp-cmp-period-name-a rp-card-meta"></span>
@@ -1163,7 +1199,7 @@
                 <div class="rp-card-head-right">
                   <div class="rp-sort-pills rp-cmp-sort-pills">
                     <button class="rp-sort-pill active" data-sort="quantity">Qty</button>
-                    <button class="rp-sort-pill" data-sort="revenue">Revenue</button>
+                    <button class="rp-sort-pill" data-sort="revenue">Gross Income</button>
                   </div>
                   <button class="rp-info-btn" data-tip="Best-selling items for Period A. Sort by units sold or total revenue." aria-label="Info" tabindex="-1">i</button>
                 </div>
@@ -1180,7 +1216,7 @@
                 <div class="rp-card-head-right">
                   <div class="rp-sort-pills rp-cmp-sort-pills">
                     <button class="rp-sort-pill active" data-sort="quantity">Qty</button>
-                    <button class="rp-sort-pill" data-sort="revenue">Revenue</button>
+                    <button class="rp-sort-pill" data-sort="revenue">Gross Income</button>
                   </div>
                   <button class="rp-info-btn" data-tip="Best-selling items for Period B. Sort by units sold or total revenue." aria-label="Info" tabindex="-1">i</button>
                 </div>
@@ -1191,95 +1227,49 @@
 
         </div>
 
-        <div class="rp-kpi-strip">
-          <div class="rp-kpi rp-kpi--primary">
-            <div class="rp-kpi-label-row">
-              <span class="rp-kpi-label">Revenue</span>
-              <button class="rp-info-btn rp-info-btn--light" data-tip="Total revenue from all completed sales in this period." aria-label="Info" tabindex="-1">i</button>
-            </div>
-            <span class="rp-kpi-val" id="reportsRevenue">$0.00</span>
-            <span class="rp-kpi-cmp" id="reportsRevenueCmp"></span>
-          </div>
-          <div class="rp-kpi">
-            <div class="rp-kpi-label-row">
-              <span class="rp-kpi-label">Transactions</span>
-              <button class="rp-info-btn" data-tip="Number of completed sales recorded in this period." aria-label="Info" tabindex="-1">i</button>
-            </div>
-            <span class="rp-kpi-val" id="reportsTransactions">0</span>
-            <span class="rp-kpi-cmp" id="reportsTransCmp"></span>
-          </div>
-          <div class="rp-kpi">
-            <div class="rp-kpi-label-row">
-              <span class="rp-kpi-label">Avg. Order</span>
-              <button class="rp-info-btn" data-tip="Average revenue per transaction: total ÷ transaction count." aria-label="Info" tabindex="-1">i</button>
-            </div>
-            <span class="rp-kpi-val" id="reportsAvgOrder">$0.00</span>
-            <span class="rp-kpi-cmp" id="reportsAvgCmp"></span>
-          </div>
-          <div class="rp-kpi">
-            <div class="rp-kpi-label-row">
-              <span class="rp-kpi-label">Avg. Serving</span>
-              <button class="rp-info-btn" data-tip="Average time from order placed to kitchen marking it done. Green badge means faster than before (better)." aria-label="Info" tabindex="-1">i</button>
-            </div>
-            <span class="rp-kpi-val rp-kpi-val--muted" id="reportsServingTime">—</span>
-            <span class="rp-kpi-cmp" id="reportsServingCmp"></span>
-          </div>
-        </div>
-
-        <div class="rp-grid">
-
-          <section class="rp-card">
-            <div class="rp-card-head">
-              <h3>Top Items</h3>
-              <div class="rp-card-head-right">
-                <div class="rp-sort-pills" id="topItemsSortPills">
-                  <button class="rp-sort-pill active" data-sort="quantity">Qty</button>
-                  <button class="rp-sort-pill" data-sort="revenue">Revenue</button>
-                </div>
-                <button class="rp-info-btn" data-tip="Best-selling items. Sort by units sold or total revenue generated." aria-label="Info" tabindex="-1">i</button>
+        <!-- ── Overview section ── -->
+        <div class="rp-section" data-section="overview">
+          <div class="rp-kpi-strip">
+            <div class="rp-kpi rp-kpi--primary" data-metric="revenue" style="--metric-color: #22c55e" role="button" tabindex="0" aria-pressed="false">
+              <div class="rp-kpi-label-row">
+                <span class="rp-kpi-label">Gross Income</span>
+                <button class="rp-info-btn rp-info-btn--light" data-tip="Total gross income from all completed sales in this period." aria-label="Info" tabindex="-1">i</button>
               </div>
+              <span class="rp-kpi-val" id="reportsRevenue">$0.00</span>
+              <span class="rp-kpi-cmp" id="reportsRevenueCmp"></span>
             </div>
-            <div id="reportsTopItems"></div>
-          </section>
-
-          <section class="rp-card rp-card--ph" id="rpCategoryCard">
-            <div class="rp-card-head">
-              <h3>Category Mix</h3>
-              <div class="rp-card-head-right">
-                <span class="rp-phase-badge" id="rpCategoryBadge">Loading…</span>
-                <button class="rp-info-btn" data-tip="Revenue split by menu category — shows which categories drive the most sales." aria-label="Info" tabindex="-1">i</button>
+            <div class="rp-kpi rp-kpi--expense" data-metric="expenses" style="--metric-color: #ef4444" role="button" tabindex="0" aria-pressed="false">
+              <div class="rp-kpi-label-row">
+                <span class="rp-kpi-label">Expenses</span>
+                <button class="rp-info-btn" data-tip="Total expenses logged for this period." aria-label="Info" tabindex="-1">i</button>
               </div>
+              <span class="rp-kpi-val" id="reportsExpenses">$0.00</span>
             </div>
-            <div class="rp-ph rp-ph--donut" id="rpCategoryPh">
-              <div class="rp-ph-donut"></div>
-              <div class="rp-ph-legend">
-                <div class="rp-ph-line" style="width:65%"></div>
-                <div class="rp-ph-line" style="width:45%"></div>
-                <div class="rp-ph-line" style="width:30%"></div>
+            <div class="rp-kpi rp-kpi--net" data-metric="net" style="--metric-color: #3b82f6" role="button" tabindex="0" aria-pressed="false">
+              <div class="rp-kpi-label-row">
+                <span class="rp-kpi-label">Net Income</span>
+                <button class="rp-info-btn" data-tip="Gross income minus expenses for this period." aria-label="Info" tabindex="-1">i</button>
               </div>
+              <span class="rp-kpi-val" id="reportsNetIncome">$0.00</span>
             </div>
-            <div class="rp-chart-wrap rp-chart-wrap--donut hidden" id="rpCategoryWrap">
-              <canvas id="rpCategoryCanvas"></canvas>
-            </div>
-          </section>
-
-          <section class="rp-card rp-card--full" id="rpStaffCard">
-            <div class="rp-card-head">
-              <h3>Staff Performance</h3>
-              <div class="rp-card-head-right">
-                <span class="rp-card-meta">by revenue</span>
-                <button class="rp-info-btn" data-tip="Revenue and transaction count per cashier, based on who recorded each sale." aria-label="Info" tabindex="-1">i</button>
+<div class="rp-kpi" data-metric="avgOrder" style="--metric-color: #f59e0b" role="button" tabindex="0" aria-pressed="false">
+              <div class="rp-kpi-label-row">
+                <span class="rp-kpi-label">Avg. Order</span>
+                <button class="rp-info-btn" data-tip="Average revenue per transaction: total ÷ transaction count." aria-label="Info" tabindex="-1">i</button>
               </div>
+              <span class="rp-kpi-val" id="reportsAvgOrder">$0.00</span>
+              <span class="rp-kpi-cmp" id="reportsAvgCmp"></span>
             </div>
-            <div id="reportsStaff"></div>
-          </section>
+          </div>
+          <div class="rp-grid">
 
+          <!-- Revenue Over Time lives in Overview -->
           <section class="rp-card rp-card--full rp-card--ph" id="rpRevenueCard">
             <div class="rp-card-head">
-              <h3>Revenue Over Time</h3>
+              <h3><span id="rpOverviewChartTitle">Gross Income</span> Over Time</h3>
               <div class="rp-card-head-right">
                 <span class="rp-phase-badge" id="rpRevenueBadge">Loading…</span>
-                <button class="rp-info-btn" data-tip="Revenue plotted over time. Shows hourly bars for Today; daily bars for Week/Month; monthly bars for Year." aria-label="Info" tabindex="-1">i</button>
+                <button class="rp-info-btn" data-tip="Click any KPI card above to add or remove it from this chart. Multiple metrics can be shown simultaneously." aria-label="Info" tabindex="-1">i</button>
               </div>
             </div>
             <div class="rp-ph rp-ph--bars" id="rpRevenuePh">
@@ -1295,108 +1285,297 @@
               <canvas id="rpRevenueCanvas"></canvas>
             </div>
           </section>
+        </div><!-- /overview grid -->
+        </div><!-- /overview section -->
 
-          <section class="rp-card rp-card--full rp-card--ph" id="rpHourlyCard">
-            <div class="rp-card-head">
-              <h3>Hourly Breakdown</h3>
-              <div class="rp-card-head-right">
-                <span class="rp-phase-badge" id="rpHourlyBadge">Loading…</span>
-                <button class="rp-info-btn" data-tip="Revenue totaled by hour of day across the entire period. Reveals your busiest times." aria-label="Info" tabindex="-1">i</button>
+        <!-- ── Sales section ── -->
+        <div class="rp-section hidden" data-section="sales">
+          <div class="rp-sales-layout">
+            <!-- Left column -->
+            <div class="rp-sales-left">
+              <div class="rp-kpi-strip rp-kpi-strip--2col">
+                <div class="rp-kpi rp-kpi--primary">
+                  <div class="rp-kpi-label-row">
+                    <span class="rp-kpi-label">Gross Income</span>
+                    <button class="rp-info-btn rp-info-btn--light" data-tip="Total gross income from all completed sales in this period." aria-label="Info" tabindex="-1">i</button>
+                  </div>
+                  <div class="rp-kpi-val-row"><span class="rp-kpi-emoji">💰</span><span class="rp-kpi-val" id="salesGrossIncome">$0.00</span></div>
+                </div>
+                <div class="rp-kpi rp-kpi--net">
+                  <div class="rp-kpi-label-row">
+                    <span class="rp-kpi-label">Net Income</span>
+                    <button class="rp-info-btn" data-tip="Gross income minus expenses for this period." aria-label="Info" tabindex="-1">i</button>
+                  </div>
+                  <div class="rp-kpi-val-row"><span class="rp-kpi-emoji">📉</span><span class="rp-kpi-val" id="salesNetIncome">$0.00</span></div>
+                </div>
+                <div class="rp-kpi">
+                  <div class="rp-kpi-label-row">
+                    <span class="rp-kpi-label" id="salesAvgGrossLabel">Avg. Gross</span>
+                    <button class="rp-info-btn" id="salesAvgGrossInfo" data-tip="Average gross income per time unit for this period." aria-label="Info" tabindex="-1">i</button>
+                  </div>
+                  <div class="rp-kpi-val-row"><span class="rp-kpi-emoji">📊</span><span class="rp-kpi-val" id="salesAvgGross">$0.00</span></div>
+                </div>
+                <div class="rp-kpi">
+                  <div class="rp-kpi-label-row">
+                    <span class="rp-kpi-label" id="salesAvgNetLabel">Avg. Net</span>
+                    <button class="rp-info-btn" id="salesAvgNetInfo" data-tip="Average net income per time unit for this period." aria-label="Info" tabindex="-1">i</button>
+                  </div>
+                  <div class="rp-kpi-val-row"><span class="rp-kpi-emoji">📈</span><span class="rp-kpi-val" id="salesAvgNet">$0.00</span></div>
+                </div>
               </div>
-            </div>
-            <div class="rp-ph rp-ph--bars rp-ph--bars-sm" id="rpHourlyPh">
-              <div class="rp-ph-bar" style="--h:10%"></div>
-              <div class="rp-ph-bar" style="--h:15%"></div>
-              <div class="rp-ph-bar" style="--h:25%"></div>
-              <div class="rp-ph-bar" style="--h:40%"></div>
-              <div class="rp-ph-bar" style="--h:75%"></div>
-              <div class="rp-ph-bar" style="--h:95%"></div>
-              <div class="rp-ph-bar" style="--h:85%"></div>
-              <div class="rp-ph-bar" style="--h:70%"></div>
-              <div class="rp-ph-bar" style="--h:55%"></div>
-              <div class="rp-ph-bar" style="--h:35%"></div>
-              <div class="rp-ph-bar" style="--h:20%"></div>
-              <div class="rp-ph-bar" style="--h:10%"></div>
-            </div>
-            <div class="rp-chart-wrap hidden" id="rpHourlyWrap">
-              <canvas id="rpHourlyCanvas"></canvas>
-            </div>
-          </section>
 
-          <section class="rp-card rp-card--full rp-card--ph" id="rpDowCard">
-            <div class="rp-card-head">
-              <h3>Day of Week</h3>
-              <div class="rp-card-head-right">
-                <span class="rp-phase-badge" id="rpDowBadge">Loading…</span>
-                <button class="rp-info-btn" data-tip="Total revenue by day of the week. The brightest bar is your strongest day. Needs 2+ days of data." aria-label="Info" tabindex="-1">i</button>
+              <div class="rp-kpi-strip">
+                <div class="rp-kpi">
+                  <div class="rp-kpi-label-row">
+                    <span class="rp-kpi-label">Best Seller</span>
+                    <button class="rp-info-btn" data-tip="Top item by units sold this period." aria-label="Info" tabindex="-1">i</button>
+                  </div>
+                  <div class="rp-kpi-val-row"><span class="rp-kpi-emoji">🔥</span><span class="rp-kpi-val rp-kpi-val--name" id="salesBestSeller">—</span></div>
+                  <span class="rp-peak-count" id="salesBestSellerSub"></span>
+                </div>
+                <div class="rp-kpi">
+                  <div class="rp-kpi-label-row">
+                    <span class="rp-kpi-label">Top Category</span>
+                    <button class="rp-info-btn" data-tip="Category that generated the most revenue this period." aria-label="Info" tabindex="-1">i</button>
+                  </div>
+                  <div class="rp-kpi-val-row"><span class="rp-kpi-emoji">🏆</span><span class="rp-kpi-val rp-kpi-val--name" id="salesTopCategory">—</span></div>
+                  <span class="rp-peak-count" id="salesTopCategorySub"></span>
+                </div>
+                <div class="rp-kpi">
+                  <div class="rp-kpi-label-row">
+                    <span class="rp-kpi-label">Top Staff</span>
+                    <button class="rp-info-btn" data-tip="Staff member with the highest revenue this period." aria-label="Info" tabindex="-1">i</button>
+                  </div>
+                  <div class="rp-kpi-val-row"><span class="rp-kpi-emoji">⭐</span><span class="rp-kpi-val rp-kpi-val--name" id="salesTopStaff">—</span></div>
+                  <span class="rp-peak-count" id="salesTopStaffSub"></span>
+                </div>
               </div>
-            </div>
-            <div class="rp-ph rp-ph--bars" id="rpDowPh">
-              <div class="rp-ph-bar" style="--h:55%"></div>
-              <div class="rp-ph-bar" style="--h:70%"></div>
-              <div class="rp-ph-bar" style="--h:80%"></div>
-              <div class="rp-ph-bar" style="--h:95%"></div>
-              <div class="rp-ph-bar" style="--h:90%"></div>
-              <div class="rp-ph-bar" style="--h:65%"></div>
-              <div class="rp-ph-bar" style="--h:50%"></div>
-            </div>
-            <div class="rp-chart-wrap hidden" id="rpDowWrap">
-              <canvas id="rpDowCanvas"></canvas>
-            </div>
-          </section>
 
-          <section class="rp-card rp-card--full rp-card--ph" id="rpServingHourCard">
-            <div class="rp-card-head">
-              <h3>Serving Time by Hour</h3>
-              <div class="rp-card-head-right">
-                <span class="rp-phase-badge" id="rpServingHourBadge">Loading…</span>
-                <button class="rp-info-btn" data-tip="Average minutes from checkout to order served, by hour of day. Peaks reveal which rush windows slow your kitchen down the most." aria-label="Info" tabindex="-1">i</button>
+              <section class="rp-card">
+                <div class="rp-card-head">
+                  <h3>Top Items</h3>
+                  <div class="rp-card-head-right">
+                    <div class="rp-sort-pills" id="topItemsSortPills">
+                      <button class="rp-sort-pill active" data-sort="quantity">Qty</button>
+                      <button class="rp-sort-pill" data-sort="revenue">Gross Income</button>
+                    </div>
+                    <button class="rp-info-btn" data-tip="Best-selling items. Sort by units sold or total revenue generated." aria-label="Info" tabindex="-1">i</button>
+                  </div>
+                </div>
+                <div id="reportsTopItems"></div>
+              </section>
+
+              <section class="rp-card rp-sales-staff" id="rpStaffCard">
+                <div class="rp-card-head">
+                  <h3>Staff Performance</h3>
+                  <div class="rp-card-head-right">
+                    <div class="rp-sort-pills" id="staffSortPills">
+                      <button class="rp-sort-pill" data-sort="quantity">Qty</button>
+                      <button class="rp-sort-pill active" data-sort="revenue">Gross Income</button>
+                    </div>
+                    <button class="rp-info-btn" data-tip="Gross income and transaction count per cashier, based on who recorded each sale." aria-label="Info" tabindex="-1">i</button>
+                  </div>
+                </div>
+                <div id="reportsStaff"></div>
+              </section>
+            </div><!-- /rp-sales-left -->
+
+            <!-- Right column -->
+            <div class="rp-sales-right">
+              <section class="rp-card rp-card--ph" id="rpCategoryCard">
+                <div class="rp-card-head">
+                  <h3>Category Mix</h3>
+                  <div class="rp-card-head-right">
+                    <span class="rp-phase-badge" id="rpCategoryBadge">Loading…</span>
+                    <button class="rp-info-btn" data-tip="Revenue split by menu category — shows which categories drive the most sales." aria-label="Info" tabindex="-1">i</button>
+                  </div>
+                </div>
+                <div class="rp-ph rp-ph--donut" id="rpCategoryPh">
+                  <div class="rp-ph-donut"></div>
+                  <div class="rp-ph-legend">
+                    <div class="rp-ph-line" style="width:65%"></div>
+                    <div class="rp-ph-line" style="width:45%"></div>
+                    <div class="rp-ph-line" style="width:30%"></div>
+                  </div>
+                </div>
+                <div class="rp-chart-wrap rp-chart-wrap--donut hidden" id="rpCategoryWrap">
+                  <canvas id="rpCategoryCanvas"></canvas>
+                </div>
+              </section>
+
+              <section class="rp-card rp-card--ph" id="rpItemMixCard">
+                <div class="rp-card-head">
+                  <h3>Item Mix</h3>
+                  <div class="rp-card-head-right">
+                    <span class="rp-phase-badge" id="rpItemMixBadge">Loading…</span>
+                    <button class="rp-info-btn" data-tip="Units sold per item as a share of total items sold. Shows which items make up most of your volume." aria-label="Info" tabindex="-1">i</button>
+                  </div>
+                </div>
+                <div class="rp-ph rp-ph--donut" id="rpItemMixPh">
+                  <div class="rp-ph-donut"></div>
+                  <div class="rp-ph-legend">
+                    <div class="rp-ph-line" style="width:60%"></div>
+                    <div class="rp-ph-line" style="width:42%"></div>
+                    <div class="rp-ph-line" style="width:28%"></div>
+                  </div>
+                </div>
+                <div class="rp-chart-wrap rp-chart-wrap--donut hidden" id="rpItemMixWrap">
+                  <canvas id="rpItemMixCanvas"></canvas>
+                </div>
+              </section>
+            </div><!-- /rp-sales-right -->
+          </div><!-- /rp-sales-layout -->
+        </div><!-- /sales section -->
+
+        <!-- ── Traffic section ── -->
+        <div class="rp-section hidden" data-section="traffic">
+          <div class="rp-kpi-strip rp-kpi-strip--2col">
+            <div class="rp-kpi">
+              <div class="rp-kpi-label-row">
+                <span class="rp-kpi-label">Most Active Hour</span>
+                <button class="rp-info-btn" data-tip="The hour of day with the most orders across this period." aria-label="Info" tabindex="-1">i</button>
               </div>
+              <span class="rp-kpi-val" id="trafficPeakHour">—</span>
+              <span class="rp-peak-count" id="trafficPeakHourSub"></span>
             </div>
-            <div class="rp-ph rp-ph--bars rp-ph--bars-sm" id="rpServingHourPh">
-              <div class="rp-ph-bar" style="--h:30%"></div>
-              <div class="rp-ph-bar" style="--h:50%"></div>
-              <div class="rp-ph-bar" style="--h:75%"></div>
-              <div class="rp-ph-bar" style="--h:95%"></div>
-              <div class="rp-ph-bar" style="--h:80%"></div>
-              <div class="rp-ph-bar" style="--h:60%"></div>
-              <div class="rp-ph-bar" style="--h:45%"></div>
-              <div class="rp-ph-bar" style="--h:25%"></div>
-              <div class="rp-ph-bar" style="--h:55%"></div>
-              <div class="rp-ph-bar" style="--h:70%"></div>
-              <div class="rp-ph-bar" style="--h:50%"></div>
-              <div class="rp-ph-bar" style="--h:35%"></div>
-            </div>
-            <div class="rp-chart-wrap hidden" id="rpServingHourWrap">
-              <canvas id="rpServingHourCanvas"></canvas>
-            </div>
-          </section>
-
-          <section class="rp-card rp-card--full rp-card--ph" id="rpServingDayCard">
-            <div class="rp-card-head">
-              <h3>Serving Time by Day</h3>
-              <div class="rp-card-head-right">
-                <span class="rp-phase-badge" id="rpServingDayBadge">Loading…</span>
-                <button class="rp-info-btn" data-tip="Average serving time by day of the week. The brightest bar is your most pressured day in the kitchen." aria-label="Info" tabindex="-1">i</button>
+            <div class="rp-kpi">
+              <div class="rp-kpi-label-row">
+                <span class="rp-kpi-label">Most Active Day</span>
+                <button class="rp-info-btn" data-tip="The day of the week with the most orders across this period." aria-label="Info" tabindex="-1">i</button>
               </div>
+              <span class="rp-kpi-val" id="trafficPeakDay">—</span>
+              <span class="rp-peak-count" id="trafficPeakDaySub"></span>
             </div>
-            <div class="rp-ph rp-ph--bars" id="rpServingDayPh">
-              <div class="rp-ph-bar" style="--h:50%"></div>
-              <div class="rp-ph-bar" style="--h:65%"></div>
-              <div class="rp-ph-bar" style="--h:80%"></div>
-              <div class="rp-ph-bar" style="--h:95%"></div>
-              <div class="rp-ph-bar" style="--h:85%"></div>
-              <div class="rp-ph-bar" style="--h:70%"></div>
-              <div class="rp-ph-bar" style="--h:55%"></div>
+            <div class="rp-kpi">
+              <div class="rp-kpi-label-row">
+                <span class="rp-kpi-label">Transactions</span>
+                <button class="rp-info-btn" data-tip="Number of completed sales recorded in this period." aria-label="Info" tabindex="-1">i</button>
+              </div>
+              <span class="rp-kpi-val" id="reportsTransactions">0</span>
+              <span class="rp-kpi-cmp" id="reportsTransCmp"></span>
             </div>
-            <div class="rp-chart-wrap hidden" id="rpServingDayWrap">
-              <canvas id="rpServingDayCanvas"></canvas>
+            <div class="rp-kpi">
+              <div class="rp-kpi-label-row">
+                <span class="rp-kpi-label">Avg. per Day</span>
+                <button class="rp-info-btn" data-tip="Average number of transactions per day across this period." aria-label="Info" tabindex="-1">i</button>
+              </div>
+              <span class="rp-kpi-val" id="trafficAvgDaily">—</span>
+              <span class="rp-peak-count" id="trafficAvgDailySub"></span>
             </div>
-          </section>
+          </div>
+          <div class="rp-grid">
+            <section class="rp-card rp-card--full rp-card--ph" id="rpHourlyCard">
+              <div class="rp-card-head">
+                <h3>Hourly Breakdown</h3>
+                <div class="rp-card-head-right">
+                  <span class="rp-phase-badge" id="rpHourlyBadge">Loading…</span>
+                  <button class="rp-info-btn" data-tip="Revenue totaled by hour of day across the entire period. Reveals your busiest times." aria-label="Info" tabindex="-1">i</button>
+                </div>
+              </div>
+              <div class="rp-ph rp-ph--bars rp-ph--bars-sm" id="rpHourlyPh">
+                <div class="rp-ph-bar" style="--h:10%"></div><div class="rp-ph-bar" style="--h:15%"></div>
+                <div class="rp-ph-bar" style="--h:25%"></div><div class="rp-ph-bar" style="--h:40%"></div>
+                <div class="rp-ph-bar" style="--h:75%"></div><div class="rp-ph-bar" style="--h:95%"></div>
+                <div class="rp-ph-bar" style="--h:85%"></div><div class="rp-ph-bar" style="--h:70%"></div>
+                <div class="rp-ph-bar" style="--h:55%"></div><div class="rp-ph-bar" style="--h:35%"></div>
+                <div class="rp-ph-bar" style="--h:20%"></div><div class="rp-ph-bar" style="--h:10%"></div>
+              </div>
+              <div class="rp-chart-wrap hidden" id="rpHourlyWrap">
+                <canvas id="rpHourlyCanvas"></canvas>
+              </div>
+            </section>
 
+            <section class="rp-card rp-card--full rp-card--ph" id="rpDowCard">
+              <div class="rp-card-head">
+                <h3>Day of Week</h3>
+                <div class="rp-card-head-right">
+                  <span class="rp-phase-badge" id="rpDowBadge">Loading…</span>
+                  <button class="rp-info-btn" data-tip="Total revenue by day of the week. The brightest bar is your strongest day. Needs 2+ days of data." aria-label="Info" tabindex="-1">i</button>
+                </div>
+              </div>
+              <div class="rp-ph rp-ph--bars" id="rpDowPh">
+                <div class="rp-ph-bar" style="--h:55%"></div><div class="rp-ph-bar" style="--h:70%"></div>
+                <div class="rp-ph-bar" style="--h:80%"></div><div class="rp-ph-bar" style="--h:95%"></div>
+                <div class="rp-ph-bar" style="--h:90%"></div><div class="rp-ph-bar" style="--h:65%"></div>
+                <div class="rp-ph-bar" style="--h:50%"></div>
+              </div>
+              <div class="rp-chart-wrap hidden" id="rpDowWrap">
+                <canvas id="rpDowCanvas"></canvas>
+              </div>
+            </section>
+          </div>
+        </div><!-- /traffic section -->
+
+        <!-- ── Kitchen section ── -->
+        <div class="rp-section hidden" data-section="kitchen">
+          <div style="max-width: 280px;">
+            <div class="rp-kpi">
+              <div class="rp-kpi-label-row">
+                <span class="rp-kpi-label">Avg. Serving Time</span>
+                <button class="rp-info-btn" data-tip="Average time from order placed to kitchen marking it done." aria-label="Info" tabindex="-1">i</button>
+              </div>
+              <span class="rp-kpi-val rp-kpi-val--muted" id="reportsServingTime">—</span>
+              <span class="rp-kpi-cmp" id="reportsServingCmp"></span>
+            </div>
+          </div>
+          <div class="rp-grid">
+            <section class="rp-card rp-card--full rp-card--ph" id="rpServingHourCard">
+              <div class="rp-card-head">
+                <h3>Serving Time by Hour</h3>
+                <div class="rp-card-head-right">
+                  <span class="rp-phase-badge" id="rpServingHourBadge">Loading…</span>
+                  <button class="rp-info-btn" data-tip="Average minutes from checkout to order served, by hour of day. Peaks reveal which rush windows slow your kitchen down the most." aria-label="Info" tabindex="-1">i</button>
+                </div>
+              </div>
+              <div class="rp-ph rp-ph--bars rp-ph--bars-sm" id="rpServingHourPh">
+                <div class="rp-ph-bar" style="--h:30%"></div><div class="rp-ph-bar" style="--h:50%"></div>
+                <div class="rp-ph-bar" style="--h:75%"></div><div class="rp-ph-bar" style="--h:95%"></div>
+                <div class="rp-ph-bar" style="--h:80%"></div><div class="rp-ph-bar" style="--h:60%"></div>
+                <div class="rp-ph-bar" style="--h:45%"></div><div class="rp-ph-bar" style="--h:25%"></div>
+                <div class="rp-ph-bar" style="--h:55%"></div><div class="rp-ph-bar" style="--h:70%"></div>
+                <div class="rp-ph-bar" style="--h:50%"></div><div class="rp-ph-bar" style="--h:35%"></div>
+              </div>
+              <div class="rp-chart-wrap hidden" id="rpServingHourWrap">
+                <canvas id="rpServingHourCanvas"></canvas>
+              </div>
+            </section>
+
+            <section class="rp-card rp-card--full rp-card--ph" id="rpServingDayCard">
+              <div class="rp-card-head">
+                <h3>Serving Time by Day</h3>
+                <div class="rp-card-head-right">
+                  <span class="rp-phase-badge" id="rpServingDayBadge">Loading…</span>
+                  <button class="rp-info-btn" data-tip="Average serving time by day of the week. The brightest bar is your most pressured day in the kitchen." aria-label="Info" tabindex="-1">i</button>
+                </div>
+              </div>
+              <div class="rp-ph rp-ph--bars" id="rpServingDayPh">
+                <div class="rp-ph-bar" style="--h:50%"></div><div class="rp-ph-bar" style="--h:65%"></div>
+                <div class="rp-ph-bar" style="--h:80%"></div><div class="rp-ph-bar" style="--h:95%"></div>
+                <div class="rp-ph-bar" style="--h:85%"></div><div class="rp-ph-bar" style="--h:70%"></div>
+                <div class="rp-ph-bar" style="--h:55%"></div>
+              </div>
+              <div class="rp-chart-wrap hidden" id="rpServingDayWrap">
+                <canvas id="rpServingDayCanvas"></canvas>
+              </div>
+            </section>
+          </div>
+        </div><!-- /kitchen section -->
+
+
+        </div><!-- /rp-body -->
+      </div><!-- /rp-layout -->
+
+      <!-- Full-list modal (inside rp-panel so it sits above it) -->
+      <div class="rp-list-modal hidden" id="rpListModal">
+        <div class="rp-list-modal-box">
+          <div class="rp-list-modal-head">
+            <h3 id="rpListModalTitle"></h3>
+            <button class="rp-list-modal-close" id="rpListModalClose">&times;</button>
+          </div>
+          <div class="rp-list-modal-body" id="rpListModalBody"></div>
         </div>
       </div>
-    </div>
+    </div><!-- /rp-panel -->
 
     <!-- Invite Staff Modal -->
     <div class="modal-backdrop hidden" id="inviteStaffModal">
@@ -1678,6 +1857,7 @@
                   </button>
                   <div>
                     <h3 class="support-detail-title" id="supportDetailTitle"></h3>
+                    <span class="support-ticket-id" id="supportDetailTicketId"></span>
                     <div class="support-detail-chips">
                       <span class="support-chip" id="supportDetailCategory"></span>
                       <span class="support-status-chip" id="supportDetailStatus"></span>
@@ -1687,6 +1867,23 @@
                 <button type="button" class="btn support-solved-btn" id="supportMarkSolvedBtn">Mark as Solved</button>
               </div>
               <div class="support-thread" id="supportThread"></div>
+              <div class="support-reply-bar hidden" id="supportReplyBar">
+                <textarea class="support-reply-input" id="supportReplyInput" placeholder="Reply to support…" rows="2"></textarea>
+                <button type="button" class="btn primary support-reply-send" id="supportReplySendBtn">Send</button>
+              </div>
+              <div class="support-rating-bar hidden" id="supportRatingBar">
+                <p class="support-rating-label">How was your support experience?</p>
+                <div class="support-stars" id="supportStars">
+                  <button type="button" class="support-star" data-value="1" title="Bad">😤</button>
+                  <button type="button" class="support-star" data-value="2" title="Poor">😕</button>
+                  <button type="button" class="support-star" data-value="3" title="OK">😐</button>
+                  <button type="button" class="support-star" data-value="4" title="Good">😊</button>
+                  <button type="button" class="support-star" data-value="5" title="Great">🤩</button>
+                </div>
+                <textarea class="support-reply-input" id="supportRatingComment" placeholder="Leave a comment… (optional)" rows="2"></textarea>
+                <button type="button" class="btn primary support-rating-submit" id="supportRatingSubmitBtn">Submit Rating</button>
+              </div>
+              <div class="support-rating-done hidden" id="supportRatingDone"></div>
             </div>
 
             <!-- Success state -->

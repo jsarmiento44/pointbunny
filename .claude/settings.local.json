@@ -19,7 +19,15 @@
       "Bash(node *)",
       "Bash(npm install *)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:1234)",
-      "Bash(npx playwright *)"
+      "Bash(npx playwright *)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\Kelly\\\\Desktop\\\\Pointy\\\\Pointy Project\\\\pointy-admin-updates-05-22.md\" -Force)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\Kelly\\\\Desktop\\\\Pointy\\\\Pointy Project\\\\pointy-app-todos-05-22.md\" -Force)",
+      "PowerShell(Start-Process -FilePath \"npm\" -ArgumentList \"start\" -WorkingDirectory \"C:\\\\Users\\\\Kelly\\\\Desktop\\\\Pointy\\\\Pointy Project\" -WindowStyle Hidden)",
+      "PowerShell(tail *)",
+      "PowerShell(npx playwright install chromium 2>&1 | Select-Object -Last 3)",
+      "PowerShell(npx playwright install chromium 2>&1)",
+      "Bash(grep -n \"^html\\\\|^body\\\\|html,\\\\|body {\" pointy.css)",
+      "Bash(Read \"C:\\\\Users\\\\Kelly\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Kelly-Desktop-Pointy-Pointy-Project\\\\ce1ad800-db7d-4268-a719-8727732dff95\\\\tasks\\\\b0fifvzff.output\")"
     ]
   }
 }
