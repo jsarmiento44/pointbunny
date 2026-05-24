@@ -101,16 +101,6 @@
     </header>
 
     <main>
-      <section class="hero fade-up" aria-labelledby="greet">
-        <div class="hero-left">
-          <h1 id="greet" class="greet">👋 Hello, <span class="company-name">Wowa</span>!</h1>
-          <p class="sub">Ready to ring up sales and keep things moving.</p>
-        </div>
-        <div class="hero-datetime">
-          <span class="hero-time" id="dateTimeStr">--:--</span>
-          <span class="hero-date" id="dateStr"></span>
-        </div>
-      </section>
 
 
       <div class="modal-parent"></div>
@@ -529,6 +519,17 @@
         </div>
       </div>
 
+      <section class="hero fade-up" aria-labelledby="greet">
+        <div class="hero-left">
+          <h1 id="greet" class="greet">👋 Hello, <span class="company-name">Wowa</span>!</h1>
+          <p class="sub">Ready to ring up sales and keep things moving.</p>
+        </div>
+        <div class="hero-datetime">
+          <span class="hero-time" id="dateTimeStr">--:--</span>
+          <span class="hero-date" id="dateStr"></span>
+        </div>
+      </section>
+
       <div class="home-layout fade-up">
 
         <!-- Left column: New Order · Stats · Shortcuts -->
@@ -615,17 +616,19 @@
 
           <article class="card home-util-card" tabindex="0" data-min-role="manager">
             <span class="ring" aria-hidden="true"></span>
-            <button class="btn-main" data-action="discounts" aria-label="Manage discounts">
+            <button class="btn-main" data-action="discounts" aria-label="Manage receipt adjustments">
               <span class="card-icon" aria-hidden="true">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="19" y1="5" x2="5" y2="19" />
-                  <circle cx="6.5" cy="6.5" r="2.5" />
-                  <circle cx="17.5" cy="17.5" r="2.5" />
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                  <polyline points="10 9 9 9 8 9"/>
                 </svg>
               </span>
               <div>
-                <div class="title">Discounts</div>
-                <div class="hint">Promos &amp; codes</div>
+                <div class="title">Adjustments</div>
+                <div class="hint">Fees, promos &amp; loyalty</div>
               </div>
             </button>
           </article>
@@ -882,37 +885,126 @@
       </div>
     </div>
 
-    <!-- Discounts Panel -->
+    <!-- Receipt Adjustments Panel -->
     <div id="discountPanel" class="cashflow-panel hidden">
       <div class="cashflow-header">
         <button class="discount-back cashflow-back" aria-label="Go back">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            width="20"
-            height="20"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" width="20" height="20">
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />
           </svg>
         </button>
         <div class="cashflow-header-center">
-          <h2 class="cashflow-title">Offers &amp; Discounts</h2>
+          <h2 class="cashflow-title">Receipt Adjustments</h2>
         </div>
-        <div class="cashflow-header-actions">
-          <button class="btn primary" id="newDiscountCodeBtn" type="button">
-            + New Code
+        <div class="cashflow-header-actions"></div>
+      </div>
+
+      <div class="adj-panel-layout">
+        <!-- Sidebar -->
+        <nav class="adj-panel-sidebar">
+          <button class="adj-nav-tab adj-nav-tab--active" data-section="adjustments" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+              width="17" height="17">
+              <rect x="2" y="3" width="20" height="14" rx="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            Auto Adjustments
           </button>
-        </div>
-      </div>
-      <div class="discount-panel-body">
-        <ul class="discount-code-list" id="discountCodeList"></ul>
-      </div>
+          <button class="adj-nav-tab" data-section="promo" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+              width="17" height="17">
+              <line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/>
+              <circle cx="17.5" cy="17.5" r="2.5"/>
+            </svg>
+            Promo Codes
+          </button>
+          <button class="adj-nav-tab" data-section="loyalty" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+              width="17" height="17">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+            Loyalty Program
+          </button>
+        </nav>
+
+        <!-- Body -->
+        <div class="adj-panel-body">
+
+          <!-- Section: Auto Adjustments -->
+          <div class="adj-panel-section" id="adjPanelSection" data-section="adjustments">
+            <div class="adj-section-header">
+              <div>
+                <h3 class="adj-section-title">Auto Adjustments</h3>
+                <p class="adj-section-hint">Auto-applied to every receipt. VAT, service fees, and more.</p>
+              </div>
+              <button class="btn primary" id="adjPanelAddBtn" type="button">+ Add</button>
+            </div>
+            <ul class="adjustment-list" id="adjPanelList">
+              <li class="adjustment-empty">No adjustments yet.</li>
+            </ul>
+          </div>
+
+          <!-- Section: Promo Codes -->
+          <div class="adj-panel-section hidden" id="promoPanelSection" data-section="promo">
+            <div class="adj-section-header">
+              <div>
+                <h3 class="adj-section-title">Promo Codes</h3>
+                <p class="adj-section-hint">Discount codes customers can apply at checkout.</p>
+              </div>
+              <button class="btn primary" id="newDiscountCodeBtn" type="button">+ New Code</button>
+            </div>
+            <ul class="discount-code-list" id="discountCodeList"></ul>
+          </div>
+
+          <!-- Section: Loyalty Program -->
+          <div class="adj-panel-section hidden" id="loyaltyPanelSection" data-section="loyalty">
+            <div class="adj-loyalty-placeholder">
+              <div class="adj-loyalty-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                  width="48" height="48">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              </div>
+              <h3 class="adj-loyalty-title">Loyalty Program</h3>
+              <p class="adj-loyalty-desc">Reward your regulars with points, tiers, and exclusive perks. Build repeat business automatically.</p>
+              <div class="adj-loyalty-features">
+                <div class="adj-loyalty-feature">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
+                  Points per purchase
+                </div>
+                <div class="adj-loyalty-feature">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
+                  Customer tiers &amp; rewards
+                </div>
+                <div class="adj-loyalty-feature">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
+                  Birthday &amp; milestone perks
+                </div>
+              </div>
+              <span class="adj-loyalty-badge">Coming Soon</span>
+            </div>
+          </div>
+
+        </div><!-- /.adj-panel-body -->
+      </div><!-- /.adj-panel-layout -->
+    </div>
+
+    <!-- Adjustment Form Modal (from Adjustments Panel) -->
+    <div class="modal-backdrop hidden" id="adjPanelModal">
+      <div class="modal-container discount-code-form-container" id="adjPanelForm"></div>
     </div>
 
     <!-- Staff Panel -->
@@ -1008,9 +1100,15 @@
       </div>
 
       <div class="rp-custom-range hidden" id="reportsCustomRange">
-        <input type="date" id="reportsFrom" aria-label="From date" />
+        <div class="rp-date-pick">
+          <input type="date" id="reportsFrom" aria-label="From date" class="rp-date-pick-input" />
+          <button type="button" class="rp-date-pick-label" id="reportsFromLabel">Start date</button>
+        </div>
         <span class="rp-range-sep">–</span>
-        <input type="date" id="reportsTo" aria-label="To date" />
+        <div class="rp-date-pick">
+          <input type="date" id="reportsTo" aria-label="To date" class="rp-date-pick-input" />
+          <button type="button" class="rp-date-pick-label" id="reportsToLabel">End date</button>
+        </div>
         <button class="btn primary" id="applyReportsRangeBtn" type="button">Apply</button>
       </div>
 
@@ -1026,44 +1124,74 @@
             <option value="custom">Custom…</option>
           </select>
           <div id="rpCmpADayWrap" class="rp-cmp-custom-inputs">
-            <input type="date" id="rpCmpADay" class="rp-cmp-date-input">
+            <div class="rp-date-pick">
+              <input type="date" id="rpCmpADay" class="rp-date-pick-input">
+              <button type="button" class="rp-date-pick-label" id="rpCmpADayLabel">Pick date</button>
+            </div>
           </div>
           <div id="rpCmpAWeekWrap" class="rp-cmp-custom-inputs hidden">
             <span class="rp-cmp-b-hint">Week of</span>
-            <input type="date" id="rpCmpAWeek" class="rp-cmp-date-input">
+            <div class="rp-date-pick">
+              <input type="date" id="rpCmpAWeek" class="rp-date-pick-input">
+              <button type="button" class="rp-date-pick-label" id="rpCmpAWeekLabel">Pick date</button>
+            </div>
           </div>
           <div id="rpCmpAMonthWrap" class="rp-cmp-custom-inputs hidden">
-            <input type="month" id="rpCmpAMonth" class="rp-cmp-date-input">
+            <div class="rp-date-pick">
+              <input type="month" id="rpCmpAMonth" class="rp-date-pick-input">
+              <button type="button" class="rp-date-pick-label" id="rpCmpAMonthLabel">Pick month</button>
+            </div>
           </div>
           <div id="rpCmpAYearWrap" class="rp-cmp-custom-inputs hidden">
             <input type="number" id="rpCmpAYear" class="rp-cmp-date-input rp-cmp-year-input" min="2000" max="2099" placeholder="Year">
           </div>
           <div id="rpCmpCustomA" class="rp-cmp-custom-inputs hidden">
-            <input type="date" id="rpCmpFromA" class="rp-cmp-date-input">
+            <div class="rp-date-pick">
+              <input type="date" id="rpCmpFromA" class="rp-date-pick-input">
+              <button type="button" class="rp-date-pick-label" id="rpCmpFromALabel">Start date</button>
+            </div>
             <span class="rp-cmp-dash">–</span>
-            <input type="date" id="rpCmpToA" class="rp-cmp-date-input">
+            <div class="rp-date-pick">
+              <input type="date" id="rpCmpToA" class="rp-date-pick-input">
+              <button type="button" class="rp-date-pick-label" id="rpCmpToALabel">End date</button>
+            </div>
           </div>
         </div>
         <span class="rp-cmp-vs-label" id="rpCmpVsLabel">Day vs Day</span>
         <div class="rp-cmp-side">
           <span class="rp-cmp-dot rp-cmp-dot--b"></span>
           <div id="rpCmpBDayWrap" class="rp-cmp-custom-inputs">
-            <input type="date" id="rpCmpBDay" class="rp-cmp-date-input">
+            <div class="rp-date-pick">
+              <input type="date" id="rpCmpBDay" class="rp-date-pick-input">
+              <button type="button" class="rp-date-pick-label" id="rpCmpBDayLabel">Pick date</button>
+            </div>
           </div>
           <div id="rpCmpBWeekWrap" class="rp-cmp-custom-inputs hidden">
             <span class="rp-cmp-b-hint">Week of</span>
-            <input type="date" id="rpCmpBWeek" class="rp-cmp-date-input">
+            <div class="rp-date-pick">
+              <input type="date" id="rpCmpBWeek" class="rp-date-pick-input">
+              <button type="button" class="rp-date-pick-label" id="rpCmpBWeekLabel">Pick date</button>
+            </div>
           </div>
           <div id="rpCmpBMonthWrap" class="rp-cmp-custom-inputs hidden">
-            <input type="month" id="rpCmpBMonth" class="rp-cmp-date-input">
+            <div class="rp-date-pick">
+              <input type="month" id="rpCmpBMonth" class="rp-date-pick-input">
+              <button type="button" class="rp-date-pick-label" id="rpCmpBMonthLabel">Pick month</button>
+            </div>
           </div>
           <div id="rpCmpBYearWrap" class="rp-cmp-custom-inputs hidden">
             <input type="number" id="rpCmpBYear" class="rp-cmp-date-input rp-cmp-year-input" min="2000" max="2099" placeholder="Year">
           </div>
           <div id="rpCmpCustomB" class="rp-cmp-custom-inputs hidden">
-            <input type="date" id="rpCmpFromB" class="rp-cmp-date-input">
+            <div class="rp-date-pick">
+              <input type="date" id="rpCmpFromB" class="rp-date-pick-input">
+              <button type="button" class="rp-date-pick-label" id="rpCmpFromBLabel">Start date</button>
+            </div>
             <span class="rp-cmp-dash">–</span>
-            <input type="date" id="rpCmpToB" class="rp-cmp-date-input">
+            <div class="rp-date-pick">
+              <input type="date" id="rpCmpToB" class="rp-date-pick-input">
+              <button type="button" class="rp-date-pick-label" id="rpCmpToBLabel">End date</button>
+            </div>
           </div>
         </div>
         <button class="rp-run-cmp-btn" id="rpRunCmpBtn" type="button">
@@ -1101,6 +1229,8 @@
         <!-- Compare results (shown instead of sections in compare mode) -->
         <div class="rp-cmp-results hidden" id="rpCompareResults">
 
+          <!-- ── Overview ── -->
+          <h4 class="rp-cmp-section-title">Overview</h4>
           <div class="rp-cmp-kpis">
             <div class="rp-cmp-kpi-block">
               <div class="rp-kpi-label-row">
@@ -1108,70 +1238,45 @@
                 <button class="rp-info-btn" data-tip="Total gross income from all completed sales. Green dot = Period A, Blue dot = Period B." aria-label="Info" tabindex="-1">i</button>
               </div>
               <div class="rp-cmp-kpi-vals">
-                <div class="rp-cmp-kpi-pair">
-                  <span class="rp-cmp-dot rp-cmp-dot--a"></span>
-                  <span id="rpCmpRevA" class="rp-cmp-kpi-val">—</span>
-                </div>
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--a"></span><span id="rpCmpRevA" class="rp-cmp-kpi-val">—</span></div>
                 <span id="rpCmpRevDelta" class="rp-cmp-delta-badge"></span>
-                <div class="rp-cmp-kpi-pair">
-                  <span class="rp-cmp-dot rp-cmp-dot--b"></span>
-                  <span id="rpCmpRevB" class="rp-cmp-kpi-val">—</span>
-                </div>
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--b"></span><span id="rpCmpRevB" class="rp-cmp-kpi-val">—</span></div>
               </div>
             </div>
             <div class="rp-cmp-kpi-block">
               <div class="rp-kpi-label-row">
                 <span class="rp-cmp-kpi-label">Transactions</span>
-                <button class="rp-info-btn" data-tip="Number of completed sales in each period. Delta % shows how A compares to B." aria-label="Info" tabindex="-1">i</button>
+                <button class="rp-info-btn" data-tip="Number of completed sales in each period." aria-label="Info" tabindex="-1">i</button>
               </div>
               <div class="rp-cmp-kpi-vals">
-                <div class="rp-cmp-kpi-pair">
-                  <span class="rp-cmp-dot rp-cmp-dot--a"></span>
-                  <span id="rpCmpTxA" class="rp-cmp-kpi-val">—</span>
-                </div>
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--a"></span><span id="rpCmpTxA" class="rp-cmp-kpi-val">—</span></div>
                 <span id="rpCmpTxDelta" class="rp-cmp-delta-badge"></span>
-                <div class="rp-cmp-kpi-pair">
-                  <span class="rp-cmp-dot rp-cmp-dot--b"></span>
-                  <span id="rpCmpTxB" class="rp-cmp-kpi-val">—</span>
-                </div>
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--b"></span><span id="rpCmpTxB" class="rp-cmp-kpi-val">—</span></div>
               </div>
             </div>
             <div class="rp-cmp-kpi-block">
               <div class="rp-kpi-label-row">
                 <span class="rp-cmp-kpi-label">Avg. Order</span>
-                <button class="rp-info-btn" data-tip="Average revenue per transaction for each period (total ÷ count)." aria-label="Info" tabindex="-1">i</button>
+                <button class="rp-info-btn" data-tip="Total period revenue ÷ total orders for each period." aria-label="Info" tabindex="-1">i</button>
               </div>
               <div class="rp-cmp-kpi-vals">
-                <div class="rp-cmp-kpi-pair">
-                  <span class="rp-cmp-dot rp-cmp-dot--a"></span>
-                  <span id="rpCmpAvgA" class="rp-cmp-kpi-val">—</span>
-                </div>
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--a"></span><span id="rpCmpAvgA" class="rp-cmp-kpi-val">—</span></div>
                 <span id="rpCmpAvgDelta" class="rp-cmp-delta-badge"></span>
-                <div class="rp-cmp-kpi-pair">
-                  <span class="rp-cmp-dot rp-cmp-dot--b"></span>
-                  <span id="rpCmpAvgB" class="rp-cmp-kpi-val">—</span>
-                </div>
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--b"></span><span id="rpCmpAvgB" class="rp-cmp-kpi-val">—</span></div>
               </div>
             </div>
             <div class="rp-cmp-kpi-block">
               <div class="rp-kpi-label-row">
                 <span class="rp-cmp-kpi-label">Avg. Serving</span>
-                <button class="rp-info-btn" data-tip="Average serving time per order. Lower is better — green means faster." aria-label="Info" tabindex="-1">i</button>
+                <button class="rp-info-btn" data-tip="Average serving time per order. Lower is better." aria-label="Info" tabindex="-1">i</button>
               </div>
               <div class="rp-cmp-kpi-vals">
-                <div class="rp-cmp-kpi-pair">
-                  <span class="rp-cmp-dot rp-cmp-dot--a"></span>
-                  <span id="rpCmpServA" class="rp-cmp-kpi-val">—</span>
-                </div>
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--a"></span><span id="rpCmpServA" class="rp-cmp-kpi-val">—</span></div>
                 <span id="rpCmpServDelta" class="rp-cmp-delta-badge"></span>
-                <div class="rp-cmp-kpi-pair">
-                  <span class="rp-cmp-dot rp-cmp-dot--b"></span>
-                  <span id="rpCmpServB" class="rp-cmp-kpi-val">—</span>
-                </div>
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--b"></span><span id="rpCmpServB" class="rp-cmp-kpi-val">—</span></div>
               </div>
             </div>
           </div>
-
           <div class="rp-card rp-card--full">
             <div class="rp-card-head">
               <h3>Gross Income Over Time</h3>
@@ -1180,49 +1285,225 @@
                   <span class="rp-cmp-dot rp-cmp-dot--a"></span><span class="rp-cmp-period-name-a rp-card-meta"></span>
                   <span class="rp-cmp-dot rp-cmp-dot--b" style="margin-left:10px"></span><span class="rp-cmp-period-name-b rp-card-meta"></span>
                 </div>
-                <button class="rp-info-btn" data-tip="Both periods plotted side by side on the same time axis. Green bars = Period A, Blue bars = Period B." aria-label="Info" tabindex="-1">i</button>
+                <button class="rp-info-btn" data-tip="Both periods plotted side by side. Green = Period A, Blue = Period B." aria-label="Info" tabindex="-1">i</button>
               </div>
             </div>
-            <div class="rp-chart-wrap">
-              <canvas id="rpCmpRevenueCanvas"></canvas>
+            <div class="rp-chart-wrap"><canvas id="rpCmpRevenueCanvas"></canvas></div>
+          </div>
+
+          <!-- ── Sales ── -->
+          <h4 class="rp-cmp-section-title">Sales</h4>
+          <div class="rp-cmp-kpis">
+            <div class="rp-cmp-kpi-block">
+              <div class="rp-kpi-label-row">
+                <span class="rp-cmp-kpi-label">Best Seller</span>
+                <button class="rp-info-btn" data-tip="Top item by units sold in each period." aria-label="Info" tabindex="-1">i</button>
+              </div>
+              <div class="rp-cmp-kpi-vals">
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--a"></span><span id="rpCmpBestSellerA" class="rp-cmp-kpi-val rp-cmp-kpi-val--name">—</span></div>
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--b"></span><span id="rpCmpBestSellerB" class="rp-cmp-kpi-val rp-cmp-kpi-val--name">—</span></div>
+              </div>
+              <div class="rp-cmp-peak-subs">
+                <span id="rpCmpBestSellerSubA" class="rp-cmp-peak-sub rp-cmp-peak-sub--a"></span>
+                <span id="rpCmpBestSellerSubB" class="rp-cmp-peak-sub rp-cmp-peak-sub--b"></span>
+              </div>
+            </div>
+            <div class="rp-cmp-kpi-block">
+              <div class="rp-kpi-label-row">
+                <span class="rp-cmp-kpi-label">Top Category</span>
+                <button class="rp-info-btn" data-tip="Category with the most revenue in each period." aria-label="Info" tabindex="-1">i</button>
+              </div>
+              <div class="rp-cmp-kpi-vals">
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--a"></span><span id="rpCmpTopCatA" class="rp-cmp-kpi-val rp-cmp-kpi-val--name">—</span></div>
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--b"></span><span id="rpCmpTopCatB" class="rp-cmp-kpi-val rp-cmp-kpi-val--name">—</span></div>
+              </div>
+              <div class="rp-cmp-peak-subs">
+                <span id="rpCmpTopCatSubA" class="rp-cmp-peak-sub rp-cmp-peak-sub--a"></span>
+                <span id="rpCmpTopCatSubB" class="rp-cmp-peak-sub rp-cmp-peak-sub--b"></span>
+              </div>
+            </div>
+            <div class="rp-cmp-kpi-block">
+              <div class="rp-kpi-label-row">
+                <span class="rp-cmp-kpi-label">Top Staff</span>
+                <button class="rp-info-btn" data-tip="Staff member with the highest revenue in each period." aria-label="Info" tabindex="-1">i</button>
+              </div>
+              <div class="rp-cmp-kpi-vals">
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--a"></span><span id="rpCmpTopStaffA" class="rp-cmp-kpi-val rp-cmp-kpi-val--name">—</span></div>
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--b"></span><span id="rpCmpTopStaffB" class="rp-cmp-kpi-val rp-cmp-kpi-val--name">—</span></div>
+              </div>
+              <div class="rp-cmp-peak-subs">
+                <span id="rpCmpTopStaffSubA" class="rp-cmp-peak-sub rp-cmp-peak-sub--a"></span>
+                <span id="rpCmpTopStaffSubB" class="rp-cmp-peak-sub rp-cmp-peak-sub--b"></span>
+              </div>
             </div>
           </div>
 
           <div class="rp-cmp-items-grid">
             <div class="rp-card">
               <div class="rp-card-head">
-                <div class="rp-cmp-card-title">
-                  <span class="rp-cmp-dot rp-cmp-dot--a"></span>
-                  <h3>Top Items</h3>
-                  <span class="rp-cmp-period-name-a rp-card-meta"></span>
-                </div>
+                <div class="rp-cmp-card-title"><span class="rp-cmp-dot rp-cmp-dot--a"></span><h3>Top Items</h3><span class="rp-cmp-period-name-a rp-card-meta"></span></div>
                 <div class="rp-card-head-right">
                   <div class="rp-sort-pills rp-cmp-sort-pills">
                     <button class="rp-sort-pill active" data-sort="quantity">Qty</button>
                     <button class="rp-sort-pill" data-sort="revenue">Gross Income</button>
                   </div>
-                  <button class="rp-info-btn" data-tip="Best-selling items for Period A. Sort by units sold or total revenue." aria-label="Info" tabindex="-1">i</button>
+                  <button class="rp-info-btn" data-tip="Best-selling items for Period A." aria-label="Info" tabindex="-1">i</button>
                 </div>
               </div>
               <div id="rpCmpTopItemsA"></div>
             </div>
             <div class="rp-card">
               <div class="rp-card-head">
-                <div class="rp-cmp-card-title">
-                  <span class="rp-cmp-dot rp-cmp-dot--b"></span>
-                  <h3>Top Items</h3>
-                  <span class="rp-cmp-period-name-b rp-card-meta"></span>
-                </div>
+                <div class="rp-cmp-card-title"><span class="rp-cmp-dot rp-cmp-dot--b"></span><h3>Top Items</h3><span class="rp-cmp-period-name-b rp-card-meta"></span></div>
                 <div class="rp-card-head-right">
                   <div class="rp-sort-pills rp-cmp-sort-pills">
                     <button class="rp-sort-pill active" data-sort="quantity">Qty</button>
                     <button class="rp-sort-pill" data-sort="revenue">Gross Income</button>
                   </div>
-                  <button class="rp-info-btn" data-tip="Best-selling items for Period B. Sort by units sold or total revenue." aria-label="Info" tabindex="-1">i</button>
+                  <button class="rp-info-btn" data-tip="Best-selling items for Period B." aria-label="Info" tabindex="-1">i</button>
                 </div>
               </div>
               <div id="rpCmpTopItemsB"></div>
             </div>
+          </div>
+
+          <div class="rp-cmp-items-grid">
+            <div class="rp-card">
+              <div class="rp-card-head">
+                <div class="rp-cmp-card-title"><span class="rp-cmp-dot rp-cmp-dot--a"></span><h3>Category Mix</h3><span class="rp-cmp-period-name-a rp-card-meta"></span></div>
+              </div>
+              <div class="rp-chart-wrap rp-chart-wrap--donut"><canvas id="rpCmpCategoryCanvasA"></canvas></div>
+            </div>
+            <div class="rp-card">
+              <div class="rp-card-head">
+                <div class="rp-cmp-card-title"><span class="rp-cmp-dot rp-cmp-dot--b"></span><h3>Category Mix</h3><span class="rp-cmp-period-name-b rp-card-meta"></span></div>
+              </div>
+              <div class="rp-chart-wrap rp-chart-wrap--donut"><canvas id="rpCmpCategoryCanvasB"></canvas></div>
+            </div>
+          </div>
+
+          <div class="rp-cmp-items-grid">
+            <div class="rp-card">
+              <div class="rp-card-head">
+                <div class="rp-cmp-card-title"><span class="rp-cmp-dot rp-cmp-dot--a"></span><h3>Item Mix</h3><span class="rp-cmp-period-name-a rp-card-meta"></span></div>
+                <button class="rp-info-btn" data-tip="Units sold per item as a share of total. Shows volume split." aria-label="Info" tabindex="-1">i</button>
+              </div>
+              <div class="rp-chart-wrap rp-chart-wrap--donut"><canvas id="rpCmpItemMixCanvasA"></canvas></div>
+            </div>
+            <div class="rp-card">
+              <div class="rp-card-head">
+                <div class="rp-cmp-card-title"><span class="rp-cmp-dot rp-cmp-dot--b"></span><h3>Item Mix</h3><span class="rp-cmp-period-name-b rp-card-meta"></span></div>
+                <button class="rp-info-btn" data-tip="Units sold per item as a share of total. Shows volume split." aria-label="Info" tabindex="-1">i</button>
+              </div>
+              <div class="rp-chart-wrap rp-chart-wrap--donut"><canvas id="rpCmpItemMixCanvasB"></canvas></div>
+            </div>
+          </div>
+
+          <div class="rp-cmp-items-grid">
+            <div class="rp-card">
+              <div class="rp-card-head">
+                <div class="rp-cmp-card-title"><span class="rp-cmp-dot rp-cmp-dot--a"></span><h3>Staff Performance</h3><span class="rp-cmp-period-name-a rp-card-meta"></span></div>
+              </div>
+              <div id="rpCmpStaffA"></div>
+            </div>
+            <div class="rp-card">
+              <div class="rp-card-head">
+                <div class="rp-cmp-card-title"><span class="rp-cmp-dot rp-cmp-dot--b"></span><h3>Staff Performance</h3><span class="rp-cmp-period-name-b rp-card-meta"></span></div>
+              </div>
+              <div id="rpCmpStaffB"></div>
+            </div>
+          </div>
+
+          <!-- ── Traffic ── -->
+          <h4 class="rp-cmp-section-title">Traffic</h4>
+          <div class="rp-cmp-kpis rp-cmp-kpis--2col">
+            <div class="rp-cmp-kpi-block">
+              <div class="rp-kpi-label-row">
+                <span class="rp-cmp-kpi-label">Most Active Hour</span>
+                <button class="rp-info-btn" data-tip="Peak order hour for each period." aria-label="Info" tabindex="-1">i</button>
+              </div>
+              <div class="rp-cmp-kpi-vals">
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--a"></span><span id="rpCmpPeakHourA" class="rp-cmp-kpi-val">—</span></div>
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--b"></span><span id="rpCmpPeakHourB" class="rp-cmp-kpi-val">—</span></div>
+              </div>
+              <div class="rp-cmp-peak-subs">
+                <span id="rpCmpPeakHourSubA" class="rp-cmp-peak-sub rp-cmp-peak-sub--a"></span>
+                <span id="rpCmpPeakHourSubB" class="rp-cmp-peak-sub rp-cmp-peak-sub--b"></span>
+              </div>
+            </div>
+            <div class="rp-cmp-kpi-block">
+              <div class="rp-kpi-label-row">
+                <span class="rp-cmp-kpi-label">Most Active Day</span>
+                <button class="rp-info-btn" data-tip="Peak day of week for each period." aria-label="Info" tabindex="-1">i</button>
+              </div>
+              <div class="rp-cmp-kpi-vals">
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--a"></span><span id="rpCmpPeakDayA" class="rp-cmp-kpi-val">—</span></div>
+                <div class="rp-cmp-kpi-pair"><span class="rp-cmp-dot rp-cmp-dot--b"></span><span id="rpCmpPeakDayB" class="rp-cmp-kpi-val">—</span></div>
+              </div>
+              <div class="rp-cmp-peak-subs">
+                <span id="rpCmpPeakDaySubA" class="rp-cmp-peak-sub rp-cmp-peak-sub--a"></span>
+                <span id="rpCmpPeakDaySubB" class="rp-cmp-peak-sub rp-cmp-peak-sub--b"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="rp-card rp-card--full">
+            <div class="rp-card-head">
+              <h3>⏱️ Hourly Breakdown</h3>
+              <div class="rp-card-head-right">
+                <div class="rp-cmp-legend">
+                  <span class="rp-cmp-dot rp-cmp-dot--a"></span><span class="rp-cmp-period-name-a rp-card-meta"></span>
+                  <span class="rp-cmp-dot rp-cmp-dot--b" style="margin-left:10px"></span><span class="rp-cmp-period-name-b rp-card-meta"></span>
+                </div>
+                <button class="rp-info-btn" data-tip="Orders by hour of day for both periods." aria-label="Info" tabindex="-1">i</button>
+              </div>
+            </div>
+            <div class="rp-chart-wrap"><canvas id="rpCmpHourlyCanvas"></canvas></div>
+          </div>
+
+          <div class="rp-card rp-card--full">
+            <div class="rp-card-head">
+              <h3>📆 Day of Week</h3>
+              <div class="rp-card-head-right">
+                <div class="rp-cmp-legend">
+                  <span class="rp-cmp-dot rp-cmp-dot--a"></span><span class="rp-cmp-period-name-a rp-card-meta"></span>
+                  <span class="rp-cmp-dot rp-cmp-dot--b" style="margin-left:10px"></span><span class="rp-cmp-period-name-b rp-card-meta"></span>
+                </div>
+                <button class="rp-info-btn" data-tip="Orders by day of week for both periods." aria-label="Info" tabindex="-1">i</button>
+              </div>
+            </div>
+            <div class="rp-chart-wrap"><canvas id="rpCmpDowCanvas"></canvas></div>
+          </div>
+
+          <!-- ── Kitchen ── -->
+          <h4 class="rp-cmp-section-title">Kitchen</h4>
+
+          <div class="rp-card rp-card--full">
+            <div class="rp-card-head">
+              <h3>⏱️ Serving Time by Hour</h3>
+              <div class="rp-card-head-right">
+                <div class="rp-cmp-legend">
+                  <span class="rp-cmp-dot rp-cmp-dot--a"></span><span class="rp-cmp-period-name-a rp-card-meta"></span>
+                  <span class="rp-cmp-dot rp-cmp-dot--b" style="margin-left:10px"></span><span class="rp-cmp-period-name-b rp-card-meta"></span>
+                </div>
+                <button class="rp-info-btn" data-tip="Avg. minutes from order placed to done, by hour of day." aria-label="Info" tabindex="-1">i</button>
+              </div>
+            </div>
+            <div class="rp-chart-wrap"><canvas id="rpCmpServingHourCanvas"></canvas></div>
+          </div>
+
+          <div class="rp-card rp-card--full">
+            <div class="rp-card-head">
+              <h3>📆 Serving Time by Day</h3>
+              <div class="rp-card-head-right">
+                <div class="rp-cmp-legend">
+                  <span class="rp-cmp-dot rp-cmp-dot--a"></span><span class="rp-cmp-period-name-a rp-card-meta"></span>
+                  <span class="rp-cmp-dot rp-cmp-dot--b" style="margin-left:10px"></span><span class="rp-cmp-period-name-b rp-card-meta"></span>
+                </div>
+                <button class="rp-info-btn" data-tip="Avg. serving time by day of the week." aria-label="Info" tabindex="-1">i</button>
+              </div>
+            </div>
+            <div class="rp-chart-wrap"><canvas id="rpCmpServingDayCanvas"></canvas></div>
           </div>
 
         </div>
@@ -1255,7 +1536,7 @@
 <div class="rp-kpi" data-metric="avgOrder" style="--metric-color: #f59e0b" role="button" tabindex="0" aria-pressed="false">
               <div class="rp-kpi-label-row">
                 <span class="rp-kpi-label">Avg. Order</span>
-                <button class="rp-info-btn" data-tip="Average revenue per transaction: total ÷ transaction count." aria-label="Info" tabindex="-1">i</button>
+                <button class="rp-info-btn" data-tip="Total period revenue ÷ total orders. Each order counts equally — not an average of daily averages, so it may differ from what you read off the chart." aria-label="Info" tabindex="-1">i</button>
               </div>
               <span class="rp-kpi-val" id="reportsAvgOrder">$0.00</span>
               <span class="rp-kpi-cmp" id="reportsAvgCmp"></span>
@@ -1267,6 +1548,7 @@
           <section class="rp-card rp-card--full rp-card--ph" id="rpRevenueCard">
             <div class="rp-card-head">
               <h3><span id="rpOverviewChartTitle">Gross Income</span> Over Time</h3>
+              <div id="rpOverviewLegend" class="rp-overview-legend"></div>
               <div class="rp-card-head-right">
                 <span class="rp-phase-badge" id="rpRevenueBadge">Loading…</span>
                 <button class="rp-info-btn" data-tip="Click any KPI card above to add or remove it from this chart. Multiple metrics can be shown simultaneously." aria-label="Info" tabindex="-1">i</button>
@@ -1435,7 +1717,7 @@
                 <span class="rp-kpi-label">Most Active Hour</span>
                 <button class="rp-info-btn" data-tip="The hour of day with the most orders across this period." aria-label="Info" tabindex="-1">i</button>
               </div>
-              <span class="rp-kpi-val" id="trafficPeakHour">—</span>
+              <div class="rp-kpi-val-row"><span class="rp-kpi-emoji">⏰</span><span class="rp-kpi-val" id="trafficPeakHour">—</span></div>
               <span class="rp-peak-count" id="trafficPeakHourSub"></span>
             </div>
             <div class="rp-kpi">
@@ -1443,7 +1725,7 @@
                 <span class="rp-kpi-label">Most Active Day</span>
                 <button class="rp-info-btn" data-tip="The day of the week with the most orders across this period." aria-label="Info" tabindex="-1">i</button>
               </div>
-              <span class="rp-kpi-val" id="trafficPeakDay">—</span>
+              <div class="rp-kpi-val-row"><span class="rp-kpi-emoji">📅</span><span class="rp-kpi-val" id="trafficPeakDay">—</span></div>
               <span class="rp-peak-count" id="trafficPeakDaySub"></span>
             </div>
             <div class="rp-kpi">
@@ -1451,7 +1733,7 @@
                 <span class="rp-kpi-label">Transactions</span>
                 <button class="rp-info-btn" data-tip="Number of completed sales recorded in this period." aria-label="Info" tabindex="-1">i</button>
               </div>
-              <span class="rp-kpi-val" id="reportsTransactions">0</span>
+              <div class="rp-kpi-val-row"><span class="rp-kpi-emoji">🧾</span><span class="rp-kpi-val" id="reportsTransactions">0</span></div>
               <span class="rp-kpi-cmp" id="reportsTransCmp"></span>
             </div>
             <div class="rp-kpi">
@@ -1459,14 +1741,14 @@
                 <span class="rp-kpi-label">Avg. per Day</span>
                 <button class="rp-info-btn" data-tip="Average number of transactions per day across this period." aria-label="Info" tabindex="-1">i</button>
               </div>
-              <span class="rp-kpi-val" id="trafficAvgDaily">—</span>
+              <div class="rp-kpi-val-row"><span class="rp-kpi-emoji">📈</span><span class="rp-kpi-val" id="trafficAvgDaily">—</span></div>
               <span class="rp-peak-count" id="trafficAvgDailySub"></span>
             </div>
           </div>
           <div class="rp-grid">
             <section class="rp-card rp-card--full rp-card--ph" id="rpHourlyCard">
               <div class="rp-card-head">
-                <h3>Hourly Breakdown</h3>
+                <h3>⏱️ Hourly Breakdown</h3>
                 <div class="rp-card-head-right">
                   <span class="rp-phase-badge" id="rpHourlyBadge">Loading…</span>
                   <button class="rp-info-btn" data-tip="Revenue totaled by hour of day across the entire period. Reveals your busiest times." aria-label="Info" tabindex="-1">i</button>
@@ -1487,7 +1769,7 @@
 
             <section class="rp-card rp-card--full rp-card--ph" id="rpDowCard">
               <div class="rp-card-head">
-                <h3>Day of Week</h3>
+                <h3>📆 Day of Week</h3>
                 <div class="rp-card-head-right">
                   <span class="rp-phase-badge" id="rpDowBadge">Loading…</span>
                   <button class="rp-info-btn" data-tip="Total revenue by day of the week. The brightest bar is your strongest day. Needs 2+ days of data." aria-label="Info" tabindex="-1">i</button>
@@ -1514,14 +1796,14 @@
                 <span class="rp-kpi-label">Avg. Serving Time</span>
                 <button class="rp-info-btn" data-tip="Average time from order placed to kitchen marking it done." aria-label="Info" tabindex="-1">i</button>
               </div>
-              <span class="rp-kpi-val rp-kpi-val--muted" id="reportsServingTime">—</span>
+              <div class="rp-kpi-val-row"><span class="rp-kpi-emoji">🍳</span><span class="rp-kpi-val rp-kpi-val--muted" id="reportsServingTime">—</span></div>
               <span class="rp-kpi-cmp" id="reportsServingCmp"></span>
             </div>
           </div>
           <div class="rp-grid">
             <section class="rp-card rp-card--full rp-card--ph" id="rpServingHourCard">
               <div class="rp-card-head">
-                <h3>Serving Time by Hour</h3>
+                <h3>⏱️ Serving Time by Hour</h3>
                 <div class="rp-card-head-right">
                   <span class="rp-phase-badge" id="rpServingHourBadge">Loading…</span>
                   <button class="rp-info-btn" data-tip="Average minutes from checkout to order served, by hour of day. Peaks reveal which rush windows slow your kitchen down the most." aria-label="Info" tabindex="-1">i</button>
@@ -1542,7 +1824,7 @@
 
             <section class="rp-card rp-card--full rp-card--ph" id="rpServingDayCard">
               <div class="rp-card-head">
-                <h3>Serving Time by Day</h3>
+                <h3>📆 Serving Time by Day</h3>
                 <div class="rp-card-head-right">
                   <span class="rp-phase-badge" id="rpServingDayBadge">Loading…</span>
                   <button class="rp-info-btn" data-tip="Average serving time by day of the week. The brightest bar is your most pressured day in the kitchen." aria-label="Info" tabindex="-1">i</button>

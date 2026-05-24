@@ -1,5 +1,9 @@
 import View from "./view.js";
 
+const TRASH_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true">
+  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+</svg>`;
+
 class MenuEditView extends View {
   _parentElement = document.querySelector(".modal-parent");
   _formDiv = document.querySelector(".edit-form-parent");
@@ -21,26 +25,42 @@ class MenuEditView extends View {
   _insertEditMenuMarkup(item) {
     this._currentItemId = item._id;
     const markUp = `
-<div class="modal-backdrop">
-  <div class="modal-container">
-    <button class="modal-close-btn" aria-label="Close modal">&#x2715;</button>
+<div class="edit-modal-overlay">
+  <div class="edit-modal-card">
+    <button class="edit-modal-close" aria-label="Close modal">&#x2715;</button>
 
     <form class="edit-item-form">
       <h2 class="edit-form-title">Edit Menu Item</h2>
 
-      <!-- Hero: image + core info -->
-      <div class="edit-hero">
-        <div class="file-upload-preview-wrapper">
-          <img src="${item.imageURL || "default-image.png"}" alt="Item Image" class="edit-image-preview" />
-          <input type="file" class="edit-image-input" name="image" accept="image/*" style="display:none;" />
-          <span class="edit-image-overlay">Change image</span>
+      <!-- Top grid: photo (4×2) + Item Name, Category, Price, Status (2×1 each) -->
+      <div class="edit-top-wrap">
+        <!-- Photo column -->
+        <div class="edit-photo-col">
+          <div class="file-upload-preview-wrapper edit-photo-box">
+            <img src="${item.imageURL || "default-image.png"}" alt="Item Image" class="edit-image-preview" />
+            <input type="file" class="edit-image-input" name="image" accept="image/*" style="display:none;" />
+            <span class="edit-image-overlay">Change image</span>
+          </div>
         </div>
-        <div class="edit-hero-info">
-          <label class="edit-field">
-            Item Name
-            <input type="text" name="itemName" value="${item.itemName}" />
-          </label>
-          <div class="edit-inline-row">
+        <!-- Fields: two explicit rows so each row is its own flex context -->
+        <div class="edit-fields-col">
+          <div class="edit-fields-row">
+            <label class="edit-field">
+              Item Name
+              <input type="text" name="itemName" value="${item.itemName}" />
+            </label>
+            <div class="edit-field">
+              <span>Category</span>
+              <div class="category-wrapper">
+                <select class="edit-field-select" name="category"></select>
+                <div class="new-category-row hidden">
+                  <input type="text" class="new-category-field edit-new-category-input" placeholder="New category name" />
+                  <button class="new-category-button" type="button">+ Add</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="edit-fields-row">
             <label class="edit-field">
               Price
               <input type="number" name="price" value="${item.price}" />
@@ -53,18 +73,6 @@ class MenuEditView extends View {
                 <option value="Unavailable" ${item.status === "unavailable" ? "selected" : ""}>Unavailable</option>
               </select>
             </label>
-          </div>
-        </div>
-      </div>
-
-      <!-- Category -->
-      <div class="edit-field">
-        <span>Category</span>
-        <div class="category-wrapper">
-          <select class="edit-field-select" name="category"></select>
-          <div class="new-category-row hidden">
-            <input type="text" class="new-category-field edit-new-category-input" placeholder="New category name" />
-            <button class="new-category-button" type="button">+ Add</button>
           </div>
         </div>
       </div>
@@ -87,18 +95,20 @@ class MenuEditView extends View {
             ? item.variants.map((variant, vIndex) => `
             <div class="edit-variant-group">
               <div class="edit-variant-header">
-                <label class="edit-field">
-                  Variant Group Label
-                  <input type="text" name="variants[${vIndex}][optionLabel]" value="${variant.optionLabel}" />
-                </label>
-                <button type="button" class="edit-delete-variant-btn">&#x2715;</button>
+                <span class="edit-variant-group-title">Variant Group Label</span>
+                <button type="button" class="edit-delete-variant-btn">&#x1F5D1; Remove Group</button>
+              </div>
+              <input type="text" class="edit-variant-label-input" name="variants[${vIndex}][optionLabel]" value="${variant.optionLabel}" placeholder="e.g. Size, Flavor, Add-ons…" />
+              <div class="edit-variant-cols-header">
+                <span>Option name</span>
+                <span>Price <span class="edit-tip" data-tip="Leave empty or enter 0 if this option has no extra charge">ⓘ</span></span>
               </div>
               <div class="edit-variant-options">
                 ${variant.options.map((option, oIndex) => `
                   <div class="edit-variant-row">
                     <input type="text" name="variants[${vIndex}][options][${oIndex}][optionName]" placeholder="Option name" value="${option.optionName}" />
                     <input type="number" name="variants[${vIndex}][options][${oIndex}][optionPrice]" placeholder="Price" value="${option.optionPrice}" />
-                    <button type="button" class="edit-delete-option-btn">&#x2715;</button>
+                    <button type="button" class="edit-delete-option-btn" aria-label="Remove option">${TRASH_ICON}</button>
                   </div>
                 `).join("")}
               </div>
@@ -156,15 +166,46 @@ class MenuEditView extends View {
     );
   }
 
+  // Returns the first empty required input inside variant groups, or null if all valid
+  _validateVariants(form) {
+    const groups = form.querySelectorAll(".edit-variant-group");
+    for (const group of groups) {
+      const labelInput = group.querySelector(".edit-variant-label-input");
+      if (labelInput && !labelInput.value.trim()) return labelInput;
+
+      const optionNames = group.querySelectorAll('input[name*="[optionName]"]');
+      for (const opt of optionNames) {
+        if (!opt.value.trim()) return opt;
+      }
+    }
+    return null;
+  }
+
   _updateItemData(handler) {
     if (this._submitHandler) {
       this._formDiv.removeEventListener("submit", this._submitHandler);
     }
 
+    // Clear error highlight as the user types
+    this._formDiv.addEventListener("input", (e) => {
+      e.target.closest(".edit-input-error")?.classList.remove("edit-input-error");
+    }, { once: false });
+
     this._submitHandler = (e) => {
       e.preventDefault();
       const form = e.target.closest(".edit-item-form");
       if (!form) return;
+
+      // Validate variant fields before saving
+      const badInput = this._validateVariants(form);
+      if (badInput) {
+        badInput.classList.remove("edit-input-error"); // reset so animation re-triggers
+        void badInput.offsetWidth;                     // force reflow
+        badInput.classList.add("edit-input-error");
+        badInput.scrollIntoView({ behavior: "smooth", block: "center" });
+        badInput.focus();
+        return; // block save
+      }
 
       const formData = new FormData(form);
       const data = {};
@@ -176,8 +217,8 @@ class MenuEditView extends View {
       this._submitHandler = null;
 
       handler(data);
-      const backdrop = form.closest(".modal-backdrop");
-      if (backdrop) backdrop.remove();
+      const overlay = form.closest(".edit-modal-overlay");
+      if (overlay) overlay.remove();
       this._showSuccess();
       setTimeout(() => this._hideSuccess(), 1000);
     };
@@ -240,13 +281,14 @@ class MenuEditView extends View {
       const markup = `
       <div class="edit-variant-group">
         <div class="edit-variant-header">
-          <label class="edit-field">
-            Variant Group
-            <input type="text" name="variants[${vIndex}][optionLabel]" value="" placeholder="Variant Label" />
-          </label>
-          <button type="button" class="edit-delete-variant-btn">✕</button>
+          <span class="edit-variant-group-title">Variant Group Label</span>
+          <button type="button" class="edit-delete-variant-btn">🗑 Remove Group</button>
         </div>
-
+        <input type="text" class="edit-variant-label-input" name="variants[${vIndex}][optionLabel]" value="" placeholder="e.g. Size, Flavor, Add-ons…" />
+        <div class="edit-variant-cols-header">
+          <span>Option name</span>
+          <span>Price <span class="edit-tip" data-tip="Leave empty or enter 0 if this option has no extra charge">ⓘ</span></span>
+        </div>
         <div class="edit-variant-options">
           <div class="edit-variant-row">
             <input
@@ -259,10 +301,9 @@ class MenuEditView extends View {
               name="variants[${vIndex}][options][0][optionPrice]"
               placeholder="Price"
             />
-            <button type="button" class="edit-delete-option-btn">✕</button>
+            <button type="button" class="edit-delete-option-btn" aria-label="Remove option">${TRASH_ICON}</button>
           </div>
         </div>
-
         <button type="button" class="edit-add-option-btn">+ Add Option</button>
       </div>
     `;
@@ -274,6 +315,9 @@ class MenuEditView extends View {
       const newGroup = variantsSection.querySelector(
         ".edit-variant-group:last-child",
       );
+
+      // Animate in
+      newGroup.classList.add("edit-variant-group--entering");
 
       // Scroll smoothly to the new group
       newGroup.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -334,7 +378,7 @@ class MenuEditView extends View {
           name="variants[${vIndex}][options][${oIndex}][optionPrice]"
           placeholder="Price"
         />
-        <button type="button" class="edit-delete-option-btn">✕</button>
+        <button type="button" class="edit-delete-option-btn" aria-label="Remove option">${TRASH_ICON}</button>
       </div>
     `;
 
@@ -344,6 +388,10 @@ class MenuEditView extends View {
       const newOption = optionsContainer.querySelector(
         ".edit-variant-row:last-child",
       );
+
+      // Animate in
+      newOption.classList.add("edit-variant-row--entering");
+
       newOption.scrollIntoView({ behavior: "smooth", block: "center" });
 
       // Focus on the new option name input
@@ -453,7 +501,7 @@ class MenuEditView extends View {
       </div>
     `;
 
-    const container = this._formDiv.querySelector(".modal-container");
+    const container = this._formDiv.querySelector(".edit-modal-card");
     container.insertAdjacentHTML("beforeend", markup);
 
     const overlay = container.querySelector(".edit-confirm-overlay");
@@ -482,8 +530,8 @@ class MenuEditView extends View {
       );
       if (!confirmed) return;
 
-      const backdrop = btn.closest(".modal-backdrop");
-      if (backdrop) backdrop.remove();
+      const overlay = btn.closest(".edit-modal-overlay");
+      if (overlay) overlay.remove();
 
       handler(this._currentItemId);
     });
@@ -491,13 +539,13 @@ class MenuEditView extends View {
 
   _closeModal() {
     this._formDiv.addEventListener("click", (e) => {
-      const btn = e.target.closest(".modal-close-btn");
+      const btn = e.target.closest(".edit-modal-close");
       if (!btn) return;
-      const backdrop = btn.closest(".modal-backdrop");
-      if (!backdrop) return;
-      const inner = backdrop.querySelector(".modal-container");
-      if (inner) inner.classList.add("modal-exiting");
-      setTimeout(() => backdrop.remove(), 220);
+      const overlay = btn.closest(".edit-modal-overlay");
+      if (!overlay) return;
+      const card = overlay.querySelector(".edit-modal-card");
+      if (card) card.classList.add("modal-exiting");
+      setTimeout(() => overlay.remove(), 220);
     });
   }
 

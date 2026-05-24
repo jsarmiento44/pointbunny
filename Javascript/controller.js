@@ -705,7 +705,8 @@ const _refreshCategoryDropdowns = function () {
 const controlAddCategoryFromSettings = async function (name) {
   try {
     await model.addCategory(name);
-    MenuListView.render(model.state);
+    // Only update the chips strip — no full re-render, no flash
+    MenuListView._updateChips(model.state.menuCategories, name);
     _refreshCategoryDropdowns();
   } catch (err) {
     showToast(err.message ?? err);
@@ -725,11 +726,18 @@ const controlDeleteCategory = async function (name) {
     return;
   try {
     await model.deleteCategory(name);
+    // Update chips immediately, then full render to update item groups
+    MenuListView._updateChips(model.state.menuCategories);
     MenuListView.render(model.state);
     _refreshCategoryDropdowns();
   } catch (err) {
     showToast(err.message ?? err);
   }
+};
+
+const _renderAllAdjustments = function () {
+  SettingsView.renderAdjustments(model.state.settings.adjustments);
+  DiscountView.renderAdjustments(model.state.settings.adjustments);
 };
 
 const controlSaveAdjustment = async function (data) {
@@ -739,7 +747,7 @@ const controlSaveAdjustment = async function (data) {
     } else {
       await model.addAdjustment(data);
     }
-    SettingsView.renderAdjustments(model.state.settings.adjustments);
+    _renderAllAdjustments();
   } catch (err) {
     showToast(err.message ?? err);
   }
@@ -751,10 +759,17 @@ const controlEditAdjustment = function (id) {
   SettingsView.showForm(adj);
 };
 
+// Edit triggered from the Receipt Adjustments panel
+const controlEditAdjFromPanel = function (id) {
+  const adj = model.state.settings.adjustments.find((a) => a.id === id);
+  if (!adj) return;
+  DiscountView.showAdjustmentForm(adj);
+};
+
 const controlDeleteAdjustment = async function (id) {
   try {
     await model.deleteAdjustment(id);
-    SettingsView.renderAdjustments(model.state.settings.adjustments);
+    _renderAllAdjustments();
   } catch (err) {
     showToast(err.message ?? err);
   }
@@ -763,7 +778,7 @@ const controlDeleteAdjustment = async function (id) {
 const controlToggleAdjustment = async function (id) {
   try {
     await model.toggleAdjustment(id);
-    SettingsView.renderAdjustments(model.state.settings.adjustments);
+    _renderAllAdjustments();
   } catch (err) {
     showToast(err.message ?? err);
   }
@@ -1225,7 +1240,7 @@ const _getCashflowRange = function (period, from, to) {
   const fmt = (d) =>
     d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const fmtShort = (d) =>
-    d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
   if (period === "today") {
     const start = new Date(now); start.setHours(0, 0, 0, 0);
@@ -1260,9 +1275,10 @@ const _getCashflowRange = function (period, from, to) {
     return { startISO: start.toISOString(), endISO: end.toISOString(), label: String(now.getFullYear()) };
   }
 
-  // custom
-  const start = new Date(from); start.setHours(0, 0, 0, 0);
-  const end   = new Date(to);   end.setHours(23, 59, 59, 999);
+  // custom — append T00:00:00 (no Z) so the string is parsed as LOCAL midnight,
+  // not UTC midnight (which lands on the previous calendar day in UTC- timezones).
+  const start = new Date(from + 'T00:00:00');
+  const end   = new Date(to   + 'T00:00:00'); end.setHours(23, 59, 59, 999);
   return { startISO: start.toISOString(), endISO: end.toISOString(), label: `${fmtShort(start)} – ${fmtShort(end)}` };
 };
 
@@ -1569,6 +1585,7 @@ const controlDeleteExpense = async function (id) {
 const controlOpenDiscounts = function () {
   DiscountView.open();
   DiscountView.render(model.state.discountCodes);
+  DiscountView.renderAdjustments(model.state.settings.adjustments);
 };
 
 const controlCloseDiscounts = function () {
@@ -1903,9 +1920,11 @@ const _computeRevenueOverTime = function (period, startISO, endISO) {
   }
 
   // week / month / custom → daily
+  const localYMD = d =>
+    `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   const dmap = new Map();
   for (const s of sales) {
-    const d = s.sale_date.slice(0, 10);
+    const d = localYMD(new Date(s.sale_date));   // local date of sale
     dmap.set(d, (dmap.get(d) ?? 0) + Number(s.total_price));
   }
   const start = new Date(startISO);
@@ -1913,7 +1932,7 @@ const _computeRevenueOverTime = function (period, startISO, endISO) {
   const labels = [], data = [];
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     labels.push(period === "week" ? DAYS[d.getDay()] : `${d.getMonth() + 1}/${d.getDate()}`);
-    data.push(dmap.get(d.toISOString().slice(0, 10)) ?? 0);
+    data.push(dmap.get(localYMD(d)) ?? 0);       // local date key, not UTC
   }
   return { labels, data };
 };
@@ -1948,13 +1967,23 @@ const _computeAllTimeSeries = function(period, startISO, endISO) {
     const end   = new Date(endISO);
     labels = [];
     const dateStrs = [];
+    // Use LOCAL calendar date so keys match regardless of timezone.
+    // d.toISOString() gives the UTC date which can be a day behind local midnight
+    // in UTC+ timezones, causing sales to map to the wrong bucket.
+    const localYMD = d =>
+      `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      labels.push(period === "week" ? DAYS[d.getDay()] : `${d.getMonth() + 1}/${d.getDate()}`);
-      dateStrs.push(d.toISOString().slice(0, 10));
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      labels.push(period === "week"
+        ? [DAYS[d.getDay()], `${mm}/${dd}`]          // two-line: "Mon" + "05/12"
+        : `${d.getMonth() + 1}/${d.getDate()}`);
+      dateStrs.push(localYMD(d));                    // LOCAL date key, not UTC
     }
     n = labels.length;
     const dmap = new Map(dateStrs.map((s, i) => [s, i]));
-    saleKeyFn = s => dmap.get(s.sale_date.slice(0, 10)) ?? -1;
+    // Map each sale to its LOCAL calendar date so it lands in the right bucket
+    saleKeyFn = s => dmap.get(localYMD(new Date(s.sale_date))) ?? -1;
     expKeyFn  = e => e.expenseDate ? (dmap.get(e.expenseDate.slice(0, 10)) ?? -1) : -1;
   }
 
@@ -2062,7 +2091,7 @@ const _computeTrafficPeaks = function(period, startISO, endISO) {
 const _computeHourlyBreakdown = function () {
   const hours = Array(24).fill(0);
   for (const s of modelState.reportsSales)
-    hours[new Date(s.sale_date).getHours()] += Number(s.total_price);
+    hours[new Date(s.sale_date).getHours()]++;
   const fmtHour = (i) => i === 0 ? "12am" : i < 12 ? `${i}am` : i === 12 ? "12pm" : `${i - 12}pm`;
   return { labels: Array.from({ length: 24 }, (_, i) => fmtHour(i)), data: hours };
 };
@@ -2074,7 +2103,7 @@ const _computeDayOfWeek = function (period) {
   for (const s of modelState.reportsSales) {
     const d = new Date(s.sale_date).getDay(); // 0=Sun
     const idx = d === 0 ? 6 : d - 1;         // shift to Mon=0
-    totals[idx] += Number(s.total_price);
+    totals[idx]++;
   }
   return { labels: MON, data: totals, isEmpty: false };
 };
@@ -2184,17 +2213,108 @@ const _computeCompareRevenue = function (sales, type, startISO, endISO) {
     return { labels: MONTHS, data: MONTHS.map((_, i) => mmap.get(`${year}-${String(i + 1).padStart(2, "0")}`) ?? 0) };
   }
   // week / month / custom → daily
+  const localYMD = d =>
+    `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   const dmap = new Map();
-  for (const s of sales) { const d = s.sale_date.slice(0, 10); dmap.set(d, (dmap.get(d) ?? 0) + Number(s.total_price)); }
+  for (const s of sales) {
+    const d = localYMD(new Date(s.sale_date));   // local date of sale
+    dmap.set(d, (dmap.get(d) ?? 0) + Number(s.total_price));
+  }
   const start = new Date(startISO);
   const end   = new Date(endISO);
   const labels = [], data = [];
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     labels.push(type === "week" ? DAYS[d.getDay()] : `${d.getMonth() + 1}/${d.getDate()}`);
-    data.push(dmap.get(d.toISOString().slice(0, 10)) ?? 0);
+    data.push(dmap.get(localYMD(d)) ?? 0);       // local date key, not UTC
   }
   return { labels, data };
 };
+
+// ── Per-sales-array helpers (used by compare mode for both periods) ────────────
+
+const _computeCategoryMixFromSales = function (sales) {
+  const itemCatMap = new Map(model.state.menuItems.map(i => [i.itemName, i.category]));
+  const map = new Map();
+  for (const sale of sales)
+    for (const item of (sale.items ?? [])) {
+      const cat = itemCatMap.get(item.itemName) ?? "Other";
+      map.set(cat, (map.get(cat) ?? 0) + Number(item.totalPrice ?? 0));
+    }
+  return [...map.entries()].sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
+};
+
+const _computeStaffFromSales = function (sales) {
+  const map = new Map();
+  for (const sale of sales) {
+    const name = sale.added_by || "Unknown";
+    const e = map.get(name) ?? { name, transactions: 0, revenue: 0 };
+    e.transactions++; e.revenue += Number(sale.total_price);
+    map.set(name, e);
+  }
+  return [...map.values()].sort((a, b) => b.revenue - a.revenue);
+};
+
+const _computeHourlyFromSales = function (sales) {
+  const fmtHour = (i) => i === 0 ? "12am" : i < 12 ? `${i}am` : i === 12 ? "12pm" : `${i - 12}pm`;
+  const hours = Array(24).fill(0);
+  for (const s of sales) hours[new Date(s.sale_date).getHours()]++;
+  return { labels: Array.from({ length: 24 }, (_, i) => fmtHour(i)), data: hours };
+};
+
+const _computeDowFromSales = function (sales) {
+  const MON = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const totals = Array(7).fill(0);
+  for (const s of sales) {
+    const d = new Date(s.sale_date).getDay();
+    totals[d === 0 ? 6 : d - 1]++;
+  }
+  return { labels: MON, data: totals };
+};
+
+const _computeServingFromSales = function (sales) {
+  const fmtHour = (i) => i === 0 ? "12am" : i < 12 ? `${i}am` : i === 12 ? "12pm" : `${i - 12}pm`;
+  const MON = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  const filtered = sales.filter(s => s.prepared_at);
+  if (!filtered.length) return null;
+  const hourC = Array(24).fill(0), hourT = Array(24).fill(0);
+  const dayC  = Array(7).fill(0),  dayT  = Array(7).fill(0);
+  let totalMins = 0, totalCount = 0;
+  for (const s of filtered) {
+    const mins = (new Date(s.prepared_at) - new Date(s.sale_date)) / 60000;
+    if (mins < 0 || mins > 120) continue;
+    const h = new Date(s.sale_date).getHours();
+    hourC[h]++; hourT[h] += mins;
+    const d = new Date(s.sale_date).getDay();
+    const idx = d === 0 ? 6 : d - 1;
+    dayC[idx]++; dayT[idx] += mins;
+    totalMins += mins; totalCount++;
+  }
+  if (!totalCount) return null;
+  return {
+    avgMinutes: totalMins / totalCount,
+    byHour: { labels: Array.from({ length: 24 }, (_, i) => fmtHour(i)), data: hourC.map((c, i) => c > 0 ? hourT[i] / c : 0) },
+    byDay:  { labels: MON, data: dayC.map((c, i) => c > 0 ? dayT[i] / c : 0) },
+  };
+};
+
+const _computeTrafficPeaksFromSales = function (sales) {
+  const fmtHour = i => i === 0 ? "12am" : i < 12 ? `${i}am` : i === 12 ? "12pm" : `${i - 12}pm`;
+  const FULLDAY = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+  const hourC = Array(24).fill(0);
+  for (const s of sales) hourC[new Date(s.sale_date).getHours()]++;
+  const maxH = Math.max(...hourC);
+  const dayC = Array(7).fill(0);
+  for (const s of sales) { const d = new Date(s.sale_date).getDay(); dayC[d === 0 ? 6 : d - 1]++; }
+  const maxD = Math.max(...dayC);
+  return {
+    peakHour:      maxH > 0 ? fmtHour(hourC.indexOf(maxH))  : "—",
+    peakHourCount: maxH,
+    peakDay:       maxD > 0 ? FULLDAY[dayC.indexOf(maxD)]   : "—",
+    peakDayCount:  maxD,
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 let _compareModeActive = false;
 let _cmpSalesA = null, _cmpSalesB = null, _cmpRangeA = null, _cmpRangeB = null;
@@ -2257,27 +2377,80 @@ const controlRunComparison = async function ({ type, aValue, bValue, fromA, toA,
     _cmpRangeB = type === "custom" ? _getCashflowRange("custom", fromB, toB) : _getRangeFromValue(type, bValue);
     _cmpTopItemsSortKey = "quantity";
     ReportsView.setCmpTopItemsSort("quantity");
+
     const [salesA, salesB] = await Promise.all([
       fetchReportsSalesRaw(_cmpRangeA.startISO, _cmpRangeA.endISO),
       fetchReportsSalesRaw(_cmpRangeB.startISO, _cmpRangeB.endISO),
     ]);
     _cmpSalesA = salesA;
     _cmpSalesB = salesB;
+
+    const labelA = _cmpRangeA.label;
+    const labelB = _cmpRangeB.label;
+
+    // Revenue over time (existing)
     const revA = _computeCompareRevenue(salesA, type, _cmpRangeA.startISO, _cmpRangeA.endISO);
     const revB = _computeCompareRevenue(salesB, type, _cmpRangeB.startISO, _cmpRangeB.endISO);
     const maxLen = Math.max(revA.labels.length, revB.labels.length);
-    const labels = revA.labels.length >= revB.labels.length ? revA.labels : revB.labels;
+    const revLabels = revA.labels.length >= revB.labels.length ? revA.labels : revB.labels;
     const dataA = revA.data.concat(Array(maxLen - revA.data.length).fill(0));
     const dataB = revB.data.concat(Array(maxLen - revB.data.length).fill(0));
+
+    // All additional metrics
+    const categoryA  = _computeCategoryMixFromSales(salesA);
+    const categoryB  = _computeCategoryMixFromSales(salesB);
+    const itemMixA   = _computeTopItemsFromSales(salesA, 8, "quantity");
+    const itemMixB   = _computeTopItemsFromSales(salesB, 8, "quantity");
+    const staffA     = _computeStaffFromSales(salesA);
+    const staffB     = _computeStaffFromSales(salesB);
+    const hourlyA    = _computeHourlyFromSales(salesA);
+    const hourlyB    = _computeHourlyFromSales(salesB);
+    const dowA       = _computeDowFromSales(salesA);
+    const dowB       = _computeDowFromSales(salesB);
+    const servingA   = _computeServingFromSales(salesA);
+    const servingB   = _computeServingFromSales(salesB);
+    const tPeaksA    = _computeTrafficPeaksFromSales(salesA);
+    const tPeaksB    = _computeTrafficPeaksFromSales(salesB);
+    const topItemsA1 = _computeTopItemsFromSales(salesA, 1, "quantity")[0];
+    const topItemsB1 = _computeTopItemsFromSales(salesB, 1, "quantity")[0];
+
+    const fmt = (v) => `$${Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    const salesPeaksA = {
+      bestSeller: topItemsA1?.name ?? "—",
+      bestSellerSub: topItemsA1 ? `${topItemsA1.quantity} sold` : "",
+      topCategory: categoryA[0]?.label ?? "—",
+      topCategorySub: categoryA[0] ? fmt(categoryA[0].value) : "",
+      topStaff: staffA[0]?.name ?? "—",
+      topStaffSub: staffA[0] ? fmt(staffA[0].revenue) : "",
+    };
+    const salesPeaksB = {
+      bestSeller: topItemsB1?.name ?? "—",
+      bestSellerSub: topItemsB1 ? `${topItemsB1.quantity} sold` : "",
+      topCategory: categoryB[0]?.label ?? "—",
+      topCategorySub: categoryB[0] ? fmt(categoryB[0].value) : "",
+      topStaff: staffB[0]?.name ?? "—",
+      topStaffSub: staffB[0] ? fmt(staffB[0].revenue) : "",
+    };
+
+    // Render all
     ReportsView.renderCompareResults({
-      labelA: _cmpRangeA.label,
-      labelB: _cmpRangeB.label,
+      labelA, labelB,
       summaryA: _computeSummaryFromSales(salesA),
       summaryB: _computeSummaryFromSales(salesB),
       topItemsA: _computeTopItemsFromSales(salesA, 5, "quantity"),
       topItemsB: _computeTopItemsFromSales(salesB, 5, "quantity"),
     });
-    await ReportsView.renderCompareChart({ labelA: _cmpRangeA.label, labelB: _cmpRangeB.label, labels, dataA, dataB });
+
+    ReportsView.renderCmpPeakStats({ salesPeaksA, salesPeaksB, tPeaksA, tPeaksB });
+
+    await Promise.all([
+      ReportsView.renderCompareChart({ labelA, labelB, labels: revLabels, dataA, dataB }),
+      ReportsView.renderCmpSalesCharts({ categoryA, categoryB, itemMixA, itemMixB, labelA, labelB }),
+      ReportsView.renderCmpStaff({ staffA, staffB }),
+      ReportsView.renderCmpTrafficCharts({ hourlyA, hourlyB, dowA, dowB, labelA, labelB }),
+      ReportsView.renderCmpKitchenCharts({ servingA, servingB, labelA, labelB }),
+    ]);
   } catch (err) {
     showToast(err.message ?? err);
   }
@@ -2910,14 +3083,22 @@ const _wireApp = function () {
   kdsWindowBtn?.addEventListener('click', controlOpenKDSWindow);
   cfdWindowBtn?.addEventListener('click', controlOpenCFDWindow);
 
-  // Discounts
+  // Receipt Adjustments Panel
   DiscountView._addHandlerOpen(controlOpenDiscounts);
   DiscountView._addHandlerClose(controlCloseDiscounts);
+  DiscountView._addHandlerNavTabs();
+  // Promo codes
   DiscountView._addHandlerNewCode(controlNewDiscountCode);
   DiscountView._addHandlerSave(controlSaveDiscountCode);
   DiscountView._addHandlerEdit(controlEditDiscountCode);
   DiscountView._addHandlerDelete(controlDeleteDiscountCode);
   DiscountView._addHandlerToggleStatus(controlToggleDiscountStatus);
+  // Auto adjustments (panel)
+  DiscountView._addHandlerAdjAdd();
+  DiscountView._addHandlerAdjSave(controlSaveAdjustment);
+  DiscountView._addHandlerAdjEdit(controlEditAdjFromPanel);
+  DiscountView._addHandlerAdjDelete(controlDeleteAdjustment);
+  DiscountView._addHandlerAdjToggle(controlToggleAdjustment);
 
   // Today's Sales stat card → open Reports on Sales section
   const salesStatCard = document.querySelector(".home-sales-stat");

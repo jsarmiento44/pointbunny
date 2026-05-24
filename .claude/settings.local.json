@@ -27,7 +27,9 @@
       "PowerShell(npx playwright install chromium 2>&1 | Select-Object -Last 3)",
       "PowerShell(npx playwright install chromium 2>&1)",
       "Bash(grep -n \"^html\\\\|^body\\\\|html,\\\\|body {\" pointy.css)",
-      "Bash(Read \"C:\\\\Users\\\\Kelly\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Kelly-Desktop-Pointy-Pointy-Project\\\\ce1ad800-db7d-4268-a719-8727732dff95\\\\tasks\\\\b0fifvzff.output\")"
+      "Bash(Read \"C:\\\\Users\\\\Kelly\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Kelly-Desktop-Pointy-Pointy-Project\\\\ce1ad800-db7d-4268-a719-8727732dff95\\\\tasks\\\\b0fifvzff.output\")",
+      "Bash(git checkout *)",
+      "PowerShell(Get-Process *)"
     ]
   }
 }

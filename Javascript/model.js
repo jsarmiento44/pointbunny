@@ -626,7 +626,7 @@ export const fetchCashflowData = async function (startISO, endISO) {
   const [salesResult, expensesResult, voidedResult] = await Promise.all([
     supabase
       .from("sales")
-      .select("id, total_price, subtotal, customer_payment, customer_change, adjustments, sale_date, items, is_manual, added_by, order_type, ticket_number")
+      .select("id, total_price, subtotal, customer_payment, customer_change, adjustments, sale_date, items, is_manual, added_by, order_type, ticket_number, prepared_at")
       .eq("user_id", state.businessId)
       .gte("sale_date", startISO)
       .lte("sale_date", endISO)

@@ -62,12 +62,10 @@ class MenuListView extends View {
           </div>
           <div class="menu-cat-manage">
             <p class="menu-cat-section-label">Categories</p>
-            <div class="menu-cat-body">
-              <div class="menu-cat-chips">${chips || '<span class="menu-cat-hint">No categories yet.</span>'}</div>
-              <div class="menu-cat-add-row">
-                <input type="text" id="menuCategoryInput" placeholder="New category" class="category-input" />
-                <button class="btn primary" id="menuAddCategoryBtn" type="button">+ Add</button>
-              </div>
+            <div class="menu-cat-chips">${chips || '<span class="menu-cat-hint">No categories yet.</span>'}</div>
+            <div class="menu-cat-add-row">
+              <input type="text" id="menuCategoryInput" placeholder="New category name…" class="category-input" />
+              <button class="btn primary" id="menuAddCategoryBtn" type="button">+ Add Category</button>
             </div>
           </div>
           <div class="menu-items-area">
@@ -100,6 +98,30 @@ class MenuListView extends View {
       if (e.key !== 'Enter' || !e.target.matches('#menuCategoryInput')) return;
       submit(e.target);
     });
+  }
+
+  // Surgically update only the chips strip — no full modal re-render flash
+  _updateChips(categories, newCategoryName = null) {
+    const container = this._parentElement.querySelector('.menu-cat-chips');
+    if (!container) return;
+
+    const cap = (s) => s[0].toUpperCase() + s.slice(1);
+    const userCategories = categories.filter((c) => c !== 'uncategorized');
+
+    container.innerHTML = userCategories.map((cat) => `
+      <span class="menu-cat-chip">
+        <span class="menu-cat-chip-name">${cap(cat)}</span>
+        <button class="menu-cat-delete" data-category="${cat}" type="button">×</button>
+      </span>`).join('') || '<span class="menu-cat-hint">No categories yet.</span>';
+
+    // Animate only the newly added chip
+    if (newCategoryName) {
+      const newChip = [...container.querySelectorAll('.menu-cat-chip')].find(
+        el => el.querySelector('.menu-cat-chip-name')?.textContent.trim().toLowerCase()
+              === newCategoryName.trim().toLowerCase()
+      );
+      if (newChip) newChip.classList.add('menu-cat-chip--entering');
+    }
   }
 
   _addHandlerDeleteCategory(handler) {

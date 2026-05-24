@@ -1,7 +1,14 @@
-﻿class DiscountView {
-  _panel = document.querySelector("#discountPanel");
-  _formModal = document.querySelector("#discountCodeModal");
-  _list = document.querySelector("#discountCodeList");
+class DiscountView {
+  _panel      = document.querySelector("#discountPanel");
+  _formModal  = document.querySelector("#discountCodeModal");
+  _list       = document.querySelector("#discountCodeList");
+  _adjList    = document.querySelector("#adjPanelList");
+  _adjSection = document.querySelector("#adjPanelSection");
+  _adjModal   = document.querySelector("#adjPanelModal");
+  _adjForm    = document.querySelector("#adjPanelForm");
+  _currentSection = "adjustments";
+
+  // ── Open / Close ─────────────────────────────────────────────────────────────
 
   open() {
     this._panel.classList.remove("hidden", "cashflow-exiting");
@@ -14,6 +21,30 @@
       this._panel.classList.remove("cashflow-exiting");
     }, 220);
   }
+
+  // ── Section switching ────────────────────────────────────────────────────────
+
+  _switchSection(section) {
+    this._currentSection = section;
+    // Toggle nav tabs
+    this._panel.querySelectorAll(".adj-nav-tab").forEach((btn) => {
+      btn.classList.toggle("adj-nav-tab--active", btn.dataset.section === section);
+    });
+    // Toggle sections
+    this._panel.querySelectorAll(".adj-panel-section").forEach((sec) => {
+      sec.classList.toggle("hidden", sec.dataset.section !== section);
+    });
+  }
+
+  _addHandlerNavTabs() {
+    this._panel.querySelector(".adj-panel-sidebar")?.addEventListener("click", (e) => {
+      const btn = e.target.closest(".adj-nav-tab");
+      if (!btn) return;
+      this._switchSection(btn.dataset.section);
+    });
+  }
+
+  // ── Promo Codes ──────────────────────────────────────────────────────────────
 
   render(codes) {
     this._list.innerHTML = this._generateListMarkup(codes);
@@ -33,7 +64,7 @@
         const usageText =
           dc.usageLimit === null
             ? "Unlimited uses"
-            : `${dc.usageCount} / ${dc.usageLimit} use${dc.usageLimit === 1 ? "" : "s"}`;
+            : `${dc.usageCount} / ${dc.usageLimit} use${dc.usageLimit === 1 ? "" : "s"}`;
 
         return `
           <li class="discount-code-item${isPaused ? " discount-code-item--paused" : ""}" data-id="${dc.id}">
@@ -226,7 +257,149 @@
     };
   }
 
-  // ── Handlers ──────────────────────────────────────────────────────────────────
+  // ── Auto Adjustments ─────────────────────────────────────────────────────────
+
+  renderAdjustments(adjustments) {
+    if (!this._adjList) return;
+    if (!adjustments || adjustments.length === 0) {
+      this._adjList.innerHTML = '<li class="adjustment-empty">No adjustments yet. Hit "+ Add" to create one.</li>';
+      return;
+    }
+    this._adjList.innerHTML = adjustments
+      .map(
+        (adj) => `
+        <li class="adjustment-item" data-id="${adj.id}">
+          <label class="switch">
+            <input type="checkbox" class="adj-toggle" ${adj.enabled ? "checked" : ""} />
+            <span class="slider round"></span>
+          </label>
+          <div class="adjustment-item-info">
+            <div class="adjustment-item-name">${adj.name}</div>
+            <div class="adjustment-item-meta">
+              ${adj.type === "fee" ? "Fee" : "Discount"} &middot;
+              ${adj.calculation === "fixed" ? "$" + adj.value.toFixed(2) : adj.value + "%"}
+            </div>
+          </div>
+          <div class="adjustment-item-controls">
+            <button class="adjustment-edit-btn adj-panel-edit-btn" data-id="${adj.id}" type="button">Edit</button>
+            <button class="adjustment-delete-btn adj-panel-delete-btn" data-id="${adj.id}" type="button">Delete</button>
+          </div>
+        </li>
+      `
+      )
+      .join("");
+  }
+
+  showAdjustmentForm(adjustment = null) {
+    const isEdit = adjustment !== null;
+    this._adjForm.innerHTML = `
+      <button class="modal-close-btn" id="adjPanelCloseBtn" type="button">&times;</button>
+      <h2 class="edit-form-title">${isEdit ? "Edit Adjustment" : "New Adjustment"}</h2>
+
+      <div class="edit-field">
+        <label for="adjName">Name</label>
+        <input type="text" id="adjName" placeholder="e.g. VAT, Service Charge"
+          value="${isEdit ? adjustment.name : ""}" />
+      </div>
+
+      <p class="adj-form-sublabel">Type</p>
+      <div class="adj-selector" id="adjTypeSelector">
+        <button type="button" class="adj-selector-btn ${!isEdit || adjustment.type === "fee" ? "active" : ""}" data-value="fee">Fee</button>
+        <button type="button" class="adj-selector-btn ${isEdit && adjustment.type === "discount" ? "active" : ""}" data-value="discount">Discount</button>
+      </div>
+      <input type="hidden" id="adjType" value="${isEdit ? adjustment.type : "fee"}" />
+
+      <p class="adj-form-sublabel">Calculation</p>
+      <div class="adj-selector" id="adjCalcSelector">
+        <button type="button" class="adj-selector-btn ${!isEdit || adjustment.calculation === "fixed" ? "active" : ""}" data-value="fixed">Fixed ($)</button>
+        <button type="button" class="adj-selector-btn ${isEdit && adjustment.calculation === "percentage" ? "active" : ""}
+          " data-value="percentage">
+          Percentage (%)
+          <span class="adj-info-tip">i</span>
+        </button>
+      </div>
+      <input type="hidden" id="adjCalc" value="${isEdit ? adjustment.calculation : "fixed"}" />
+
+      <div class="edit-field">
+        <label for="adjValue" id="adjValueLabel">
+          ${isEdit && adjustment.calculation === "percentage" ? "Value (%)" : "Value ($)"}
+        </label>
+        <input type="number" id="adjValue" min="0" step="0.01" placeholder="0"
+          value="${isEdit ? adjustment.value : ""}" />
+      </div>
+
+      <div class="adj-form-actions">
+        <button type="button" class="btn" id="adjPanelCancelBtn">Cancel</button>
+        <button type="button" class="btn primary" id="adjSaveBtn"
+          data-edit-id="${isEdit ? adjustment.id : ""}">
+          ${isEdit ? "Update" : "Add"}
+        </button>
+      </div>
+    `;
+
+    this._wireAdjForm();
+    this._adjModal.classList.remove("hidden");
+    document.getElementById("adjName")?.focus();
+  }
+
+  _wireAdjForm() {
+    // Type selector
+    const typeSelector = document.getElementById("adjTypeSelector");
+    typeSelector?.addEventListener("click", (e) => {
+      const btn = e.target.closest(".adj-selector-btn");
+      if (!btn) return;
+      typeSelector.querySelectorAll(".adj-selector-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("adjType").value = btn.dataset.value;
+    });
+
+    // Calc selector
+    const calcSelector = document.getElementById("adjCalcSelector");
+    calcSelector?.addEventListener("click", (e) => {
+      const btn = e.target.closest(".adj-selector-btn");
+      if (!btn) return;
+      calcSelector.querySelectorAll(".adj-selector-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("adjCalc").value = btn.dataset.value;
+      const lbl = document.getElementById("adjValueLabel");
+      if (lbl) lbl.textContent = btn.dataset.value === "percentage" ? "Value (%)" : "Value ($)";
+    });
+
+    // % info tip
+    document.querySelector(".adj-info-tip")?.addEventListener("mouseenter", (e) => {
+      const rect = e.target.getBoundingClientRect();
+      const el = document.createElement("div");
+      el.className = "adj-tooltip";
+      el.textContent = "% of the running subtotal at the time this adjustment is applied";
+      document.body.appendChild(el);
+      el.style.left = `${rect.left + rect.width / 2 - el.offsetWidth / 2}px`;
+      el.style.top = `${rect.bottom + 8}px`;
+      e.target._tooltip = el;
+    });
+    document.querySelector(".adj-info-tip")?.addEventListener("mouseleave", (e) => {
+      e.target._tooltip?.remove();
+    });
+
+    document.getElementById("adjPanelCloseBtn")?.addEventListener("click", () => this.closeAdjForm());
+    document.getElementById("adjPanelCancelBtn")?.addEventListener("click", () => this.closeAdjForm());
+  }
+
+  closeAdjForm() {
+    this._adjModal.classList.add("hidden");
+    this._adjForm.innerHTML = "";
+  }
+
+  _getAdjFormData() {
+    return {
+      id: document.getElementById("adjSaveBtn")?.dataset.editId || null,
+      name: document.getElementById("adjName")?.value.trim(),
+      type: document.getElementById("adjType")?.value,
+      calculation: document.getElementById("adjCalc")?.value,
+      value: parseFloat(document.getElementById("adjValue")?.value),
+    };
+  }
+
+  // ── Handlers — open / close ───────────────────────────────────────────────────
 
   _addHandlerOpen(handler) {
     document.addEventListener("click", (e) => {
@@ -241,10 +414,17 @@
       .querySelector(".discount-back")
       .addEventListener("click", () => handler());
 
+    // Close promo form on backdrop click
     this._formModal.addEventListener("click", (e) => {
       if (e.target === this._formModal) this.closeForm();
     });
+    // Close adj form on backdrop click
+    this._adjModal.addEventListener("click", (e) => {
+      if (e.target === this._adjModal) this.closeAdjForm();
+    });
   }
+
+  // ── Handlers — promo codes ────────────────────────────────────────────────────
 
   _addHandlerNewCode(handler) {
     this._panel
@@ -256,24 +436,11 @@
     this._formModal.addEventListener("click", (e) => {
       if (!e.target.closest("#dcSaveBtn")) return;
       const data = this._getFormData();
-      if (!data.title) {
-        alert("Please enter a title.");
-        return;
-      }
-      if (!data.code) {
-        alert("Please enter a code.");
-        return;
-      }
-      if (isNaN(data.value) || data.value < 0) {
-        alert("Please enter a valid amount.");
-        return;
-      }
-      if (
-        document.getElementById("dcUsageType")?.value === "custom" &&
-        !data.usageLimit
-      ) {
-        alert("Please enter the max number of uses.");
-        return;
+      if (!data.title) { alert("Please enter a title."); return; }
+      if (!data.code) { alert("Please enter a code."); return; }
+      if (isNaN(data.value) || data.value < 0) { alert("Please enter a valid amount."); return; }
+      if (document.getElementById("dcUsageType")?.value === "custom" && !data.usageLimit) {
+        alert("Please enter the max number of uses."); return;
       }
       handler(data);
     });
@@ -300,6 +467,50 @@
       const btn = e.target.closest(".discount-toggle-btn");
       if (!btn) return;
       handler(btn.dataset.id);
+    });
+  }
+
+  // ── Handlers — auto adjustments ───────────────────────────────────────────────
+
+  _addHandlerAdjAdd() {
+    this._panel
+      .querySelector("#adjPanelAddBtn")
+      ?.addEventListener("click", () => this.showAdjustmentForm());
+  }
+
+  _addHandlerAdjSave(handler) {
+    this._adjModal.addEventListener("click", (e) => {
+      if (!e.target.closest("#adjSaveBtn")) return;
+      const data = this._getAdjFormData();
+      if (!data.name) { alert("Please enter a name."); return; }
+      if (isNaN(data.value) || data.value < 0) { alert("Please enter a valid value."); return; }
+      handler(data);
+      this.closeAdjForm();
+    });
+  }
+
+  _addHandlerAdjEdit(handler) {
+    this._adjList.addEventListener("click", (e) => {
+      const btn = e.target.closest(".adj-panel-edit-btn");
+      if (!btn) return;
+      handler(btn.dataset.id);
+    });
+  }
+
+  _addHandlerAdjDelete(handler) {
+    this._adjList.addEventListener("click", (e) => {
+      const btn = e.target.closest(".adj-panel-delete-btn");
+      if (!btn) return;
+      handler(btn.dataset.id);
+    });
+  }
+
+  _addHandlerAdjToggle(handler) {
+    this._adjList.addEventListener("change", (e) => {
+      const toggle = e.target.closest(".adj-toggle");
+      if (!toggle) return;
+      const id = toggle.closest(".adjustment-item").dataset.id;
+      handler(id);
     });
   }
 }

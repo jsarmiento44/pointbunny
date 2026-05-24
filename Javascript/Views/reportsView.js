@@ -318,11 +318,14 @@ class ReportsView extends View {
       emptyEl.innerHTML = '<span>Select a card above to display it on the chart</span>';
       wrap.appendChild(emptyEl);
     }
+    const legendEl = document.getElementById('rpOverviewLegend');
+
     if (datasets.length === 0) {
       canvas.style.display = 'none';
       emptyEl.style.display = '';
       const titleEl = document.getElementById('rpOverviewChartTitle');
       if (titleEl) titleEl.textContent = 'Overview';
+      if (legendEl) legendEl.innerHTML = '';
       return;
     }
     canvas.style.display = '';
@@ -344,6 +347,17 @@ class ReportsView extends View {
       titleEl.textContent = names.length <= 3 ? names.join(' · ') : 'Overview';
     }
 
+    // Build custom DOM legend next to the title (no canvas space used → no reflow)
+    if (legendEl) {
+      legendEl.innerHTML = mapped.length > 1
+        ? mapped.map(d => `
+            <span class="rp-legend-item">
+              <span class="rp-legend-dot" style="background:${d.borderColor}"></span>
+              ${d.label}
+            </span>`).join('')
+        : '';
+    }
+
     this._charts.revenue = new Chart(canvas, {
       type: 'line',
       data: { labels, datasets: mapped },
@@ -353,18 +367,7 @@ class ReportsView extends View {
         animation: { duration: 350, easing: 'easeOutQuart' },
         interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: {
-            display: datasets.length > 1,
-            position: 'bottom',
-            labels: {
-              color: mutedColor,
-              boxWidth: 10,
-              boxHeight: 10,
-              borderRadius: 5,
-              useBorderRadius: true,
-              padding: 16,
-            },
-          },
+          legend: { display: false }, // handled by DOM legend above
           tooltip: {
             callbacks: {
               label: ctx => {
@@ -661,7 +664,7 @@ class ReportsView extends View {
           maintainAspectRatio: false,
           animation: this._barAnim(15),
           plugins: { legend: { display: false }, tooltip: {
-            callbacks: { label: (ctx) => " " + fmt(ctx.raw) }
+            callbacks: { label: (ctx) => " " + Math.round(ctx.raw) + " orders" }
           }},
           scales: {
             x: {
@@ -672,7 +675,7 @@ class ReportsView extends View {
               grid: { color: gridColor },
               ticks: {
                 color: mutedColor,
-                callback: (v) => v === 0 ? "$0" : "$" + (v >= 1000 ? (v / 1000).toFixed(1) + "k" : v),
+                callback: (v) => Number.isInteger(v) ? v : "",
               },
               beginAtZero: true,
             },
@@ -736,7 +739,7 @@ class ReportsView extends View {
           animation: this._barAnim(60),
           plugins: {
             legend: { display: false },
-            tooltip: { callbacks: { label: (ctx) => " " + fmt(ctx.raw) } },
+            tooltip: { callbacks: { label: (ctx) => " " + Math.round(ctx.raw) + " orders" } },
           },
           scales: {
             x: {
@@ -747,7 +750,7 @@ class ReportsView extends View {
               grid: { color: gridColor },
               ticks: {
                 color: mutedColor,
-                callback: (v) => v === 0 ? "$0" : "$" + (v >= 1000 ? (v / 1000).toFixed(1) + "k" : v),
+                callback: (v) => Number.isInteger(v) ? v : "",
               },
               beginAtZero: true,
             },
@@ -1038,6 +1041,7 @@ class ReportsView extends View {
     document.querySelector("#reportsTabs")?.classList.add("hidden");
     document.querySelector("#reportsCustomRange")?.classList.add("hidden");
     document.querySelector("#reportsCompareBar")?.classList.remove("hidden");
+    document.querySelector(".rp-sidebar")?.classList.add("hidden");
     this._parentElement.querySelectorAll(".rp-section").forEach(s => s.classList.add("hidden"));
     document.querySelector("#rpCompareResults")?.classList.add("hidden");
     const btn = document.querySelector("#reportsCompareBtn");
@@ -1052,6 +1056,7 @@ class ReportsView extends View {
     document.querySelector("#reportsTabs")?.classList.remove("hidden");
     document.querySelector("#reportsCompareBar")?.classList.add("hidden");
     document.querySelector("#rpCompareResults")?.classList.add("hidden");
+    document.querySelector(".rp-sidebar")?.classList.remove("hidden");
     this._switchSection(this._activeSection);
     const btn = document.querySelector("#reportsCompareBtn");
     if (btn) {
@@ -1215,6 +1220,187 @@ class ReportsView extends View {
     this._renderCmpItemList("#rpCmpTopItemsB", itemsB);
   }
 
+  renderCmpPeakStats({ salesPeaksA, salesPeaksB, tPeaksA, tPeaksB }) {
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set("rpCmpBestSellerA",    salesPeaksA.bestSeller);
+    set("rpCmpBestSellerB",    salesPeaksB.bestSeller);
+    set("rpCmpBestSellerSubA", salesPeaksA.bestSellerSub);
+    set("rpCmpBestSellerSubB", salesPeaksB.bestSellerSub);
+    set("rpCmpTopCatA",        salesPeaksA.topCategory);
+    set("rpCmpTopCatB",        salesPeaksB.topCategory);
+    set("rpCmpTopCatSubA",     salesPeaksA.topCategorySub);
+    set("rpCmpTopCatSubB",     salesPeaksB.topCategorySub);
+    set("rpCmpTopStaffA",      salesPeaksA.topStaff);
+    set("rpCmpTopStaffB",      salesPeaksB.topStaff);
+    set("rpCmpTopStaffSubA",   salesPeaksA.topStaffSub);
+    set("rpCmpTopStaffSubB",   salesPeaksB.topStaffSub);
+    set("rpCmpPeakHourA",      tPeaksA.peakHour);
+    set("rpCmpPeakHourB",      tPeaksB.peakHour);
+    set("rpCmpPeakHourSubA",   tPeaksA.peakHourCount > 0 ? `${tPeaksA.peakHourCount} orders` : "");
+    set("rpCmpPeakHourSubB",   tPeaksB.peakHourCount > 0 ? `${tPeaksB.peakHourCount} orders` : "");
+    set("rpCmpPeakDayA",       tPeaksA.peakDay);
+    set("rpCmpPeakDayB",       tPeaksB.peakDay);
+    set("rpCmpPeakDaySubA",    tPeaksA.peakDayCount > 0 ? `${tPeaksA.peakDayCount} orders` : "");
+    set("rpCmpPeakDaySubB",    tPeaksB.peakDayCount > 0 ? `${tPeaksB.peakDayCount} orders` : "");
+  }
+
+  renderCmpStaff({ staffA, staffB }) {
+    const renderList = (elId, staff) => {
+      const el = document.getElementById(elId);
+      if (!el) return;
+      if (!staff.length) { el.innerHTML = `<p class="rp-empty">No data.</p>`; return; }
+      const maxRev = staff[0].revenue;
+      el.innerHTML = `<div class="rp-item-list">${staff.map((s, i) => `
+        <div class="rp-item-row">
+          <span class="rp-item-rank">${i + 1}</span>
+          <div class="rp-item-main">
+            <div class="rp-item-row-top">
+              <span class="rp-item-name">${s.name}</span>
+              <span class="rp-item-rev">${fmt(s.revenue)}</span>
+            </div>
+            <div class="rp-item-bar-track">
+              <div class="rp-item-bar" style="width:${maxRev > 0 ? Math.round((s.revenue / maxRev) * 100) : 0}%"></div>
+            </div>
+            <span class="rp-item-qty">${s.transactions} orders</span>
+          </div>
+        </div>`).join("")}</div>`;
+    };
+    renderList("rpCmpStaffA", staffA);
+    renderList("rpCmpStaffB", staffB);
+  }
+
+  async renderCmpSalesCharts({ categoryA, categoryB, itemMixA, itemMixB }) {
+    const Chart = await this._ensureChart();
+    const mutedColor = this._css("--muted");
+    const gapColor   = this._css("--panel-strong");
+
+    const renderDonut = (chartKey, canvasId, items) => {
+      if (this._charts[chartKey]) { this._charts[chartKey].destroy(); this._charts[chartKey] = null; }
+      const canvas = document.querySelector(`#${canvasId}`);
+      if (!canvas) return;
+      if (!items.length) {
+        canvas.style.display = "none";
+        let empty = canvas.parentElement.querySelector(".rp-empty");
+        if (!empty) { empty = document.createElement("p"); empty.className = "rp-empty"; canvas.parentElement.appendChild(empty); }
+        empty.textContent = "No data."; empty.style.display = "";
+        return;
+      }
+      canvas.style.display = "";
+      const totalValue = items.reduce((s, i) => s + i.value, 0);
+      this._observeChart(canvasId, (cvs) => {
+        this._charts[chartKey] = new Chart(cvs, {
+          type: "doughnut",
+          data: {
+            labels: items.map(i => i.label),
+            datasets: [{ data: items.map(i => i.value), backgroundColor: PALETTE.slice(0, items.length), borderWidth: 3, borderColor: gapColor, borderRadius: 4, hoverOffset: 10 }],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, cutout: "65%",
+            animation: this._donutAnim(),
+            plugins: {
+              legend: { display: true, position: "right", labels: { color: mutedColor, boxWidth: 10, boxHeight: 10, font: { size: 11 }, padding: 10 } },
+              tooltip: { callbacks: { label: (ctx) => { const pct = totalValue > 0 ? ((ctx.raw / totalValue) * 100).toFixed(1) : 0; return ` ${ctx.label}: ${fmt(ctx.raw)} (${pct}%)`; } } },
+            },
+          },
+        });
+      });
+    };
+
+    const renderItemDonut = (chartKey, canvasId, items) => {
+      if (this._charts[chartKey]) { this._charts[chartKey].destroy(); this._charts[chartKey] = null; }
+      const canvas = document.querySelector(`#${canvasId}`);
+      if (!canvas) return;
+      if (!items.length) {
+        canvas.style.display = "none";
+        let empty = canvas.parentElement.querySelector(".rp-empty");
+        if (!empty) { empty = document.createElement("p"); empty.className = "rp-empty"; canvas.parentElement.appendChild(empty); }
+        empty.textContent = "No data."; empty.style.display = "";
+        return;
+      }
+      canvas.style.display = "";
+      const top = items.slice(0, 8);
+      const totalQty = top.reduce((s, i) => s + i.quantity, 0);
+      this._observeChart(canvasId, (cvs) => {
+        this._charts[chartKey] = new Chart(cvs, {
+          type: "doughnut",
+          data: {
+            labels: top.map(i => i.name),
+            datasets: [{ data: top.map(i => i.quantity), backgroundColor: PALETTE.slice(0, top.length), borderWidth: 3, borderColor: gapColor, borderRadius: 4, hoverOffset: 10 }],
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, cutout: "65%",
+            animation: this._donutAnim(),
+            plugins: {
+              legend: { display: true, position: "right", labels: { color: mutedColor, boxWidth: 10, boxHeight: 10, font: { size: 11 }, padding: 10 } },
+              tooltip: { callbacks: { label: (ctx) => { const pct = totalQty > 0 ? ((ctx.raw / totalQty) * 100).toFixed(1) : 0; return ` ${ctx.label}: ${ctx.raw} sold (${pct}%)`; } } },
+            },
+          },
+        });
+      });
+    };
+
+    renderDonut("cmpCategoryA", "rpCmpCategoryCanvasA", categoryA);
+    renderDonut("cmpCategoryB", "rpCmpCategoryCanvasB", categoryB);
+    renderItemDonut("cmpItemMixA", "rpCmpItemMixCanvasA", itemMixA);
+    renderItemDonut("cmpItemMixB", "rpCmpItemMixCanvasB", itemMixB);
+  }
+
+  async renderCmpTrafficCharts({ hourlyA, hourlyB, dowA, dowB, labelA, labelB }) {
+    const Chart = await this._ensureChart();
+    this._renderCmpGroupedBar(Chart, "cmpHourly", "rpCmpHourlyCanvas", hourlyA.labels, hourlyA.data, hourlyB.data, labelA, labelB,
+      (v) => String(Math.round(v)));
+    this._renderCmpGroupedBar(Chart, "cmpDow", "rpCmpDowCanvas", dowA.labels, dowA.data, dowB.data, labelA, labelB,
+      (v) => String(Math.round(v)));
+  }
+
+  async renderCmpKitchenCharts({ servingA, servingB, labelA, labelB }) {
+    const Chart = await this._ensureChart();
+    const fmtMin = (v) => v > 0 ? `${v.toFixed(1)}m` : "0m";
+    const fmtHour = (i) => i === 0 ? "12am" : i < 12 ? `${i}am` : i === 12 ? "12pm" : `${i - 12}pm`;
+    const fallbackHour = { labels: Array.from({ length: 24 }, (_, i) => fmtHour(i)), data: Array(24).fill(0) };
+    const fallbackDay  = { labels: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"], data: Array(7).fill(0) };
+    const hA = servingA?.byHour ?? fallbackHour;
+    const hB = servingB?.byHour ?? fallbackHour;
+    const dA = servingA?.byDay  ?? fallbackDay;
+    const dB = servingB?.byDay  ?? fallbackDay;
+    this._renderCmpGroupedBar(Chart, "cmpServingHour", "rpCmpServingHourCanvas",
+      hA.labels, hA.data, hB.data, labelA, labelB, fmtMin);
+    this._renderCmpGroupedBar(Chart, "cmpServingDay", "rpCmpServingDayCanvas",
+      dA.labels, dA.data, dB.data, labelA, labelB, fmtMin);
+  }
+
+  _renderCmpGroupedBar(Chart, chartKey, canvasId, labels, dataA, dataB, labelA, labelB, yFmt) {
+    if (this._charts[chartKey]) { this._charts[chartKey].destroy(); this._charts[chartKey] = null; }
+    const canvas = document.querySelector(`#${canvasId}`);
+    if (!canvas) return;
+    const gridColor  = this._css("--line");
+    const mutedColor = this._css("--muted");
+    const colorA = "#22c55e", colorB = "#60a5fa";
+    this._observeChart(canvasId, (cvs) => {
+      this._charts[chartKey] = new Chart(cvs, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            { label: labelA, data: dataA, backgroundColor: this._withAlpha(colorA, 0.7), borderColor: colorA, borderWidth: 0, borderRadius: 4, borderSkipped: false },
+            { label: labelB, data: dataB, backgroundColor: this._withAlpha(colorB, 0.7), borderColor: colorB, borderWidth: 0, borderRadius: 4, borderSkipped: false },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: "top", align: "end", labels: { color: mutedColor, boxWidth: 10, boxHeight: 10, borderRadius: 3, padding: 12, font: { size: 11 } } },
+            tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${yFmt(ctx.raw)}` } },
+          },
+          scales: {
+            x: { grid: { color: gridColor, drawTicks: false }, ticks: { color: mutedColor, maxRotation: 0, autoSkip: true, maxTicksLimit: 16 } },
+            y: { grid: { color: gridColor }, ticks: { color: mutedColor, callback: yFmt }, beginAtZero: true },
+          },
+        },
+      });
+    });
+  }
+
   setCmpTopItemsSort(key) {
     document.querySelectorAll(".rp-cmp-sort-pills .rp-sort-pill").forEach(btn => {
       btn.classList.toggle("active", btn.dataset.sort === key);
@@ -1265,14 +1451,51 @@ class ReportsView extends View {
     const _ymd = (d) => d.toISOString().slice(0, 10);
     const _ym  = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
+    // Format helpers for button labels
+    const fmtDay = (ymd) => {
+      if (!ymd) return "Pick date";
+      const d = new Date(ymd + "T00:00:00");
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    };
+    const fmtMonth = (ym) => {
+      if (!ym) return "Pick month";
+      const [y, m] = ym.split("-");
+      return new Date(+y, +m - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    };
+
+    // Wire showPicker() for all date/month buttons
+    const wirePicker = (inputId, btnId, fmtFn) => {
+      const input = document.querySelector(`#${inputId}`);
+      const btn   = document.querySelector(`#${btnId}`);
+      if (!input || !btn) return;
+      btn.addEventListener("click", () => { try { input.showPicker(); } catch (e) {} });
+      input.addEventListener("change", () => { btn.textContent = fmtFn(input.value); });
+    };
+
+    wirePicker("rpCmpADay",   "rpCmpADayLabel",   fmtDay);
+    wirePicker("rpCmpBDay",   "rpCmpBDayLabel",   fmtDay);
+    wirePicker("rpCmpAWeek",  "rpCmpAWeekLabel",  fmtDay);
+    wirePicker("rpCmpBWeek",  "rpCmpBWeekLabel",  fmtDay);
+    wirePicker("rpCmpAMonth", "rpCmpAMonthLabel", fmtMonth);
+    wirePicker("rpCmpBMonth", "rpCmpBMonthLabel", fmtMonth);
+    wirePicker("rpCmpFromA",  "rpCmpFromALabel",  fmtDay);
+    wirePicker("rpCmpToA",    "rpCmpToALabel",    fmtDay);
+    wirePicker("rpCmpFromB",  "rpCmpFromBLabel",  fmtDay);
+    wirePicker("rpCmpToB",    "rpCmpToBLabel",    fmtDay);
+
+    const setLabel = (btnId, val, fmtFn) => {
+      const btn = document.querySelector(`#${btnId}`);
+      if (btn) btn.textContent = fmtFn(val);
+    };
+
     const setDefaults = (type) => {
       const now = new Date();
       if (type === "day") {
         const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
         const aEl = document.querySelector("#rpCmpADay");
         const bEl = document.querySelector("#rpCmpBDay");
-        if (aEl) aEl.value = _ymd(now);
-        if (bEl) bEl.value = _ymd(yesterday);
+        if (aEl) { aEl.value = _ymd(now);       setLabel("rpCmpADayLabel", aEl.value, fmtDay); }
+        if (bEl) { bEl.value = _ymd(yesterday); setLabel("rpCmpBDayLabel", bEl.value, fmtDay); }
       } else if (type === "week") {
         const day = now.getDay();
         const diffToMon = day === 0 ? -6 : 1 - day;
@@ -1280,13 +1503,13 @@ class ReportsView extends View {
         const lastMon = new Date(thisMon); lastMon.setDate(thisMon.getDate() - 7);
         const aEl = document.querySelector("#rpCmpAWeek");
         const bEl = document.querySelector("#rpCmpBWeek");
-        if (aEl) aEl.value = _ymd(thisMon);
-        if (bEl) bEl.value = _ymd(lastMon);
+        if (aEl) { aEl.value = _ymd(thisMon); setLabel("rpCmpAWeekLabel", aEl.value, fmtDay); }
+        if (bEl) { bEl.value = _ymd(lastMon); setLabel("rpCmpBWeekLabel", bEl.value, fmtDay); }
       } else if (type === "month") {
         const aEl = document.querySelector("#rpCmpAMonth");
         const bEl = document.querySelector("#rpCmpBMonth");
-        if (aEl) aEl.value = _ym(now);
-        if (bEl) bEl.value = _ym(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+        if (aEl) { aEl.value = _ym(now);                                          setLabel("rpCmpAMonthLabel", aEl.value, fmtMonth); }
+        if (bEl) { bEl.value = _ym(new Date(now.getFullYear(), now.getMonth() - 1, 1)); setLabel("rpCmpBMonthLabel", bEl.value, fmtMonth); }
       } else if (type === "year") {
         const aEl = document.querySelector("#rpCmpAYear");
         const bEl = document.querySelector("#rpCmpBYear");
@@ -1370,19 +1593,39 @@ class ReportsView extends View {
   }
 
   _addHandlerCustomRange(handler) {
-    const fromEl = document.querySelector("#reportsFrom");
-    const toEl = document.querySelector("#reportsTo");
+    const fromEl      = document.querySelector("#reportsFrom");
+    const toEl        = document.querySelector("#reportsTo");
+    const fromLabel   = document.querySelector("#reportsFromLabel");
+    const toLabel     = document.querySelector("#reportsToLabel");
+
+    const fmtDate = (ymd) => {
+      if (!ymd) return "Start date";
+      const d = new Date(ymd + "T00:00:00");
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    };
+
+    // Buttons trigger the native date picker
+    fromLabel?.addEventListener("click", () => { try { fromEl.showPicker(); } catch (e) {} });
+    toLabel?.addEventListener("click",   () => { try { toEl.showPicker();   } catch (e) {} });
 
     fromEl.addEventListener("change", () => {
-      if (toEl.value && toEl.value < fromEl.value) toEl.value = fromEl.value;
+      fromLabel.textContent = fmtDate(fromEl.value);
+      if (toEl.value && toEl.value < fromEl.value) {
+        toEl.value = fromEl.value;
+        toLabel.textContent = fmtDate(toEl.value);
+      }
       toEl.min = fromEl.value;
+    });
+
+    toEl.addEventListener("change", () => {
+      toLabel.textContent = fmtDate(toEl.value);
     });
 
     document.querySelector("#applyReportsRangeBtn").addEventListener("click", () => {
       const from = fromEl.value;
       const to = toEl.value;
       if (!from || !to) return;
-      if (to < from) { toEl.value = from; return; }
+      if (to < from) { toEl.value = from; toLabel.textContent = fmtDate(toEl.value); return; }
       handler({ period: "custom", from, to });
     });
   }

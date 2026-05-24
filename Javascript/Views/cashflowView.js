@@ -16,6 +16,15 @@ const pad = (n) => String(n).padStart(2, "0");
 
 const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+const fmtServing = (sale) => {
+  if (!sale.prepared_at) return "";
+  const mins = (new Date(sale.prepared_at) - new Date(sale.sale_date)) / 60000;
+  if (mins < 0 || mins > 120) return "";
+  const m = Math.floor(mins);
+  const s = Math.round((mins - m) * 60);
+  return ` · 🍳 ${m > 0 ? `${m}m ${s}s` : `${s}s`}`;
+};
+
 class CashflowView extends View {
   _parentElement = document.querySelector("#cashflowPanel");
   _expenseModal = document.querySelector("#addExpenseModal");
@@ -125,7 +134,7 @@ class CashflowView extends View {
               ${ticketStr}${label}
               ${sale.is_manual ? `<span class="cashflow-manual-badge">Manual</span>` : ""}
             </span>
-            <span class="cashflow-row-date">${fmtDateTime(sale.sale_date)}${sale.order_type ? ` · ${sale.order_type === 'takeout' ? 'Takeout' : 'Dine In'}` : ''}${sale.added_by ? ` · ${sale.is_manual ? 'Added by' : 'Cashier:'} ${esc(sale.added_by)}` : ""}</span>
+            <span class="cashflow-row-date">${fmtDateTime(sale.sale_date)}${sale.order_type ? ` · ${sale.order_type === 'takeout' ? 'Takeout' : 'Dine In'}` : ''}${sale.added_by ? ` · ${sale.is_manual ? 'Added by' : 'Cashier:'} ${esc(sale.added_by)}` : ""}${fmtServing(sale)}</span>
           </div>
           <div class="cashflow-row-right">
             <span class="cashflow-row-amount cashflow-row-amount--sale">${fmt(sale.total_price)}</span>
@@ -335,7 +344,7 @@ class CashflowView extends View {
             <span>Change</span><span>${fmt(sale.customer_change)}</span>
           </div>
         </div>
-        ${onReprint ? `<div class="sr-reprint"><button class="btn primary sr-reprint-btn">Reprint Receipt</button></div>` : ''}
+        ${onReprint ? `<div class="sr-reprint"><button class="btn sr-reprint-btn">Reprint Receipt</button></div>` : ''}
       </div>`;
 
     this._parentElement.appendChild(el);
