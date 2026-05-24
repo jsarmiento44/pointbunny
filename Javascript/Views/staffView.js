@@ -2,6 +2,7 @@ class StaffView {
   _panel      = document.querySelector('#staffPanel');
   _list       = document.querySelector('#staffList');
   _rolesEl    = document.querySelector('#staffRolesContent');
+  _payrollEl  = document.querySelector('#staffPayrollContent');
   _formModal  = document.querySelector('#inviteStaffModal');
 
   open(canManage = false) {
@@ -17,6 +18,41 @@ class StaffView {
     });
     this._list.classList.toggle('hidden', tab !== 'members');
     this._rolesEl.classList.toggle('hidden', tab !== 'roles');
+    this._payrollEl.classList.toggle('hidden', tab !== 'payroll');
+    if (tab === 'payroll' && !this._payrollEl.dataset.rendered) {
+      this._renderPayrollComingSoon();
+      this._payrollEl.dataset.rendered = '1';
+    }
+  }
+
+  _renderPayrollComingSoon() {
+    this._payrollEl.innerHTML = `
+      <div class="staff-soon-hero">
+        <div class="staff-soon-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h2 class="staff-soon-title">Payroll & Time Tracker</h2>
+        <p class="staff-soon-sub">Track shifts, manage timesheets, and run payroll — all inside Pointy. We're building this now.</p>
+        <div class="staff-soon-features">
+          <div class="staff-soon-feature">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Clock In / Clock Out
+          </div>
+          <div class="staff-soon-feature">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Timesheets & Schedules
+          </div>
+          <div class="staff-soon-feature">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Pay Runs & Summaries
+          </div>
+          <div class="staff-soon-feature">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Hours vs. Sales Reports
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   _addHandlerTabs() {

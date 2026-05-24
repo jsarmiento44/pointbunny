@@ -445,6 +445,7 @@ const _finaliseSale = async function (sale, note = null) {
   clearCart();
   channel.postMessage({ type: MSG.CFD_SALE_COMPLETE });
   model.clearReceiptAdjustments();
+  _clearCashflowCache(); // new sale invalidates all cached periods
   refreshTodaySalesDisplay();
   if (_todayTransactionCount !== null) { _todayTransactionCount++; _updateTransactionBadge(); }
   OrderCheckOutView._showSuccess(note);
@@ -1096,13 +1097,18 @@ const initApp = async function (user) {
   if (model.state.currentStaff) model.state.currentCashier = model.state.currentStaff;
   _updateCashierDisplay();
   if (model.state.role === 'Admin') model.loadBusinessProfile().catch(() => {});
-  await model.loadMenuItems();
-  await model.loadMenuCategories();
-  await model.loadAdjustments();
-  await model.loadDiscountCodes();
-  await model.loadEmployees();
-  await refreshTodaySalesDisplay();
-  await model.loadOrderQueue();
+
+  // All queries are independent after businessId is set — run in parallel
+  // instead of 7 sequential round trips (was ~1.4s, now takes as long as the slowest one)
+  await Promise.all([
+    model.loadMenuItems(),
+    model.loadMenuCategories(),
+    model.loadAdjustments(),
+    model.loadDiscountCodes(),
+    model.loadEmployees(),
+    refreshTodaySalesDisplay(),
+    model.loadOrderQueue(),
+  ]);
   if (modelState.orderQueue.length > 0) {
     KDSView.renderQueue(modelState.orderQueue);
     _ensureKDSTick();
@@ -1289,6 +1295,15 @@ const _cashflowSummary = () => {
 };
 
 const _cashflowCanEdit = () => modelState.role === 'Admin' || modelState.role === 'Manager';
+
+// ── Cashflow period cache ─────────────────────────────────────────────────────
+// Stores fetched results per period key so switching periods doesn't re-fetch.
+// 'today' is intentionally never cached — it changes throughout the day.
+// The entire cache is cleared on any data mutation (new sale, void, expense).
+const _cashflowCache = new Map();
+const _cfCacheKey = (period, from, to) =>
+  period === 'custom' ? `custom:${from}:${to}` : period;
+const _clearCashflowCache = () => _cashflowCache.clear();
 const _staffCanManage  = () => modelState.role === 'Admin';
 
 let _currentReportsPeriod = { period: 'today' };
@@ -1335,12 +1350,38 @@ const controlCloseCashflow = function () {
 };
 
 const controlChangePeriod = async function ({ period, from, to }) {
+  _currentCashflowPeriod = { period, from, to };
+  const { startISO, endISO, label } = _getCashflowRange(period, from, to);
+
+  // Cache hit — restore instantly from memory, no network round-trip
+  // 'today' is always re-fetched (live data changes throughout the day)
+  const key = _cfCacheKey(period, from, to);
+  const cached = period !== 'today' ? _cashflowCache.get(key) : null;
+  if (cached) {
+    modelState.cashflowSales = cached.sales;
+    modelState.expenses      = cached.expenses;
+    modelState.voidedSales   = cached.voidedSales;
+    CashflowView.setPeriodLabel(label);
+    CashflowView.renderSummary(_cashflowSummary());
+    _renderCashflowLists();
+    return;
+  }
+
+  // Cache miss — fetch from Supabase
+  const isHeavy = period === 'year';
   CashflowView.renderLoading();
   CashflowView.setLoading(true);
+  if (isHeavy) CashflowView.setHeavyLoadNotice(true);
   try {
-    _currentCashflowPeriod = { period, from, to };
-    const { startISO, endISO, label } = _getCashflowRange(period, from, to);
     await model.fetchCashflowData(startISO, endISO);
+    // Store in cache (never cache 'today' — it changes with every new sale)
+    if (period !== 'today') {
+      _cashflowCache.set(key, {
+        sales:       modelState.cashflowSales,
+        expenses:    modelState.expenses,
+        voidedSales: modelState.voidedSales,
+      });
+    }
     CashflowView.setPeriodLabel(label);
     CashflowView.renderSummary(_cashflowSummary());
     _renderCashflowLists();
@@ -1348,6 +1389,7 @@ const controlChangePeriod = async function ({ period, from, to }) {
     showToast(err.message ?? err);
   } finally {
     CashflowView.setLoading(false);
+    if (isHeavy) CashflowView.setHeavyLoadNotice(false);
   }
 };
 
@@ -1360,6 +1402,7 @@ const controlAddExpense = async function (data) {
   try {
     CashflowView.setSubmitting(true);
     await model.addExpense(data);
+    _clearCashflowCache();
     CashflowView.hideExpenseModal();
     CashflowView.renderSummary(_cashflowSummary());
     CashflowView.renderExpensesList(modelState.expenses, _cashflowCanEdit());
@@ -1381,6 +1424,7 @@ const _isToday = (isoStr) => {
 
 const _executeVoid = async function (id, voidedBy) {
   const { wasInQueue } = await model.voidSale(id, voidedBy);
+  _clearCashflowCache();
   KDSView.renderQueue(modelState.orderQueue);
   channel.postMessage({ type: MSG.KDS_ORDER_VOIDED, id });
   CashflowView.renderSummary(_cashflowSummary());
@@ -1421,6 +1465,7 @@ const controlVoidTransaction = function (id) {
 
 const _executeRestore = async function (id) {
   const restored = await model.restoreSale(id);
+  _clearCashflowCache();
   if (restored.prepared_at === null) {
     const queueItem = {
       id: restored.id,
@@ -1571,6 +1616,7 @@ const controlOpenSaleReceipt = function (id) {
 const controlDeleteExpense = async function (id) {
   try {
     await model.deleteExpense(id);
+    _clearCashflowCache();
     CashflowView.renderSummary(_cashflowSummary());
     CashflowView.renderExpensesList(modelState.expenses, _cashflowCanEdit());
     _refreshReportsExpenses();
@@ -2935,6 +2981,7 @@ const _renderReportsData = async function (period, startISO, endISO, label, prev
 
 const controlOpenReports = async function (section = "overview") {
   ReportsView.open();
+  ReportsView.preloadChart(); // eagerly start compiling the chart.js chunk while data fetches
   ReportsView.renderLoading();
   _currentReportsPeriod = { period: "today" };
   try {

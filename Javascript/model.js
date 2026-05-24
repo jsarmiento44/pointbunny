@@ -626,7 +626,7 @@ export const fetchCashflowData = async function (startISO, endISO) {
   const [salesResult, expensesResult, voidedResult] = await Promise.all([
     supabase
       .from("sales")
-      .select("id, total_price, subtotal, customer_payment, customer_change, adjustments, sale_date, items, is_manual, added_by, order_type, ticket_number, prepared_at")
+      .select("id, total_price, subtotal, customer_payment, customer_change, adjustments, sale_date, items, is_manual, added_by, order_type, ticket_number, prepared_at, timed_out")
       .eq("user_id", state.businessId)
       .gte("sale_date", startISO)
       .lte("sale_date", endISO)
@@ -680,7 +680,7 @@ export const restoreSale = async function (id) {
     .update({ voided_at: null, voided_by: null })
     .eq('id', id)
     .eq('user_id', state.businessId)
-    .select('id, sale_date, items, total_price, order_type, ticket_number, prepared_at')
+    .select('id, sale_date, items, total_price, order_type, ticket_number, prepared_at, timed_out')
     .single();
   if (error) throw error;
   const restoredSale = state.voidedSales.find(s => s.id === id);

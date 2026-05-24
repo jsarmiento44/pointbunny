@@ -228,7 +228,14 @@ class ReportsView extends View {
   // ── Charts ───────────────────────────────────────────────────────────────
 
   async renderCharts({ categoryMix, itemMix, hourlyBreakdown, dayOfWeek, servingTime }) {
-    const Chart = await this._ensureChart();
+    let Chart;
+    try {
+      Chart = await this._ensureChart();
+    } catch (err) {
+      console.error('[Pointy] Chart.js failed to load after retries:', err);
+      this._setChartsError();
+      return;
+    }
     this._renderCategoryChart(Chart, categoryMix);
     this._renderItemMixChart(Chart, itemMix ?? []);
     this._renderHourlyChart(Chart, hourlyBreakdown);
@@ -237,14 +244,77 @@ class ReportsView extends View {
     this._renderServingDayChart(Chart, servingTime);
   }
 
+  // ── Chart.js loader with retry ─────────────────────────────────────────────
+  // Parcel compiles dynamic-import chunks lazily; on a cold dev-server start
+  // the chunk may not exist yet when we first try to fetch it. Retry with
+  // increasing delays so charts appear automatically once Parcel finishes.
   async _ensureChart() {
     if (this._Chart) return this._Chart;
-    const { Chart, registerables } = await import("chart.js");
-    Chart.register(...registerables);
-    Chart.defaults.font.family = "Inter, sans-serif";
-    Chart.defaults.font.size = 11;
-    this._Chart = Chart;
-    return Chart;
+    if (this._chartPromise) return this._chartPromise; // deduplicate concurrent calls
+
+    const DELAYS = [1500, 2000, 3000, 4000]; // ms between attempts (4 retries)
+    let spinnerShown = false;
+
+    this._chartPromise = (async () => {
+      for (let attempt = 0; attempt <= DELAYS.length; attempt++) {
+        try {
+          const { Chart, registerables } = await import('chart.js');
+          Chart.register(...registerables);
+          Chart.defaults.font.family = 'Inter, sans-serif';
+          Chart.defaults.font.size = 11;
+          this._Chart = Chart;
+          this._chartPromise = null;
+          return Chart;
+        } catch (err) {
+          if (attempt < DELAYS.length) {
+            // On first failure: swap skeleton bars → spinner so user knows what's happening
+            if (!spinnerShown) {
+              spinnerShown = true;
+              this._setChartPlaceholdersSpinner();
+            }
+            await new Promise(r => setTimeout(r, DELAYS[attempt]));
+          } else {
+            // All retries exhausted
+            this._chartPromise = null;
+            this._Chart = null;
+            throw err;
+          }
+        }
+      }
+    })();
+
+    return this._chartPromise;
+  }
+
+  // Kick off Chart.js loading eagerly (fire-and-forget) so Parcel has max time
+  preloadChart() {
+    this._ensureChart().catch(() => {});
+  }
+
+  _setChartPlaceholdersSpinner() {
+    const html = `
+      <div class="rp-chart-loading">
+        <span class="rp-chart-spinner"></span>
+        <span class="rp-chart-loading-text">Loading charts…</span>
+      </div>`;
+    ['rpRevenuePh', 'rpCategoryPh', 'rpHourlyPh'].forEach(id => {
+      const el = document.querySelector(`#${id}`);
+      if (el && !el.classList.contains('hidden')) el.innerHTML = html;
+    });
+  }
+
+  _setChartsError() {
+    this._Chart = null; // reset so reopening Reports will retry fresh
+    const html = `
+      <div class="rp-chart-error">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>Charts failed to load</span>
+        <button class="rp-chart-retry-btn" type="button" onclick="window.location.reload()">Reload page</button>
+      </div>`;
+    ['rpRevenuePh', 'rpCategoryPh', 'rpHourlyPh'].forEach(id => {
+      const el = document.querySelector(`#${id}`);
+      if (el && !el.classList.contains('hidden')) el.innerHTML = html;
+    });
   }
 
   _css(v) {
@@ -298,7 +368,12 @@ class ReportsView extends View {
   }
 
   async renderOverviewChart({ labels, datasets }) {
-    const Chart = await this._ensureChart();
+    let Chart;
+    try {
+      Chart = await this._ensureChart();
+    } catch {
+      return; // error state already shown by renderCharts
+    }
     this._activateCard("rpRevenueCard", "rpRevenuePh", "rpRevenueWrap", "rpRevenueBadge");
 
     // Cancel any pending observer so we can render immediately (canvas is visible)

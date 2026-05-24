@@ -16,13 +16,44 @@ const pad = (n) => String(n).padStart(2, "0");
 
 const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+// Inline serving-time text for the cashflow row list
 const fmtServing = (sale) => {
+  if (sale.timed_out) {
+    // Timed-out orders: show duration in red regardless of length, or just the label if no timestamp
+    if (!sale.prepared_at) return ` · <span class="cf-timeout-tag">⏱️ Timed out</span>`;
+    const mins = (new Date(sale.prepared_at) - new Date(sale.sale_date)) / 60000;
+    if (mins < 0) return ` · <span class="cf-timeout-tag">⏱️ Timed out</span>`;
+    const m = Math.floor(mins);
+    const s = Math.round((mins - m) * 60);
+    const dur = m > 0 ? `${m}m ${s}s` : `${s}s`;
+    return ` · <span class="cf-timeout-tag">⏱️ ${dur} — timed out</span>`;
+  }
+  // Normal orders: only show if prepared_at is set and within sanity range
   if (!sale.prepared_at) return "";
   const mins = (new Date(sale.prepared_at) - new Date(sale.sale_date)) / 60000;
   if (mins < 0 || mins > 120) return "";
   const m = Math.floor(mins);
   const s = Math.round((mins - m) * 60);
   return ` · 🍳 ${m > 0 ? `${m}m ${s}s` : `${s}s`}`;
+};
+
+// Block-level serving-time line for the receipt modal (never included in printing)
+const _servingLine = (sale) => {
+  if (sale.timed_out) {
+    if (!sale.prepared_at) return `<p class="sr-serving sr-serving--timeout">⏱️ Timed out</p>`;
+    const mins = (new Date(sale.prepared_at) - new Date(sale.sale_date)) / 60000;
+    if (mins < 0) return `<p class="sr-serving sr-serving--timeout">⏱️ Timed out</p>`;
+    const m = Math.floor(mins);
+    const s = Math.round((mins - m) * 60);
+    const dur = m > 0 ? `${m}m ${s}s` : `${s}s`;
+    return `<p class="sr-serving sr-serving--timeout">⏱️ ${dur} — timed out</p>`;
+  }
+  if (!sale.prepared_at) return '';
+  const mins = (new Date(sale.prepared_at) - new Date(sale.sale_date)) / 60000;
+  if (mins < 0 || mins > 120) return '';
+  const m = Math.floor(mins);
+  const s = Math.round((mins - m) * 60);
+  return `<p class="sr-serving">🍳 Served in ${m > 0 ? `${m}m ${s}s` : `${s}s`}</p>`;
 };
 
 class CashflowView extends View {
@@ -251,6 +282,21 @@ class CashflowView extends View {
     this._parentElement.querySelectorAll(".cashflow-tab").forEach(btn => { btn.disabled = on; });
   }
 
+  setHeavyLoadNotice(on) {
+    const existing = this._parentElement.querySelector('.cf-heavy-notice');
+    if (on && !existing) {
+      const el = document.createElement('p');
+      el.className = 'cf-heavy-notice';
+      el.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Loading a full year of data — this may take a few seconds…`;
+      this._parentElement.querySelector('.cashflow-period-bar')
+        ?.insertAdjacentElement('afterend', el);
+    } else if (!on && existing) {
+      existing.remove();
+    }
+  }
+
   setSubmitting(on) {
     const btn = document.querySelector("#expenseSubmitBtn");
     btn.disabled = on;
@@ -323,6 +369,7 @@ class CashflowView extends View {
           ${sale.is_manual ? `<span class="sr-manual-badge">Manually added${sale.added_by ? ` by ${esc(sale.added_by)}` : ""}</span>` : ""}
         </p>
         ${!sale.is_manual && sale.added_by ? `<p class="sale-receipt-cashier">Cashier: ${esc(sale.added_by)}</p>` : ""}
+        ${_servingLine(sale)}
         <div class="sr-items">${itemsMarkup}</div>
         <div class="sr-divider"></div>
         <div class="sr-summary">

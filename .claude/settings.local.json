@@ -29,7 +29,9 @@
       "Bash(grep -n \"^html\\\\|^body\\\\|html,\\\\|body {\" pointy.css)",
       "Bash(Read \"C:\\\\Users\\\\Kelly\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Kelly-Desktop-Pointy-Pointy-Project\\\\ce1ad800-db7d-4268-a719-8727732dff95\\\\tasks\\\\b0fifvzff.output\")",
       "Bash(git checkout *)",
-      "PowerShell(Get-Process *)"
+      "PowerShell(Get-Process *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'Home page redesign: new CTA, metrics row, action row, shortcuts grid, queue panel *)"
     ]
   }
 }

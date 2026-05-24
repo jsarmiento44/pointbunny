@@ -52,25 +52,6 @@
             </svg>
             <span class="nav-display-label">Customer<span class="nav-display-sub">Screen</span></span>
           </button>
-          <div class="toggle" role="group" aria-label="Theme toggle">
-            <button
-              id="lightBtn"
-              aria-pressed="false"
-              title="Light mode"
-              aria-label="Light mode"
-            >
-              ☀︎
-            </button>
-            <button
-              id="darkBtn"
-              aria-pressed="false"
-              title="Dark mode"
-              aria-label="Dark mode"
-              class="active"
-            >
-              ✦
-            </button>
-          </div>
           <button
             class="btn icon-btn"
             type="button"
@@ -231,6 +212,19 @@
                       <input type="checkbox" id="showRemovedToggle" checked />
                       <span class="slider round"></span>
                     </label>
+                  </div>
+                </section>
+
+                <section class="settings-section">
+                  <div class="settings-toggle-row">
+                    <div>
+                      <p class="settings-toggle-label">App Theme</p>
+                      <p class="settings-toggle-hint">Switch between light and dark mode.</p>
+                    </div>
+                    <div class="toggle" role="group" aria-label="Theme toggle">
+                      <button id="lightBtn" aria-pressed="false" title="Light mode" aria-label="Light mode">☀︎</button>
+                      <button id="darkBtn" aria-pressed="false" title="Dark mode" aria-label="Dark mode">✦</button>
+                    </div>
                   </div>
                 </section>
               </div>
@@ -532,189 +526,167 @@
 
       <div class="home-layout fade-up">
 
-        <!-- Left column: New Order · Stats · Shortcuts -->
+        <!-- Left column -->
         <div class="home-left-col">
 
-        <!-- Primary action -->
-        <article class="card card--featured home-new-order-card" tabindex="0">
-          <span class="ring" aria-hidden="true"></span>
-          <button class="btn-main" data-action="new-order" aria-label="Create new order" id="#newOrderBtn">
-            <span class="card-icon" aria-hidden="true">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <path d="M16 10a4 4 0 01-8 0" />
-              </svg>
-            </span>
-            <div>
-              <div class="title">New Order</div>
-              <div class="hint">Start a new sale</div>
-            </div>
-            <div class="chev" aria-hidden="true">→</div>
-          </button>
-        </article>
+          <!-- New Order CTA -->
+          <article class="home-cta">
+            <button class="home-cta-btn" data-action="new-order" aria-label="Create new order" id="#newOrderBtn">
+              <span class="home-cta-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <path d="M16 10a4 4 0 01-8 0" />
+                </svg>
+              </span>
+              <div class="home-cta-text">
+                <div class="home-cta-title">New Order</div>
+                <div class="home-cta-sub">Start a new sale</div>
+              </div>
+              <span class="home-cta-arrow" aria-hidden="true">→</span>
+            </button>
+          </article>
 
-          <div class="home-stats-panel">
-            <div class="stat-card stat-card--accent stat-card--btn home-sales-stat" role="button" tabindex="0" title="View Overview Report">
-              <span class="stat-label">
-                <span class="stat-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <!-- Metrics row: Today's Sales + Transactions -->
+          <div class="home-metrics-row">
+            <div class="home-metric-card home-sales-stat" role="button" tabindex="0" title="View Overview Report">
+              <div class="home-metric-label">
+                <span class="home-metric-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 </span>
                 Today's Sales
-              </span>
-              <span class="stat-value" id="totalStr">$0.00</span>
-              <span class="sales-vs-yesterday" id="salesVsYesterday">
-                <span class="svs-dot"></span>
-              </span>
+              </div>
+              <div class="home-metric-value" id="totalStr">$0.00</div>
+              <div class="sales-vs-yesterday" id="salesVsYesterday"><span class="svs-dot"></span></div>
             </div>
-            <div class="home-stats-secondary">
-              <div class="stat-card stat-card--btn home-cashier-stat" id="cashierCard" role="button" tabindex="0" title="Switch cashier">
-                <span class="stat-label">
-                  <span class="stat-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  </span>
-                  Cashier
+            <div class="home-metric-card" id="transactionsCard" role="button" tabindex="0" title="View Sales Report">
+              <div class="home-metric-label">
+                <span class="home-metric-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8H8"/><path d="M16 12H8"/><path d="M12 16H8"/></svg>
                 </span>
-                <span class="stat-value" id="shiftStr">—</span>
+                Transactions
               </div>
-              <div class="stat-card stat-card--btn" id="transactionsCard" role="button" tabindex="0" title="View Sales Report">
-                <span class="stat-label">
-                  <span class="stat-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8H8"/><path d="M16 12H8"/><path d="M12 16H8"/></svg>
-                  </span>
-                  Transactions
-                </span>
-                <span class="stat-value" id="basketCountStr">—</span>
-                <span class="sales-vs-yesterday" id="basketsVsYesterday"><span class="svs-dot"></span></span>
-              </div>
+              <div class="home-metric-value" id="basketCountStr">—</div>
+              <div class="sales-vs-yesterday" id="basketsVsYesterday"><span class="svs-dot"></span></div>
             </div>
           </div>
 
-          <!-- Divider -->
-          <div class="home-section-divider" aria-hidden="true">
-            <span>Shortcuts</span>
-          </div>
-
-          <div class="home-utility-row">
-          <article class="card home-util-card" tabindex="0" data-min-role="manager">
-            <span class="ring" aria-hidden="true"></span>
-            <button class="btn-main" data-action="menu-list" aria-label="Open menu list" id="menu-list">
-              <span class="card-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="7" height="7" rx="1" />
-                  <rect x="14" y="3" width="7" height="7" rx="1" />
-                  <rect x="3" y="14" width="7" height="7" rx="1" />
-                  <rect x="14" y="14" width="7" height="7" rx="1" />
-                </svg>
-              </span>
-              <div>
-                <div class="title">Menu List</div>
-                <div class="hint">Browse items</div>
-              </div>
-            </button>
-          </article>
-
-          <article class="card home-util-card" tabindex="0" data-min-role="manager">
-            <span class="ring" aria-hidden="true"></span>
-            <button class="btn-main" data-action="discounts" aria-label="Manage receipt adjustments">
-              <span class="card-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                  <line x1="16" y1="13" x2="8" y2="13"/>
-                  <line x1="16" y1="17" x2="8" y2="17"/>
-                  <polyline points="10 9 9 9 8 9"/>
-                </svg>
-              </span>
-              <div>
-                <div class="title">Adjustments</div>
-                <div class="hint">Fees, promos &amp; loyalty</div>
-              </div>
-            </button>
-          </article>
-
-          <article class="card home-util-card" tabindex="0">
-            <span class="ring" aria-hidden="true"></span>
-            <button class="btn-main" data-action="cash-flow" aria-label="View transactions and cashflow">
-              <span class="card-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Action row: Cashier + Activity -->
+          <div class="home-action-row">
+            <div class="home-cashier-card" id="cashierCard" role="button" tabindex="0" title="Switch cashier">
+              <div class="home-cashier-label">Cashier</div>
+              <div class="home-cashier-value" id="shiftStr">—</div>
+              <span class="home-cashier-change">Change →</span>
+            </div>
+            <div class="home-activity-card" data-action="cash-flow" role="button" tabindex="0" aria-label="View activity">
+              <span class="home-activity-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
                   <line x1="12" y1="1" x2="12" y2="23" />
                   <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                 </svg>
               </span>
-              <div>
-                <div class="title">Cash Flow</div>
-                <div class="hint">Income &amp; expenses</div>
-              </div>
-            </button>
-          </article>
-
-          <article class="card home-util-card" tabindex="0" data-min-role="admin">
-            <span class="ring" aria-hidden="true"></span>
-            <button class="btn-main" data-action="staff" aria-label="Manage staff">
-              <span class="card-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-              </span>
-              <div>
-                <div class="title">Staff</div>
-                <div class="hint">Roles &amp; members</div>
-              </div>
-            </button>
-          </article>
-
-          <article class="card home-util-card" tabindex="0" data-min-role="manager">
-            <span class="ring" aria-hidden="true"></span>
-            <button class="btn-main" data-action="summary" aria-label="View summary">
-              <span class="card-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="20" x2="18" y2="10" />
-                  <line x1="12" y1="20" x2="12" y2="4" />
-                  <line x1="6" y1="20" x2="6" y2="14" />
-                  <line x1="2" y1="20" x2="22" y2="20" />
-                </svg>
-              </span>
-              <div>
-                <div class="title">Summary</div>
-                <div class="hint">Sales &amp; reports</div>
-              </div>
-            </button>
-          </article>
-
-          <article class="card home-util-card support-card" tabindex="0">
-            <span class="ring" aria-hidden="true"></span>
-            <span class="support-unread-badge hidden" id="supportUnreadBadge" aria-hidden="true"></span>
-            <button class="btn-main" data-action="support" aria-label="Help and support">
-              <span class="card-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-                  <line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
-              </span>
-              <div>
-                <div class="title">Help &amp; Support</div>
-                <div class="hint">Get help or report an issue</div>
-              </div>
-            </button>
-          </article>
+              <div class="home-activity-label">Activity</div>
+              <div class="home-activity-hint">Sales, expenses &amp; voids</div>
+            </div>
           </div>
+
+          <!-- Divider -->
+          <div class="home-section-divider" aria-hidden="true"><span>Shortcuts</span></div>
+
+          <!-- Shortcuts grid (3 columns) -->
+          <div class="home-shortcuts-grid">
+
+            <article class="home-shortcut-card" tabindex="0" data-min-role="manager">
+              <button class="home-shortcut-btn" data-action="menu-list" aria-label="Open menu list" id="menu-list">
+                <span class="home-shortcut-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                </span>
+                <span class="home-shortcut-label">Menu</span>
+              </button>
+            </article>
+
+            <article class="home-shortcut-card" tabindex="0" data-min-role="manager">
+              <button class="home-shortcut-btn" data-action="discounts" aria-label="Manage receipt adjustments">
+                <span class="home-shortcut-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                  </svg>
+                </span>
+                <span class="home-shortcut-label">Adjustments</span>
+              </button>
+            </article>
+
+            <article class="home-shortcut-card" tabindex="0">
+              <button class="home-shortcut-btn" data-action="cash-flow" aria-label="View activity">
+                <span class="home-shortcut-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="1" x2="12" y2="23" />
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                  </svg>
+                </span>
+                <span class="home-shortcut-label">Activity</span>
+              </button>
+            </article>
+
+            <article class="home-shortcut-card" tabindex="0" data-min-role="admin">
+              <button class="home-shortcut-btn" data-action="staff" aria-label="Manage staff">
+                <span class="home-shortcut-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                </span>
+                <span class="home-shortcut-label">Staff</span>
+              </button>
+            </article>
+
+            <article class="home-shortcut-card" tabindex="0" data-min-role="manager">
+              <button class="home-shortcut-btn" data-action="summary" aria-label="View reports">
+                <span class="home-shortcut-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10" />
+                    <line x1="12" y1="20" x2="12" y2="4" />
+                    <line x1="6" y1="20" x2="6" y2="14" />
+                    <line x1="2" y1="20" x2="22" y2="20" />
+                  </svg>
+                </span>
+                <span class="home-shortcut-label">Reports</span>
+              </button>
+            </article>
+
+            <article class="home-shortcut-card support-card" tabindex="0">
+              <span class="support-unread-badge hidden" id="supportUnreadBadge" aria-hidden="true"></span>
+              <button class="home-shortcut-btn" data-action="support" aria-label="Help and support">
+                <span class="home-shortcut-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                </span>
+                <span class="home-shortcut-label">Help</span>
+              </button>
+            </article>
+
+          </div><!-- end home-shortcuts-grid -->
 
         </div><!-- end home-left-col -->
 
         <!-- Right column: Active Queue -->
-        <section class="open-orders-section">
-          <div class="open-orders-header">
-            <h2 class="open-orders-title">
-              <span class="stat-icon open-orders-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-              </span>
-              Active Queue
-            </h2>
+        <section class="home-queue-panel" aria-labelledby="queueTitle">
+          <div class="home-queue-header">
+            <h2 class="home-queue-title" id="queueTitle">Active Queue</h2>
             <div class="open-orders-header-actions">
               <button class="open-orders-view-all hidden" id="openOrdersViewAll" type="button"></button>
               <button class="open-orders-expand-btn" id="openOrdersExpandBtn" type="button" aria-label="View all orders">
@@ -723,7 +695,15 @@
             </div>
           </div>
           <ul class="open-orders-list" id="openOrdersList">
-            <li class="oq-empty">No active orders.</li>
+            <li class="oq-empty-state">
+              <span class="oq-empty-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
+                  <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+              </span>
+              <span class="oq-empty-title">All caught up</span>
+              <span class="oq-empty-subtitle">New orders will appear here as they come in</span>
+            </li>
           </ul>
         </section>
 
@@ -782,7 +762,7 @@
           </svg>
         </button>
         <div class="cashflow-header-center">
-          <h2 class="cashflow-title">Transactions &amp; Cashflow</h2>
+          <h2 class="cashflow-title">Activity</h2>
           <span class="cashflow-period-label" id="cashflowPeriodLabel"
             >Today</span
           >
@@ -1038,10 +1018,18 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             Roles
           </button>
+
+          <p class="staff-sidebar-label" style="margin-top:10px;">Coming Soon</p>
+          <button class="staff-tab staff-tab--soon" data-tab="payroll" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span style="flex:1">Payroll / Time Tracker</span>
+            <span class="staff-soon-badge">Soon</span>
+          </button>
         </nav>
         <div class="staff-main" id="staffMain">
           <ul class="staff-list" id="staffList"></ul>
           <div class="staff-roles-list hidden" id="staffRolesContent"></div>
+          <div class="staff-payroll-content hidden" id="staffPayrollContent"></div>
         </div>
       </div>
     </div>
