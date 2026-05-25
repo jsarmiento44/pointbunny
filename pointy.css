@@ -5261,6 +5261,14 @@ kbd {
   font-size: 0.72rem;
   font-weight: 600;
   min-height: 15px;
+  white-space: nowrap;
+}
+
+/* Prevent trend line from wrapping inside the dash card */
+.home-dash-body .sales-vs-yesterday {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Dash card: mid-range squeeze ── */

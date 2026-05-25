@@ -1143,7 +1143,7 @@ const _updateYesterdayBadge = function (todayTotal) {
     ? `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`
     : `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>`;
   el.className = `sales-vs-yesterday ${isUp ? 'svs--up' : 'svs--down'}`;
-  el.innerHTML = `${arrow}<span>${Math.abs(pct)}% vs yesterday</span>`;
+  el.innerHTML = `${arrow}<span>${Math.abs(pct)}% vs yest.</span>`;
 };
 
 const _updateTransactionBadge = function () {
@@ -1160,7 +1160,7 @@ const _updateTransactionBadge = function () {
     ? `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`
     : `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>`;
   badgeEl.className = `sales-vs-yesterday ${isUp ? 'svs--up' : 'svs--down'}`;
-  badgeEl.innerHTML = `${arrow}<span>${Math.abs(pct)}% vs yesterday</span>`;
+  badgeEl.innerHTML = `${arrow}<span>${Math.abs(pct)}% vs yest.</span>`;
 };
 
 const _loadTransactionCounts = async function () {
