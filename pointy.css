@@ -5536,6 +5536,11 @@ kbd {
   font-weight: 600;
 }
 
+/* Hidden on desktop, shown in mobile nav drawer */
+.nav-settings-label {
+  display: none;
+}
+
 .settings-nav-divider {
   height: 1px;
   background: var(--line);
@@ -10472,11 +10477,10 @@ button, .btn {
     opacity: 0.85;
   }
 
-  /* Logout - subtle danger tint */
-  .nav-actions #logoutBtn {
-    color: var(--warn);
-    border-color: rgba(251, 113, 133, 0.3);
-    background: rgba(251, 113, 133, 0.05);
+  /* Show Settings label in mobile drawer */
+  .nav-actions .nav-settings-label {
+    display: inline;
+    font-size: 0.95rem;
   }
 
   /* ── Touch target sizes ───────────────────────────────────────────────── */
