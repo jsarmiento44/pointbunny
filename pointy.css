@@ -5193,50 +5193,55 @@ kbd {
   background: rgba(255,255,255,0.28);
 }
 
-/* ── Metrics row ── */
-.home-metrics-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.home-metric-card {
+/* ── Quick dashboard card (Sales + Tx + Serving) ── */
+.home-dash-card {
+  display: flex;
+  flex-direction: row;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
+  border-top: 3px solid var(--color-primary);
   border-radius: var(--radius-lg);
-  padding: 11px 14px;
-  cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(22, 185, 120, 0.10);
+  flex-shrink: 0;
+}
+.home-dash-stat {
+  flex: 1;
+  padding: 11px 13px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
+  cursor: pointer;
+  transition: background 0.12s;
 }
-.home-metric-card:hover {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-card);
+.home-dash-stat:hover {
+  background: color-mix(in srgb, var(--color-primary) 5%, transparent);
 }
-.home-metric-label {
+.home-dash-stat--serving {
+  cursor: default;
+}
+.home-dash-stat--serving:hover {
+  background: none;
+}
+.home-dash-divider {
+  width: 1px;
+  background: var(--color-border);
+  margin: 10px 0;
+  flex-shrink: 0;
+}
+.home-dash-label {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 0.72rem;
+  gap: 5px;
+  font-size: 0.65rem;
   font-weight: 700;
   color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-}
-.home-metric-icon {
-  width: 22px;
-  height: 22px;
-  background: var(--color-primary-soft);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   color: var(--color-primary);
-  flex-shrink: 0;
 }
-.home-metric-value {
-  font-size: 1.45rem;
+.home-dash-value {
+  font-size: 1.35rem;
   font-weight: 800;
   color: var(--color-text-primary);
   letter-spacing: -0.03em;
@@ -5244,6 +5249,11 @@ kbd {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.home-dash-serving-vs {
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-height: 16px;
 }
 
 /* ── Sales trend indicator ── */

@@ -1126,6 +1126,7 @@ const initApp = async function (user) {
   initAnalytics(user.id);
   _loadYesterdayComparison();
   _loadTransactionCounts();
+  _loadServingComparison();
   model.loadTickets().then(() => SupportView.syncUnreadBadge(model.state.tickets)).catch(() => {});
 };
 
@@ -1187,6 +1188,59 @@ const _loadYesterdayComparison = async function () {
     _updateYesterdayBadge(todayTotal);
   } catch (_) {
     if (el) el.innerHTML = '';
+  }
+};
+
+const _loadServingComparison = async function () {
+  const valEl = document.getElementById('homeAvgServing');
+  const vsEl  = document.getElementById('homeServingVs');
+  if (!valEl) return;
+  try {
+    const now = new Date();
+    const todayStart     = new Date(now); todayStart.setHours(0, 0, 0, 0);
+    const todayEnd       = new Date(now); todayEnd.setHours(23, 59, 59, 999);
+    const yest           = new Date(now); yest.setDate(now.getDate() - 1);
+    const yesterdayStart = new Date(yest); yesterdayStart.setHours(0, 0, 0, 0);
+    const yesterdayEnd   = new Date(yest); yesterdayEnd.setHours(23, 59, 59, 999);
+
+    const [today, yesterday] = await Promise.all([
+      model.fetchPeriodTotals(todayStart.toISOString(), todayEnd.toISOString()),
+      model.fetchPeriodTotals(yesterdayStart.toISOString(), yesterdayEnd.toISOString()),
+    ]);
+
+    const todayMins = today.avgServingMinutes;
+    if (todayMins === null) { valEl.textContent = '—'; if (vsEl) vsEl.textContent = ''; return; }
+
+    // Format as "Xm Ys"
+    const totalSecs = Math.round(todayMins * 60);
+    const m = Math.floor(totalSecs / 60);
+    const s = totalSecs % 60;
+    valEl.textContent = m > 0 ? `${m}m ${s}s` : `${s}s`;
+
+    // Compare vs yesterday
+    if (!vsEl) return;
+    const yestMins = yesterday.avgServingMinutes;
+    if (yestMins === null || yestMins === 0) { vsEl.textContent = ''; return; }
+
+    const diffSecs = Math.round((yestMins - todayMins) * 60); // positive = faster today
+    const absSecs  = Math.abs(diffSecs);
+    const absFmt   = absSecs >= 60
+      ? `${Math.floor(absSecs / 60)}m ${absSecs % 60}s`
+      : `${absSecs}s`;
+
+    if (diffSecs > 0) {
+      vsEl.className = 'home-dash-serving-vs svs--up';
+      vsEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg> ${absFmt} faster`;
+    } else if (diffSecs < 0) {
+      vsEl.className = 'home-dash-serving-vs svs--down';
+      vsEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg> ${absFmt} slower`;
+    } else {
+      vsEl.className = 'home-dash-serving-vs';
+      vsEl.textContent = 'Same as yesterday';
+    }
+  } catch (_) {
+    if (valEl) valEl.textContent = '—';
+    if (vsEl)  vsEl.textContent  = '';
   }
 };
 
