@@ -5234,6 +5234,16 @@ kbd {
   letter-spacing: 0.06em;
   color: var(--color-primary);
 }
+.home-dash-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+.home-dash-emoji {
+  font-size: 1.35rem;
+  line-height: 1.1;
+  flex-shrink: 0;
+}
 .home-dash-value {
   font-size: 1.35rem;
   font-weight: 800;
