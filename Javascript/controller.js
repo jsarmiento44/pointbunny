@@ -1089,7 +1089,8 @@ const initApp = async function (user) {
     (s ? `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim() : null) ||
     user.user_metadata?.display_name ||
     user.email;
-  document.querySelector('.company-name').textContent = model.state.username;
+  const companyNameEl = document.querySelector('.company-name');
+  if (companyNameEl) companyNameEl.textContent = model.state.username;
   localStorage.setItem('pointy_store_name', model.state.username);
   localStorage.setItem('pointy_business_id', model.state.businessId);
   document.body.classList.remove('role-admin', 'role-manager', 'role-cashier');

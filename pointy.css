@@ -5420,7 +5420,8 @@ kbd {
   main { flex: none; height: auto; padding: 16px 12px 24px; overflow-y: visible; }
   .home-layout { flex-direction: column; margin-top: 12px; gap: 12px; }
   .home-left-col { flex: none; }
-  .home-queue-panel { min-height: 280px; flex: none; }
+  .home-right-col { flex: none; }
+  .home-queue-panel { min-height: 280px; }
   .open-orders-list { max-height: 240px; overflow-y: auto; }
 }
 
@@ -8219,10 +8220,20 @@ body.role-manager [data-min-role="admin"] {
    OPEN ORDERS (home page list)
 ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Active Queue Panel ── */
-.home-queue-panel {
+/* ── Right column: metrics + queue ── */
+.home-right-col {
   flex: 48;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Active Queue Panel ── */
+.home-queue-panel {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);

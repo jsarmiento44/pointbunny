@@ -513,16 +513,7 @@
         </div>
       </div>
 
-      <section class="hero fade-up" aria-labelledby="greet">
-        <div class="hero-left">
-          <h1 id="greet" class="greet">👋 Hello, <span class="company-name">Wowa</span>!</h1>
-          <p class="sub">Ready to ring up sales and keep things moving.</p>
-        </div>
-        <div class="hero-datetime">
-          <span class="hero-time" id="dateTimeStr">--:--</span>
-          <span class="hero-date" id="dateStr"></span>
-        </div>
-      </section>
+      <!-- hero hidden for visual test -->
 
       <div class="home-layout fade-up">
 
@@ -550,30 +541,6 @@
               </span>
             </button>
           </article>
-
-          <!-- Metrics row: Today's Sales + Transactions -->
-          <div class="home-metrics-row">
-            <div class="home-metric-card home-sales-stat" role="button" tabindex="0" title="View Overview Report">
-              <div class="home-metric-label">
-                <span class="home-metric-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                </span>
-                Today's Sales
-              </div>
-              <div class="home-metric-value" id="totalStr">$0.00</div>
-              <div class="sales-vs-yesterday" id="salesVsYesterday"><span class="svs-dot"></span></div>
-            </div>
-            <div class="home-metric-card" id="transactionsCard" role="button" tabindex="0" title="View Sales Report">
-              <div class="home-metric-label">
-                <span class="home-metric-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8H8"/><path d="M16 12H8"/><path d="M12 16H8"/></svg>
-                </span>
-                Transactions
-              </div>
-              <div class="home-metric-value" id="basketCountStr">—</div>
-              <div class="sales-vs-yesterday" id="basketsVsYesterday"><span class="svs-dot"></span></div>
-            </div>
-          </div>
 
           <!-- Action row: Cashier + Activity -->
           <div class="home-action-row">
@@ -699,29 +666,58 @@
 
         </div><!-- end home-left-col -->
 
-        <!-- Right column: Active Queue -->
-        <section class="home-queue-panel" aria-labelledby="queueTitle">
-          <div class="home-queue-header">
-            <h2 class="home-queue-title" id="queueTitle">Active Queue</h2>
-            <div class="open-orders-header-actions">
-              <button class="open-orders-view-all hidden" id="openOrdersViewAll" type="button"></button>
-              <button class="open-orders-expand-btn" id="openOrdersExpandBtn" type="button" aria-label="View all orders">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-              </button>
+        <!-- Right column: Metrics + Active Queue -->
+        <div class="home-right-col">
+
+          <!-- Metrics row: Today's Sales + Transactions -->
+          <div class="home-metrics-row">
+            <div class="home-metric-card home-sales-stat" role="button" tabindex="0" title="View Overview Report">
+              <div class="home-metric-label">
+                <span class="home-metric-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </span>
+                Today's Sales
+              </div>
+              <div class="home-metric-value" id="totalStr">$0.00</div>
+              <div class="sales-vs-yesterday" id="salesVsYesterday"><span class="svs-dot"></span></div>
+            </div>
+            <div class="home-metric-card" id="transactionsCard" role="button" tabindex="0" title="View Sales Report">
+              <div class="home-metric-label">
+                <span class="home-metric-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8H8"/><path d="M16 12H8"/><path d="M12 16H8"/></svg>
+                </span>
+                Transactions
+              </div>
+              <div class="home-metric-value" id="basketCountStr">—</div>
+              <div class="sales-vs-yesterday" id="basketsVsYesterday"><span class="svs-dot"></span></div>
             </div>
           </div>
-          <ul class="open-orders-list" id="openOrdersList">
-            <li class="oq-empty-state">
-              <span class="oq-empty-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
-                  <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                </svg>
-              </span>
-              <span class="oq-empty-title">All caught up</span>
-              <span class="oq-empty-subtitle">New orders will appear here as they come in</span>
-            </li>
-          </ul>
-        </section>
+
+          <!-- Active Queue -->
+          <section class="home-queue-panel" aria-labelledby="queueTitle">
+            <div class="home-queue-header">
+              <h2 class="home-queue-title" id="queueTitle">Active Queue</h2>
+              <div class="open-orders-header-actions">
+                <button class="open-orders-view-all hidden" id="openOrdersViewAll" type="button"></button>
+                <button class="open-orders-expand-btn" id="openOrdersExpandBtn" type="button" aria-label="View all orders">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                </button>
+              </div>
+            </div>
+            <ul class="open-orders-list" id="openOrdersList">
+              <li class="oq-empty-state">
+                <span class="oq-empty-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
+                    <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                  </svg>
+                </span>
+                <span class="oq-empty-title">All caught up</span>
+                <span class="oq-empty-subtitle">New orders will appear here as they come in</span>
+              </li>
+            </ul>
+          </section>
+
+        </div><!-- end home-right-col -->
 
       </div>
 
