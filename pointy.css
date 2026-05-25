@@ -5109,10 +5109,9 @@ kbd {
   display: flex;
   flex-direction: row;
   gap: 14px;
-  flex: 1;
-  min-height: 0;
+  flex: 0 0 auto;
   margin-top: 8px;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .home-left-col {
@@ -5393,6 +5392,26 @@ kbd {
   color: var(--color-text-secondary);
   line-height: 1.2;
   text-align: center;
+}
+
+/* ── Coming-soon shortcut card ── */
+.home-shortcut-card--soon {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
+}
+.home-shortcut-card--soon:hover {
+  border-color: var(--color-border);
+  box-shadow: none;
+}
+.home-shortcut-card--soon .home-shortcut-icon {
+  color: var(--color-text-secondary);
+}
+.home-shortcut-card--soon .home-shortcut-title {
+  color: var(--color-text-secondary);
+}
+.home-shortcut-card--soon .home-shortcut-sub {
+  font-style: italic;
 }
 
 /* ── Home page responsive (stack layout on small screens) ── */
@@ -8204,14 +8223,12 @@ body.role-manager [data-min-role="admin"] {
 .home-queue-panel {
   flex: 48;
   min-width: 0;
-  min-height: 650px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  align-self: flex-start;
 }
 
 .home-queue-header {
