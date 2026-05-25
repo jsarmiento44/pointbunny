@@ -14,9 +14,12 @@ class NewOrderView extends View {
 
     const renderCard = (item) => {
       const unavailable = item.status === "unavailable";
+      const imgMarkup = item.imageURL
+        ? `<img src="${item.imageURL}" alt="${item.itemName}" class="pos-item-img" loading="lazy" onerror="this.className='pos-item-img pos-item-img--ph';this.removeAttribute('src')">`
+        : `<div class="pos-item-img pos-item-img--ph" aria-hidden="true"></div>`;
       return `
         <div class="pos-item-card${unavailable ? " pos-item-card--unavailable" : ""}" data-id="${item._id}">
-          <img src="${item.imageURL}" alt="${item.itemName}" class="pos-item-img" />
+          ${imgMarkup}
           <div class="pos-item-info">
             <div class="pos-item-name">${item.itemName}</div>
             <div class="pos-item-price">$${item.price}</div>
@@ -100,7 +103,7 @@ class NewOrderView extends View {
           <div class="pos-menu">
             ${
               menuItems.length === 0
-                ? `<p class="pos-empty">No items yet. Go to Menu List to add items.</p>`
+                ? `<p class="pos-empty">No items yet. Go to Catalogue to add items.</p>`
                 : `<div class="pos-items-area" id="posItemsArea">
                   ${categoryGroups}${uncatGroup}
                 </div>`

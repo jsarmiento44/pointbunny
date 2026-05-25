@@ -16,16 +16,21 @@ class MenuListView extends View {
         <button class="menu-cat-delete" data-category="${cat}" type="button">×</button>
       </span>`).join('');
 
-    const renderCard = (item) => `
+    const renderCard = (item) => {
+      const imgMarkup = item.imageURL
+        ? `<img src="${item.imageURL}" alt="${item.itemName}" loading="lazy" onerror="this.className='pos-item-img--ph';this.removeAttribute('src')">`
+        : `<div class="pos-item-img--ph" aria-hidden="true"></div>`;
+      return `
       <div class="card" data-id="${item._id}">
         <div class="btn-main">
-          <img src="${item.imageURL}" alt="${item.itemName}" />
+          ${imgMarkup}
           <div class="btn-main-text">
             <div class="title">${item.itemName}</div>
             <div class="hint">$${item.price}</div>
           </div>
         </div>
       </div>`;
+    };
 
     const groups = userCategories.map((cat) => {
       const items = menuItems.filter((i) => i.category === cat);
@@ -56,7 +61,7 @@ class MenuListView extends View {
       <div class="modal-overlay" id="menuModal">
         <div class="menu-modal">
           <div class="menu-modal-header">
-            <h2 class="menu-modal-title">Menu</h2>
+            <h2 class="menu-modal-title">Catalogue</h2>
             <button class="btn primary" id="openAddModal">+ Add Item</button>
             <button class="modal-close" aria-label="Close">&times;</button>
           </div>

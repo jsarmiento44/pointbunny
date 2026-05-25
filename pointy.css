@@ -743,8 +743,12 @@ header {
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;   /* creates a stacking context to contain ::before z-index: -1 */
   transition: background var(--transition-fast), border-color var(--transition-fast),
-              box-shadow var(--transition-fast), transform var(--transition-fast);
+              box-shadow var(--transition-fast), transform var(--transition-fast),
+              color var(--transition-fast);
 }
 .btn:hover {
   background: #F9FAFB;
@@ -3124,6 +3128,29 @@ footer {
   display: block;
 }
 
+/* Placeholder shown when no image is uploaded or image fails to load */
+.pos-item-img--ph {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  display: block;
+  background-color: var(--color-surface-alt, #f3f4f6);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpolyline points='21 15 16 10 5 21'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 36%;
+}
+
+/* Catalogue list view: match existing img dimensions */
+.btn-main .pos-item-img--ph,
+#menuModal .card .btn-main .pos-item-img--ph {
+  width: 50px;
+  height: 50px;
+  aspect-ratio: unset;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background-size: 55%;
+}
+
 .pos-item-info {
   padding: 10px 12px 12px;
 }
@@ -5133,9 +5160,30 @@ kbd {
   align-items: stretch;
   overflow: hidden;
   flex-shrink: 0;
+  position: relative;
   box-shadow: 0 4px 16px rgba(22,185,120,0.28);
   transition: transform 0.15s, box-shadow 0.15s;
   cursor: pointer;
+}
+/* ── Shimmer glare sweep ── */
+.home-cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 55%;
+  background: linear-gradient(
+    120deg,
+    transparent            0%,
+    rgba(255,255,255,0.18) 50%,
+    transparent            100%
+  );
+  transform: translateX(-120%);
+  transition: transform 0.55s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+.home-cta:hover::before {
+  transform: translateX(280%);
 }
 .home-cta:hover {
   transform: translateY(-2px);
@@ -5187,10 +5235,11 @@ kbd {
   justify-content: center;
   flex-shrink: 0;
   color: white;
-  transition: background 0.15s;
+  transition: background 0.2s, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .home-cta:hover .home-cta-arrow-btn {
   background: rgba(255,255,255,0.28);
+  transform: translateX(6px) scale(1.1);
 }
 
 /* ── Quick dashboard card (Sales + Tx + Serving) ── */
@@ -5325,17 +5374,50 @@ kbd {
   border-radius: var(--radius-lg);
   padding: 10px 13px;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, color 0.15s;
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 12px;
   min-width: 0;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
 }
 .home-cashier-card:hover,
 .home-activity-card:hover {
   border-color: var(--color-primary);
   box-shadow: var(--shadow-card);
+}
+/* sweep blob */
+.home-cashier-card::before,
+.home-activity-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--color-primary);
+  clip-path: circle(0% at 90% 90%);
+  transition: clip-path 0.55s linear;
+  pointer-events: none;
+}
+.home-cashier-card:hover::before,
+.home-activity-card:hover::before { clip-path: circle(150% at 90% 90%); }
+.home-cashier-card:active::before,
+.home-activity-card:active::before { background: #0d9e68; transition: clip-path 0.55s linear, background 0s; }
+/* flip inner text to white on hover */
+.home-cashier-card:hover .home-action-label,
+.home-cashier-card:hover .home-action-value,
+.home-cashier-card:hover .home-action-hint,
+.home-cashier-card:hover .home-action-link,
+.home-activity-card:hover .home-action-label,
+.home-activity-card:hover .home-action-value,
+.home-activity-card:hover .home-action-hint,
+.home-activity-card:hover .home-action-link { color: rgba(255,255,255,0.92); }
+.home-cashier-card:hover .home-action-icon,
+.home-activity-card:hover .home-action-icon {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
 }
 
 /* Shared action card inner parts */
@@ -5400,11 +5482,29 @@ kbd {
   overflow: hidden;
   transition: border-color 0.15s, box-shadow 0.15s;
   position: relative;
+  isolation: isolate;
+}
+/* sweep blob */
+.home-shortcut-card:not(.home-shortcut-card--soon)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--color-primary);
+  clip-path: circle(0% at 90% 90%);
+  transition: clip-path 0.55s linear;
+  pointer-events: none;
 }
 .home-shortcut-card:hover {
   border-color: var(--color-primary);
   box-shadow: var(--shadow-card);
 }
+.home-shortcut-card:not(.home-shortcut-card--soon):hover::before { clip-path: circle(150% at 90% 90%); }
+.home-shortcut-card:not(.home-shortcut-card--soon):active::before { background: #0d9e68; transition: clip-path 0.55s linear, background 0s; }
+/* flip inner text to white on hover */
+.home-shortcut-card:hover .home-shortcut-title { color: #fff; }
+.home-shortcut-card:hover .home-shortcut-sub   { color: rgba(255,255,255,0.8); }
+.home-shortcut-card:hover .home-shortcut-icon  { color: rgba(255,255,255,0.9); }
 .home-shortcut-btn {
   display: flex;
   flex-direction: column;
@@ -5485,6 +5585,46 @@ kbd {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
+  overflow: visible; /* icon-btn excluded from sweep clip */
+}
+
+/* ─── Sweep / ink-fill effect for standard buttons ─── */
+/* isolation: isolate on .btn creates a stacking context,
+   so z-index: -1 here sits above the button bg but below button text */
+.btn:not(.icon-btn)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--color-primary);   /* #16B978 */
+  clip-path: circle(0% at 90% 90%);  /* start: point at bottom-right */
+  transition: clip-path 0.55s linear;
+  pointer-events: none;
+}
+
+.btn:not(.icon-btn):hover::before {
+  clip-path: circle(150% at 90% 90%);  /* 150% guarantees all corners covered */
+}
+
+.btn:not(.icon-btn):active::before {
+  background: #0d9e68;
+  transition: clip-path 0.55s linear, background 0s;
+}
+
+/* On hover: sweep is the effect — no lift needed */
+.btn:not(.icon-btn):hover {
+  color: #fff;
+  border-color: var(--color-primary);
+  transform: none;
+  box-shadow: none;
+}
+
+/* Primary buttons already green — use a darker sweep so it's visible */
+.btn.primary:not(.icon-btn)::before {
+  background: #0d9e68;
+}
+.btn.primary:not(.icon-btn):active::before {
+  background: #0a7a50;
 }
 
 /* ====== Card SVG icons ====== */
