@@ -36,7 +36,8 @@
       "Bash(git commit -m 'Home page: compact layout to fit full page without scrolling *)",
       "Bash(git commit -m 'Home: Inventory shortcut \\(coming soon\\) + queue panel height matches left col *)",
       "Bash(git commit -m 'Home: move Sales/Transactions metrics above Active Queue \\(right col\\) *)",
-      "Bash(git commit -m 'Home: both columns fill full screen height *)"
+      "Bash(git commit -m 'Home: both columns fill full screen height *)",
+      "Bash(git commit -m 'Home: shortcuts grid fills remaining left column height *)"
     ]
   }
 }
