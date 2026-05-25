@@ -5118,17 +5118,21 @@ kbd {
 .home-left-col {
   flex: 52;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-bottom: 16px;
+  gap: 10px;
+  padding-bottom: 20px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
 
 /* ── New Order CTA ── */
 .home-cta {
   background: #16B978;
   border-radius: var(--radius-xl);
-  height: 140px;
+  height: 130px;
   display: flex;
   align-items: stretch;
   overflow: hidden;
@@ -5144,8 +5148,8 @@ kbd {
 .home-cta-btn {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 0 32px;
+  gap: 18px;
+  padding: 0 28px;
   background: none;
   border: none;
   width: 100%;
@@ -5153,34 +5157,44 @@ kbd {
   text-align: left;
 }
 .home-cta-icon {
-  width: 68px;
-  height: 68px;
+  width: 62px;
+  height: 62px;
   background: rgba(255,255,255,0.18);
-  border-radius: 18px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.home-cta-icon svg { width: 34px; height: 34px; stroke: white; }
+.home-cta-icon svg { width: 30px; height: 30px; stroke: white; }
 .home-cta-text { flex: 1; }
 .home-cta-title {
-  font-size: 1.55rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: white;
   letter-spacing: -0.025em;
   line-height: 1;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 .home-cta-sub {
-  font-size: 0.9rem;
-  color: rgba(255,255,255,0.78);
+  font-size: 0.88rem;
+  color: rgba(255,255,255,0.75);
   font-weight: 500;
 }
-.home-cta-arrow {
-  font-size: 1.4rem;
-  color: rgba(255,255,255,0.55);
+.home-cta-arrow-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.20);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  color: white;
+  transition: background 0.15s;
+}
+.home-cta:hover .home-cta-arrow-btn {
+  background: rgba(255,255,255,0.28);
 }
 
 /* ── Metrics row ── */
@@ -5260,85 +5274,74 @@ kbd {
   animation: svs-pulse 1.4s ease-in-out infinite;
 }
 
-/* ── Action row: Cashier + Activity ── */
+/* ── Action row: Cashier + Activity (sibling cards) ── */
 .home-action-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
-.home-cashier-card {
+.home-cashier-card,
+.home-activity-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 16px 18px;
+  padding: 14px 16px;
   cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 0;
   min-width: 0;
 }
-.home-cashier-card:hover {
+.home-cashier-card:hover,
+.home-activity-card:hover {
   border-color: var(--color-primary);
   box-shadow: var(--shadow-card);
 }
-.home-cashier-label {
+
+/* Shared action card inner parts */
+.home-action-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--color-primary-soft);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  flex-shrink: 0;
+  margin-bottom: 10px;
+}
+.home-action-label {
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  margin-bottom: 4px;
 }
-.home-cashier-value {
-  font-size: 1.1rem;
+.home-action-value {
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-top: 2px;
+  margin-bottom: 2px;
+  flex: 1;
 }
-.home-cashier-change {
+.home-action-hint {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  line-height: 1.3;
+  margin-bottom: 2px;
+  flex: 1;
+}
+.home-action-link {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--color-primary);
-  margin-top: 4px;
-}
-.home-activity-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 16px 18px;
-  cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-}
-.home-activity-card:hover {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-card);
-}
-.home-activity-icon {
-  width: 34px;
-  height: 34px;
-  background: var(--color-primary-soft);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-primary);
-}
-.home-activity-label {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--color-text-primary);
-}
-.home-activity-hint {
-  font-size: 0.75rem;
-  color: var(--color-text-secondary);
-  line-height: 1.3;
+  margin-top: 6px;
 }
 
 /* ── Shortcuts grid ── */
@@ -5351,7 +5354,7 @@ kbd {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  height: 84px;
+  min-height: 88px;
   overflow: hidden;
   transition: border-color 0.15s, box-shadow 0.15s;
   position: relative;
@@ -5365,25 +5368,35 @@ kbd {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 3px;
   width: 100%;
   height: 100%;
+  min-height: 88px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 8px;
+  padding: 10px 8px;
 }
 .home-shortcut-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-primary);
+  margin-bottom: 3px;
 }
-.home-shortcut-icon svg { width: 20px; height: 20px; }
-.home-shortcut-label {
-  font-size: 0.8rem;
-  font-weight: 600;
+.home-shortcut-icon svg { width: 19px; height: 19px; }
+.home-shortcut-title {
+  font-size: 0.88rem;
+  font-weight: 800;
   color: var(--color-text-primary);
+  line-height: 1.2;
+}
+.home-shortcut-sub {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  line-height: 1.2;
+  text-align: center;
 }
 
 /* ── Home page responsive (stack layout on small screens) ── */

@@ -543,7 +543,11 @@
                 <div class="home-cta-title">New Order</div>
                 <div class="home-cta-sub">Start a new sale</div>
               </div>
-              <span class="home-cta-arrow" aria-hidden="true">→</span>
+              <span class="home-cta-arrow-btn" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+                  <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </span>
             </button>
           </article>
 
@@ -574,19 +578,24 @@
           <!-- Action row: Cashier + Activity -->
           <div class="home-action-row">
             <div class="home-cashier-card" id="cashierCard" role="button" tabindex="0" title="Switch cashier">
-              <div class="home-cashier-label">Cashier</div>
-              <div class="home-cashier-value" id="shiftStr">—</div>
-              <span class="home-cashier-change">Change →</span>
-            </div>
-            <div class="home-activity-card" data-action="cash-flow" role="button" tabindex="0" aria-label="View activity">
-              <span class="home-activity-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-                  <line x1="12" y1="1" x2="12" y2="23" />
-                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              <span class="home-action-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="17" height="17">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                 </svg>
               </span>
-              <div class="home-activity-label">Activity</div>
-              <div class="home-activity-hint">Sales, expenses &amp; voids</div>
+              <div class="home-action-label">Cashier</div>
+              <div class="home-action-value" id="shiftStr">—</div>
+              <span class="home-action-link">Change cashier →</span>
+            </div>
+            <div class="home-activity-card" data-action="cash-flow" role="button" tabindex="0" aria-label="View activity">
+              <span class="home-action-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="17" height="17">
+                  <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+              </span>
+              <div class="home-action-label">Activity</div>
+              <div class="home-action-hint">Sales, expenses &amp; voids</div>
+              <span class="home-action-link">View activity →</span>
             </div>
           </div>
 
@@ -606,7 +615,8 @@
                     <rect x="14" y="14" width="7" height="7" rx="1" />
                   </svg>
                 </span>
-                <span class="home-shortcut-label">Menu</span>
+                <span class="home-shortcut-title">Menu</span>
+                <span class="home-shortcut-sub">Browse items</span>
               </button>
             </article>
 
@@ -621,7 +631,8 @@
                     <polyline points="10 9 9 9 8 9"/>
                   </svg>
                 </span>
-                <span class="home-shortcut-label">Adjustments</span>
+                <span class="home-shortcut-title">Adjustments</span>
+                <span class="home-shortcut-sub">Fees &amp; promos</span>
               </button>
             </article>
 
@@ -633,7 +644,8 @@
                     <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                   </svg>
                 </span>
-                <span class="home-shortcut-label">Activity</span>
+                <span class="home-shortcut-title">Activity</span>
+                <span class="home-shortcut-sub">Sales, expenses &amp; voids</span>
               </button>
             </article>
 
@@ -647,7 +659,8 @@
                     <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                   </svg>
                 </span>
-                <span class="home-shortcut-label">Staff</span>
+                <span class="home-shortcut-title">Staff</span>
+                <span class="home-shortcut-sub">Roles &amp; access</span>
               </button>
             </article>
 
@@ -661,7 +674,8 @@
                     <line x1="2" y1="20" x2="22" y2="20" />
                   </svg>
                 </span>
-                <span class="home-shortcut-label">Reports</span>
+                <span class="home-shortcut-title">Reports</span>
+                <span class="home-shortcut-sub">Sales summary</span>
               </button>
             </article>
 
@@ -675,7 +689,8 @@
                     <line x1="12" y1="17" x2="12.01" y2="17"/>
                   </svg>
                 </span>
-                <span class="home-shortcut-label">Help</span>
+                <span class="home-shortcut-title">Help</span>
+                <span class="home-shortcut-sub">Support &amp; issues</span>
               </button>
             </article>
 
