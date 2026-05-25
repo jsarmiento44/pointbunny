@@ -5299,6 +5299,7 @@ kbd {
 }
 .svs--up   { color: var(--color-success); }
 .svs--down { color: #ef4444; }
+.svs-sub   { font-size: 0.78em; font-weight: 500; opacity: 0.8; }
 @keyframes svs-pulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.3; }
