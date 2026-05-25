@@ -813,7 +813,7 @@ main {
   max-width: 1280px;
   width: 100%;
   margin: 0 auto;
-  padding: 14px 16px 10px;
+  padding: 10px 16px 8px;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -5086,7 +5086,7 @@ kbd {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  margin-top: 4px;
+  margin-top: 0;
 }
 .home-section-divider::before,
 .home-section-divider::after {
@@ -5108,31 +5108,27 @@ kbd {
 .home-layout {
   display: flex;
   flex-direction: row;
-  gap: 16px;
+  gap: 14px;
   flex: 1;
   min-height: 0;
-  margin-top: 10px;
+  margin-top: 8px;
   align-items: flex-start;
 }
 
 .home-left-col {
   flex: 52;
   min-width: 0;
-  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-bottom: 20px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
+  gap: 8px;
+  padding-bottom: 0;
 }
 
 /* ── New Order CTA ── */
 .home-cta {
   background: #16B978;
   border-radius: var(--radius-xl);
-  height: 130px;
+  height: 114px;
   display: flex;
   align-items: stretch;
   overflow: hidden;
@@ -5148,8 +5144,8 @@ kbd {
 .home-cta-btn {
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 0 28px;
+  gap: 14px;
+  padding: 0 24px;
   background: none;
   border: none;
   width: 100%;
@@ -5157,16 +5153,16 @@ kbd {
   text-align: left;
 }
 .home-cta-icon {
-  width: 62px;
-  height: 62px;
+  width: 52px;
+  height: 52px;
   background: rgba(255,255,255,0.18);
-  border-radius: 16px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.home-cta-icon svg { width: 30px; height: 30px; stroke: white; }
+.home-cta-icon svg { width: 26px; height: 26px; stroke: white; }
 .home-cta-text { flex: 1; }
 .home-cta-title {
   font-size: 1.5rem;
@@ -5201,18 +5197,18 @@ kbd {
 .home-metrics-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 .home-metric-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 16px 18px;
+  padding: 11px 14px;
   cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 .home-metric-card:hover {
   border-color: var(--color-primary);
@@ -5240,7 +5236,7 @@ kbd {
   flex-shrink: 0;
 }
 .home-metric-value {
-  font-size: 1.7rem;
+  font-size: 1.45rem;
   font-weight: 800;
   color: var(--color-text-primary);
   letter-spacing: -0.03em;
@@ -5278,14 +5274,14 @@ kbd {
 .home-action-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 .home-cashier-card,
 .home-activity-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 14px 16px;
+  padding: 10px 13px;
   cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s;
   display: flex;
@@ -5301,60 +5297,60 @@ kbd {
 
 /* Shared action card inner parts */
 .home-action-icon {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   background: var(--color-primary-soft);
-  border-radius: 9px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-primary);
   flex-shrink: 0;
-  margin-bottom: 10px;
+  margin-bottom: 7px;
 }
 .home-action-label {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 .home-action-value {
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--color-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
   flex: 1;
 }
 .home-action-hint {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--color-text-secondary);
   line-height: 1.3;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
   flex: 1;
 }
 .home-action-link {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-primary);
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 /* ── Shortcuts grid ── */
 .home-shortcuts-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
 .home-shortcut-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  min-height: 88px;
+  min-height: 74px;
   overflow: hidden;
   transition: border-color 0.15s, box-shadow 0.15s;
   position: relative;
@@ -5368,31 +5364,31 @@ kbd {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 2px;
   width: 100%;
   height: 100%;
-  min-height: 88px;
+  min-height: 74px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 10px 8px;
+  padding: 8px 6px;
 }
 .home-shortcut-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-primary);
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
-.home-shortcut-icon svg { width: 19px; height: 19px; }
+.home-shortcut-icon svg { width: 17px; height: 17px; }
 .home-shortcut-title {
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 800;
   color: var(--color-text-primary);
   line-height: 1.2;
 }
 .home-shortcut-sub {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 500;
   color: var(--color-text-secondary);
   line-height: 1.2;
@@ -10476,25 +10472,14 @@ button, .btn {
   .home-shortcuts-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .home-layout {
-    gap: 10px;
-    margin-top: 8px;
-  }
-  .home-left-col {
-    gap: 8px;
-  }
   .home-cta {
-    height: 116px;
+    height: 106px;
   }
   .home-cta-title {
-    font-size: 1.25rem;
-  }
-  .home-cta-icon {
-    width: 54px;
-    height: 54px;
+    font-size: 1.2rem;
   }
   .home-metric-value {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
   }
   .hero {
     margin-bottom: 0;

@@ -32,7 +32,8 @@
       "PowerShell(Get-Process *)",
       "Bash(git add *)",
       "Bash(git commit -m 'Home page redesign: new CTA, metrics row, action row, shortcuts grid, queue panel *)",
-      "Bash(git commit -m 'Home page refinements: unified action cards, shortcut subtitles, circular CTA arrow, scroll fix *)"
+      "Bash(git commit -m 'Home page refinements: unified action cards, shortcut subtitles, circular CTA arrow, scroll fix *)",
+      "Bash(git commit -m 'Home page: compact layout to fit full page without scrolling *)"
     ]
   }
 }
