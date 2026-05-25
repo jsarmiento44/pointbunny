@@ -40,7 +40,8 @@
       "Bash(git commit -m 'Home: shortcuts grid fills remaining left column height *)",
       "Bash(git commit -m 'Move Log Out from navbar to bottom of Settings sidebar *)",
       "Bash(git commit -m 'Mobile nav: add Settings label to gear button in drawer *)",
-      "Bash(git commit -m 'Reports: rename '\\\\''Other'\\\\'' category fallback to '\\\\''Uncategorized'\\\\'' *)"
+      "Bash(git commit -m 'Reports: rename '\\\\''Other'\\\\'' category fallback to '\\\\''Uncategorized'\\\\'' *)",
+      "Bash(git commit -m 'Reports: revert category fallback to '\\\\''Other'\\\\''; add tooltip explanation *)"
     ]
   }
 }
