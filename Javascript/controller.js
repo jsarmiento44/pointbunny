@@ -1932,7 +1932,7 @@ const _computeCategoryMix = function () {
   const map = new Map();
   for (const sale of modelState.reportsSales) {
     for (const item of (sale.items ?? [])) {
-      const cat = itemCatMap.get(item.itemName) ?? "Other";
+      const cat = itemCatMap.get(item.itemName) ?? "Uncategorized";
       map.set(cat, (map.get(cat) ?? 0) + Number(item.totalPrice ?? 0));
     }
   }
@@ -2284,7 +2284,7 @@ const _computeCategoryMixFromSales = function (sales) {
   const map = new Map();
   for (const sale of sales)
     for (const item of (sale.items ?? [])) {
-      const cat = itemCatMap.get(item.itemName) ?? "Other";
+      const cat = itemCatMap.get(item.itemName) ?? "Uncategorized";
       map.set(cat, (map.get(cat) ?? 0) + Number(item.totalPrice ?? 0));
     }
   return [...map.entries()].sort((a, b) => b[1] - a[1]).map(([label, value]) => ({ label, value }));
