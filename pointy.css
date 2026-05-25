@@ -5207,15 +5207,32 @@ kbd {
 }
 .home-dash-stat {
   flex: 1;
-  padding: 11px 13px;
+  padding: 12px 14px;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
   cursor: pointer;
   transition: background 0.12s;
+  min-width: 0;
 }
 .home-dash-stat:hover {
   background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+}
+.home-dash-emoji {
+  font-size: 2.1rem;
+  line-height: 1;
+  flex-shrink: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+.home-dash-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
 }
 .home-dash-divider {
   width: 1px;
@@ -5224,66 +5241,42 @@ kbd {
   flex-shrink: 0;
 }
 .home-dash-label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.65rem;
+  font-size: 0.64rem;
   font-weight: 700;
-  color: var(--color-text-secondary);
+  color: var(--color-primary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--color-primary);
-}
-.home-dash-value-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 4px;
-}
-.home-dash-emoji {
-  font-size: 1.25rem;
-  line-height: 1.1;
-  flex-shrink: 0;
-  opacity: 0.85;
 }
 .home-dash-value {
-  font-size: 1.35rem;
+  font-size: 1.3rem;
   font-weight: 800;
   color: var(--color-text-primary);
   letter-spacing: -0.03em;
-  line-height: 1.1;
+  line-height: 1.15;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .home-dash-serving-vs {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  min-height: 16px;
+  min-height: 15px;
 }
 
-/* ── Dash card: mid-range squeeze (right col gets narrow) ── */
+/* ── Dash card: mid-range squeeze ── */
 @media (max-width: 1100px) {
-  .home-dash-value { font-size: 1.15rem; }
-  .home-dash-emoji { font-size: 1.05rem; }
-  .home-dash-stat  { padding: 10px 10px; }
+  .home-dash-stat  { padding: 10px 10px; gap: 8px; }
+  .home-dash-emoji { font-size: 1.7rem; }
+  .home-dash-value { font-size: 1.1rem; }
 }
 
-/* ── Dash card: mobile — stack stats vertically ── */
+/* ── Dash card: mobile — stack vertically ── */
 @media (max-width: 900px) {
-  .home-dash-card {
-    flex-direction: column;
-  }
-  .home-dash-divider {
-    width: auto;
-    height: 1px;
-    margin: 0 12px;
-  }
-  .home-dash-stat {
-    padding: 12px 16px;
-  }
-  .home-dash-value { font-size: 1.45rem; }
-  .home-dash-emoji { font-size: 1.35rem; }
+  .home-dash-card  { flex-direction: column; }
+  .home-dash-divider { width: auto; height: 1px; margin: 0 14px; }
+  .home-dash-stat  { padding: 12px 16px; gap: 14px; }
+  .home-dash-emoji { font-size: 2.2rem; }
+  .home-dash-value { font-size: 1.4rem; }
 }
 
 /* ── Sales trend indicator ── */
