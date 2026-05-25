@@ -49,7 +49,8 @@
       "Bash(git commit -m 'Home dash card: emoji left col + text right col, responsive *)",
       "Bash(git commit -m 'Home dash card: fix trend text wrapping *)",
       "Bash(git commit -m 'Trend badge: percentage full-size, '\\\\''vs yesterday'\\\\'' smaller \\(0.78em, 500 weight\\) *)",
-      "Bash(git commit -m 'Action cards: two-column layout \\(SVG left | text stack right\\) *)"
+      "Bash(git commit -m 'Action cards: two-column layout \\(SVG left | text stack right\\) *)",
+      "Bash(git commit -m 'Action cards: restore green-tinted square background on icon \\(52px, r14\\) *)"
     ]
   }
 }

@@ -5340,12 +5340,15 @@ kbd {
 
 /* Shared action card inner parts */
 .home-action-icon {
+  width: 52px;
+  height: 52px;
+  background: var(--color-primary-soft);
+  border-radius: 14px;
   color: var(--color-primary);
   flex-shrink: 0;
-  align-self: stretch;
   display: flex;
   align-items: center;
-  opacity: 0.9;
+  justify-content: center;
 }
 .home-action-body {
   display: flex;
