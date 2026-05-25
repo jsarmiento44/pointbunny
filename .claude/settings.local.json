@@ -44,7 +44,8 @@
       "Bash(git commit -m 'Reports: revert category fallback to '\\\\''Other'\\\\''; add tooltip explanation *)",
       "Bash(git commit -m 'Home: unified quick-dashboard card \\(Sales + Tx + Avg Serving\\) *)",
       "Bash(git commit -m 'Home dash card: serving time clickable + emojis on all three stats *)",
-      "Bash(git commit -m 'Home dash card: emojis inline with values at same font size *)"
+      "Bash(git commit -m 'Home dash card: emojis inline with values at same font size *)",
+      "Bash(git commit -m 'Home dash card: emoji right of value + responsive layout *)"
     ]
   }
 }
