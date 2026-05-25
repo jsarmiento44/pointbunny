@@ -5217,12 +5217,6 @@ kbd {
 .home-dash-stat:hover {
   background: color-mix(in srgb, var(--color-primary) 5%, transparent);
 }
-.home-dash-stat--serving {
-  cursor: default;
-}
-.home-dash-stat--serving:hover {
-  background: none;
-}
 .home-dash-divider {
   width: 1px;
   background: var(--color-border);

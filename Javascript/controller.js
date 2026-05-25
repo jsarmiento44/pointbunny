@@ -3209,11 +3209,18 @@ const _wireApp = function () {
     salesStatCard.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); controlOpenReports("sales"); } });
   }
 
-  // Transactions stat card → open Reports on Sales section
+  // Transactions stat card → open Reports on Traffic section
   const transactionsCard = document.querySelector("#transactionsCard");
   if (transactionsCard) {
     transactionsCard.addEventListener("click", () => controlOpenReports("traffic"));
     transactionsCard.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); controlOpenReports("traffic"); } });
+  }
+
+  // Avg. Serving stat → open Reports on Kitchen section
+  const servingStatEl = document.querySelector(".home-dash-stat--serving");
+  if (servingStatEl) {
+    servingStatEl.addEventListener("click", () => controlOpenReports("kitchen"));
+    servingStatEl.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); controlOpenReports("kitchen"); } });
   }
 
   // Reports
