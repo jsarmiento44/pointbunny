@@ -1,0 +1,429 @@
+/* ── Time Clock page ──────────────────────────────────────────────────────── */
+
+.tc-body {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  font-family: 'Inter', sans-serif;
+}
+
+.tc-screen {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* ── Spinner ─────────────────────────────────────────────────────────────── */
+
+.tc-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--panel-strong);
+  border-top-color: var(--brand-1);
+  border-radius: 50%;
+  animation: tc-spin 0.7s linear infinite;
+}
+@keyframes tc-spin { to { transform: rotate(360deg); } }
+
+/* ── Card (activation + login) ───────────────────────────────────────────── */
+
+.tc-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--shadow-lg);
+}
+
+.tc-brand {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--brand-1);
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.tc-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--brand-1) 12%, transparent);
+  color: var(--brand-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.tc-card-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  margin: 0;
+}
+
+.tc-business-name {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text);
+  text-align: center;
+  letter-spacing: -0.3px;
+  margin: 0;
+}
+
+.tc-card-sub {
+  font-size: 0.88rem;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.tc-code-input {
+  width: 100%;
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.4rem;
+  padding: 14px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--input-bg, var(--bg));
+  color: var(--text);
+  text-transform: uppercase;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.tc-code-input:focus { border-color: var(--brand-1); }
+
+.tc-field {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tc-field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tc-field input {
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--input-bg, var(--bg));
+  color: var(--text);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+.tc-field input:focus { border-color: var(--brand-1); }
+
+.tc-error {
+  font-size: 0.83rem;
+  color: #ef4444;
+  text-align: center;
+  margin: 0;
+}
+
+.tc-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.tc-btn:active { transform: scale(0.98); }
+.tc-btn--primary {
+  background: var(--brand-1);
+  color: #fff;
+}
+.tc-btn--primary:hover { opacity: 0.9; }
+.tc-btn--secondary {
+  background: var(--panel-strong);
+  color: var(--text);
+}
+.tc-btn--secondary:hover { opacity: 0.85; }
+.tc-btn--danger {
+  background: color-mix(in srgb, #ef4444 14%, transparent);
+  color: #ef4444;
+}
+.tc-btn--danger:hover { opacity: 0.85; }
+.tc-btn--break {
+  background: color-mix(in srgb, #f59e0b 14%, transparent);
+  color: #f59e0b;
+}
+.tc-btn--break:hover { opacity: 0.85; }
+.tc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Shift card ──────────────────────────────────────────────────────────── */
+
+.tc-shift-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  box-shadow: var(--shadow-lg);
+}
+
+.tc-shift-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.tc-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.tc-shift-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tc-shift-status {
+  font-size: 0.83rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* ── Timer ───────────────────────────────────────────────────────────────── */
+
+.tc-timer-block {
+  text-align: center;
+  padding: 24px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.tc-timer {
+  font-size: 3.2rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.tc-timer--break { color: #f59e0b; }
+
+.tc-timer-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 500;
+  margin-top: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Actions ─────────────────────────────────────────────────────────────── */
+
+.tc-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Summary ─────────────────────────────────────────────────────────────── */
+
+.tc-summary {
+  background: var(--panel-strong);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tc-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.tc-summary-row span:last-child {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tc-summary-total {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--brand-1);
+}
+
+/* ── Sign out ────────────────────────────────────────────────────────────── */
+
+.tc-signout-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+  text-align: center;
+  padding: 4px;
+  transition: color 0.15s;
+}
+.tc-signout-btn:hover { color: var(--text); }
+
+/* ── PIN pad overlay ─────────────────────────────────────────────────────────── */
+
+.tc-pinpad-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.tc-pinpad-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 36px 32px;
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  box-shadow: var(--shadow-lg);
+}
+
+.tc-pinpad-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  margin: 0;
+}
+
+.tc-pinpad-sub {
+  font-size: 0.88rem;
+  color: var(--muted);
+  text-align: center;
+  margin: -8px 0 0;
+}
+
+.tc-pinpad-dots {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+}
+
+.tc-pinpad-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: transparent;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.tc-pinpad-dot--filled {
+  background: var(--brand-1);
+  border-color: var(--brand-1);
+}
+
+@keyframes tc-pinpad-shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-8px); }
+  40%       { transform: translateX(8px); }
+  60%       { transform: translateX(-5px); }
+  80%       { transform: translateX(5px); }
+}
+
+.tc-pinpad-dots--shake {
+  animation: tc-pinpad-shake 0.4s ease;
+}
+
+.tc-pinpad-error {
+  font-size: 0.83rem;
+  color: #ef4444;
+  text-align: center;
+  margin: -8px 0 0;
+}
+
+.tc-pinpad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+.tc-pinpad-key {
+  height: 64px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: var(--panel-strong);
+  color: var(--text);
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.1s, transform 0.08s;
+  user-select: none;
+}
+.tc-pinpad-key:active { transform: scale(0.93); opacity: 0.7; }
+
+.tc-pinpad-key--action {
+  background: color-mix(in srgb, var(--muted) 10%, transparent);
+  color: var(--muted);
+}
+
+.tc-pinpad-key--confirm {
+  background: var(--brand-1);
+  color: #fff;
+  border-color: transparent;
+  font-size: 1.4rem;
+}
+
+.tc-pinpad-cancel {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.83rem;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.15s;
+}
+.tc-pinpad-cancel:hover { color: var(--text); }

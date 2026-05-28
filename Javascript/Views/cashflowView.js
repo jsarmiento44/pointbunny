@@ -224,7 +224,7 @@ class CashflowView extends View {
           ? `Voided by ${esc(sale.voided_by)} · ${fmtDateTime(sale.voided_at)}`
           : `Voided · ${fmtDateTime(sale.voided_at)}`;
         return `
-        <div class="cashflow-row cashflow-row--voided">
+        <div class="cashflow-row cashflow-row--voided" data-sale-id="${sale.id}" role="button" tabindex="0" title="View receipt">
           <div class="cashflow-row-main">
             <span class="cashflow-row-desc">${ticketStr}${label}</span>
             <span class="cashflow-row-date">${fmtDateTime(sale.sale_date)}${sale.order_type ? ` · ${sale.order_type === 'takeout' ? 'Takeout' : 'Dine In'}` : ''}${sale.added_by ? ` · Cashier: ${esc(sale.added_by)}` : ""}</span>
@@ -232,7 +232,6 @@ class CashflowView extends View {
           </div>
           <div class="cashflow-row-right">
             <span class="cashflow-row-amount cashflow-row-amount--voided">${fmt(sale.total_price)}</span>
-            <button class="cashflow-restore-btn" data-sale-id="${sale.id}" type="button">Restore</button>
           </div>
         </div>`;
       })
@@ -240,9 +239,6 @@ class CashflowView extends View {
   }
 
   showExpenseModal() {
-    const now = new Date();
-    const local = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    document.querySelector("#expenseDate").value = local;
     this._expenseModal.classList.remove("hidden");
   }
 
@@ -355,15 +351,25 @@ class CashflowView extends View {
       })
       .join("");
 
+    const isVoided = !!sale.voided_at;
+    const voidedBanner = isVoided ? `
+      <div class="sr-voided-banner">
+        <span class="sr-voided-label">VOIDED</span>
+        <span class="sr-voided-meta">
+          ${sale.voided_by ? `by ${esc(sale.voided_by)} · ` : ''}${fmtDateTime(sale.voided_at)}
+        </span>
+      </div>` : '';
+
     const el = document.createElement("div");
     el.id = "saleReceiptModal";
     el.className = "sale-receipt-overlay";
     el.innerHTML = `
-      <div class="sale-receipt-card">
+      <div class="sale-receipt-card${isVoided ? ' sale-receipt-card--voided' : ''}">
         <div class="sale-receipt-header">
           <h3 class="sale-receipt-title">Order Receipt</h3>
           <button class="sale-receipt-close" aria-label="Close">&times;</button>
         </div>
+        ${voidedBanner}
         <p class="sale-receipt-date">
           ${fmtDateTime(sale.sale_date)}
           ${sale.is_manual ? `<span class="sr-manual-badge">Manually added${sale.added_by ? ` by ${esc(sale.added_by)}` : ""}</span>` : ""}
@@ -391,7 +397,7 @@ class CashflowView extends View {
             <span>Change</span><span>${fmt(sale.customer_change)}</span>
           </div>
         </div>
-        ${onReprint ? `<div class="sr-reprint"><button class="btn sr-reprint-btn">Reprint Receipt</button></div>` : ''}
+        ${onReprint && !isVoided ? `<div class="sr-reprint"><button class="btn sr-reprint-btn">Reprint Receipt</button></div>` : ''}
       </div>`;
 
     this._parentElement.appendChild(el);
@@ -463,15 +469,22 @@ class CashflowView extends View {
         amount: document.querySelector("#expenseAmount").value,
         description: document.querySelector("#expenseDescription").value.trim(),
         category: document.querySelector("#expenseCategory").value.trim(),
-        expense_date: new Date(document.querySelector("#expenseDate").value).toISOString(),
+        expense_date: new Date().toISOString(),
       };
       handler(data);
     });
   }
 
   _addHandlerOpenSaleReceipt(handler) {
+    // Sales list
     document.querySelector("#cashflowSalesList").addEventListener("click", (e) => {
       if (e.target.closest(".cashflow-void-btn")) return;
+      const row = e.target.closest(".cashflow-row[data-sale-id]");
+      if (!row) return;
+      handler(row.dataset.saleId);
+    });
+    // Voided list — click row to view receipt
+    document.querySelector("#cashflowVoidedList").addEventListener("click", (e) => {
       const row = e.target.closest(".cashflow-row[data-sale-id]");
       if (!row) return;
       handler(row.dataset.saleId);
@@ -500,13 +513,6 @@ class CashflowView extends View {
     });
   }
 
-  _addHandlerRestore(handler) {
-    document.querySelector("#cashflowVoidedList").addEventListener("click", (e) => {
-      const btn = e.target.closest(".cashflow-restore-btn");
-      if (!btn) return;
-      handler(btn.dataset.saleId);
-    });
-  }
 
   _addHandlerTabChange() {
     this._parentElement.querySelector(".cashflow-tabs").addEventListener("click", (e) => {

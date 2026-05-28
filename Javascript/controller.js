@@ -331,6 +331,7 @@ const controlMarkOrderDone = function (id, timedOut = false) {
     dismissToast();
     try {
       await model.recordServeTime(id, timedOut);
+      _loadServingComparison();
     } catch (_) {}
   }, UNDO_WINDOW_MS);
 
@@ -341,7 +342,7 @@ const controlMarkOrderDone = function (id, timedOut = false) {
 const controlOpenKDSWindow = function () {
   const { width, height } = model.state.settings.kdsWindowSize;
   const win = window.open('kds-display.html', 'pointy-kds', `width=${width},height=${height},menubar=no,toolbar=no,location=no`);
-  if (!win) showToast('Popup was blocked. Allow popups for this site to open the Kitchen Display.', 'error');
+  if (!win) showToast('Popup was blocked. Allow popups for this site to open the Queue Display.', 'error');
   else win.focus();
 };
 
@@ -638,11 +639,24 @@ const controlSubmitTicket = async function () {
   }
 };
 
-const controlSaveBusinessInfo = async function ({ name, email, phone }) {
+const controlGenerateTimeclockToken = async function () {
+  const btn = document.getElementById('tcGenerateTokenBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+  try {
+    const token = await model.generateTimeclockToken();
+    SettingsView.showTimeclockToken(token);
+  } catch (err) {
+    showToast('Failed to generate code', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+};
+
+const controlSaveBusinessInfo = async function ({ name, email, phone, timezone }) {
   const btn = document.getElementById('saveBusinessInfoBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
-    await model.saveBusinessInfo({ name, email, phone });
+    await model.saveBusinessInfo({ name, email, phone, timezone });
     SettingsView.showBusinessSaveStatus(true, 'Changes saved');
   } catch (err) {
     SettingsView.showBusinessSaveStatus(false, err.message ?? 'Failed to save');
@@ -653,10 +667,13 @@ const controlSaveBusinessInfo = async function ({ name, email, phone }) {
 
 const controlOpenSettings = function () {
   if (model.state.role === 'Admin') {
+    const isOwner = model.state.userId === model.state.businessId;
     SettingsView.syncBusinessInfo({
-      name:  model.state.businessName  ?? '',
-      email: model.state.businessEmail ?? model.state.currentStaff?.email ?? '',
-      phone: model.state.businessPhone ?? '',
+      name:     model.state.businessName     ?? '',
+      email:    model.state.businessEmail    ?? model.state.currentStaff?.email ?? '',
+      phone:    model.state.businessPhone    ?? '',
+      timezone: model.state.businessTimezone ?? null,
+      isOwner,
     });
   }
   SettingsView.renderAdjustments(model.state.settings.adjustments);
@@ -1196,12 +1213,8 @@ const _loadServingComparison = async function () {
   const vsEl  = document.getElementById('homeServingVs');
   if (!valEl) return;
   try {
-    const now = new Date();
-    const todayStart     = new Date(now); todayStart.setHours(0, 0, 0, 0);
-    const todayEnd       = new Date(now); todayEnd.setHours(23, 59, 59, 999);
-    const yest           = new Date(now); yest.setDate(now.getDate() - 1);
-    const yesterdayStart = new Date(yest); yesterdayStart.setHours(0, 0, 0, 0);
-    const yesterdayEnd   = new Date(yest); yesterdayEnd.setHours(23, 59, 59, 999);
+    const { start: todayStart, end: todayEnd } = _getBizDayBounds();
+    const { start: yesterdayStart, end: yesterdayEnd } = _getBizDayBounds(new Date(Date.now() - 86400000));
 
     const [today, yesterday] = await Promise.all([
       model.fetchPeriodTotals(todayStart.toISOString(), todayEnd.toISOString()),
@@ -1304,16 +1317,13 @@ const _getCashflowRange = function (period, from, to) {
     d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
   if (period === "today") {
-    const start = new Date(now); start.setHours(0, 0, 0, 0);
-    const end   = new Date(now); end.setHours(23, 59, 59, 999);
+    const { start, end } = _getBizDayBounds(now);
     return { startISO: start.toISOString(), endISO: end.toISOString(), label: fmt(now) };
   }
 
   if (period === "yesterday") {
-    const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
-    const start = new Date(yesterday); start.setHours(0, 0, 0, 0);
-    const end   = new Date(yesterday); end.setHours(23, 59, 59, 999);
-    return { startISO: start.toISOString(), endISO: end.toISOString(), label: `Yesterday · ${fmt(yesterday)}` };
+    const { start, end } = _getBizDayBounds(new Date(Date.now() - 86400000));
+    return { startISO: start.toISOString(), endISO: end.toISOString(), label: `Yesterday · ${fmt(start)}` };
   }
 
   if (period === "week") {
@@ -1471,10 +1481,32 @@ const controlAddExpense = async function (data) {
   }
 };
 
+// ── Timezone-aware date helpers ───────────────────────────────────────────────
+// Returns { start: Date, end: Date } for the calendar day that contains `date`
+// in the business's configured IANA timezone (falls back to browser timezone).
+const _dayBoundsInTz = function (date, tz) {
+  // Format the date as "YYYY-MM-DD HH:mm:ss" in the target timezone (sv-SE gives ISO-style output)
+  const dtStr = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: tz,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).format(date).replace(' ', 'T');
+  // Compute UTC offset by comparing tz-local time (treated as UTC) vs actual UTC ms
+  const offsetMs = date.getTime() - new Date(dtStr + 'Z').getTime();
+  const dayStr = dtStr.slice(0, 10); // "YYYY-MM-DD"
+  const startMs = new Date(dayStr + 'T00:00:00Z').getTime() + offsetMs;
+  return { start: new Date(startMs), end: new Date(startMs + 86400000 - 1) };
+};
+
+const _getBizDayBounds = function (date = new Date()) {
+  const tz = model.state.businessTimezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return _dayBoundsInTz(date, tz);
+};
+
 const _isToday = (isoStr) => {
   const d = new Date(isoStr);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  const { start, end } = _getBizDayBounds();
+  return d >= start && d <= end;
 };
 
 const _executeVoid = async function (id, voidedBy) {
@@ -1500,7 +1532,7 @@ const controlVoidTransaction = function (id) {
 
   if (_cashflowCanEdit()) {
     CashflowView.showConfirmModal({
-      message: 'Void this transaction? It will be removed from reports and the active queue.',
+      message: 'Void this transaction? It will be removed from reports and the active queue. This cannot be undone.',
       confirmLabel: 'Void',
       cancelLabel: 'Cancel',
       onConfirm: () => doVoid([modelState.currentStaff?.firstName, modelState.currentStaff?.lastName].filter(Boolean).join(' ') || 'Admin'),
@@ -1518,62 +1550,6 @@ const controlVoidTransaction = function (id) {
   }
 };
 
-const _executeRestore = async function (id) {
-  const restored = await model.restoreSale(id);
-  _clearCashflowCache();
-  if (restored.prepared_at === null) {
-    const queueItem = {
-      id: restored.id,
-      saleDate: restored.sale_date,
-      items: restored.items,
-      startedAt: new Date(restored.sale_date).getTime(),
-      totalPrice: Number(restored.total_price),
-      orderType: restored.order_type ?? null,
-      ticketNumber: restored.ticket_number ?? null,
-    };
-    modelState.orderQueue = [...modelState.orderQueue, queueItem].sort((a, b) => a.startedAt - b.startedAt);
-    KDSView.renderQueue(modelState.orderQueue);
-    channel.postMessage({
-      type: MSG.KDS_QUEUE_SYNC,
-      queue: modelState.orderQueue,
-      thresholds: { yellow: modelState.settings.kdsYellowThreshold, red: modelState.settings.kdsRedThreshold },
-    });
-  }
-  CashflowView.renderSummary(_cashflowSummary());
-  _renderCashflowLists();
-  const restoredInCashflow = modelState.cashflowSales.find(s => s.id === restored.id);
-  if (restoredInCashflow && _isToday(restored.sale_date)) {
-    refreshTodaySalesDisplay();
-    if (_todayTransactionCount !== null) { _todayTransactionCount++; _updateTransactionBadge(); }
-  }
-  showToast('Transaction restored.', 'success');
-};
-
-const controlRestoreTransaction = function (id) {
-  const doRestore = async (authorized) => {
-    try { await _executeRestore(id); }
-    catch (err) { showToast(err.message ?? err); }
-  };
-
-  if (_cashflowCanEdit()) {
-    CashflowView.showConfirmModal({
-      message: 'Restore this transaction? It will reappear in reports.',
-      confirmLabel: 'Restore',
-      cancelLabel: 'Cancel',
-      onConfirm: doRestore,
-    });
-  } else {
-    CashflowView.showOverrideModal(async (email, password) => {
-      try {
-        await model.verifyOverrideCredentials(email, password);
-        CashflowView.hideOverrideModal();
-        await _executeRestore(id);
-      } catch (err) {
-        CashflowView.setOverrideError(err.message ?? 'Authorization failed.');
-      }
-    });
-  }
-};
 
 const _generateAndDownloadCSV = function () {
   const periodLabel = document.querySelector("#cashflowPeriodLabel")?.textContent ?? "cashflow";
@@ -1664,7 +1640,8 @@ const controlReprintSale = async function (sale) {
 };
 
 const controlOpenSaleReceipt = function (id) {
-  const sale = modelState.cashflowSales.find((s) => s.id === id);
+  const sale = modelState.cashflowSales.find((s) => s.id === id)
+    ?? modelState.voidedSales.find((s) => s.id === id);
   if (sale) CashflowView.showSaleReceipt(sale, () => controlReprintSale(sale));
 };
 
@@ -1883,13 +1860,14 @@ const controlEditStaffRole = function (staffId) {
   const staff = model.state.staff.find(s => s.id === staffId);
   if (!staff) return;
   const { onSave } = StaffView.showEditRoleModal(staff, model.state.roles);
-  onSave(async (roleId) => {
+  onSave(async (roleId, hourlyRate) => {
     try {
       await model.updateStaffRole(staffId, roleId);
+      if (hourlyRate !== undefined) await model.updateStaffHourlyRate(staffId, hourlyRate);
       StaffView.render(model.state.staff, _staffCanManage());
-      showToast('Role updated.', 'success');
+      showToast('Staff updated.', 'success');
     } catch (err) {
-      showToast(err.message ?? 'Could not update role.');
+      showToast(err.message ?? 'Could not update staff.');
     }
   });
 };
@@ -1943,6 +1921,72 @@ const controlRemoveStaff = async function (id) {
     showToast('Staff member removed.', 'success');
   } catch (err) {
     showToast(err.message ?? err);
+  }
+};
+
+// ── Payroll / Timesheets ──────────────────────────────────────────────────────
+
+let _tsType  = 'week';
+let _tsValue = null;
+
+const controlFetchTimesheets = async function (type, value) {
+  try {
+    let startISO, endISO, label, resolvedValue;
+    if (type === 'custom') {
+      const start = new Date(value.from + 'T00:00:00'); start.setHours(0, 0, 0, 0);
+      const end   = new Date(value.to   + 'T00:00:00'); end.setHours(23, 59, 59, 999);
+      startISO = start.toISOString();
+      endISO   = end.toISOString();
+      const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      label = `${fmt(start)} – ${fmt(end)}`;
+      resolvedValue = value;
+    } else {
+      const range = _getRangeFromValue(type, value);
+      ({ startISO, endISO, label } = range);
+      if (type === 'week') {
+        const monday = new Date(startISO);
+        resolvedValue = `${monday.getFullYear()}-${String(monday.getMonth()+1).padStart(2,'0')}-${String(monday.getDate()).padStart(2,'0')}`;
+      } else {
+        resolvedValue = value;
+      }
+    }
+    _tsType  = type;
+    _tsValue = resolvedValue;
+    await model.fetchShifts(startISO, endISO);
+    const canEdit = model.state.role === 'Admin' || model.state.userId === model.state.businessId;
+    StaffView.renderTimesheets(model.state.shifts, model.state.staff, canEdit, { type, value: resolvedValue, label });
+  } catch (err) {
+    showToast(err.message ?? 'Failed to load timesheets');
+  }
+};
+
+const controlSaveShift = async function (data) {
+  const canEdit = model.state.role === 'Admin' || model.state.userId === model.state.businessId;
+  if (!canEdit) { showToast('Only admins can edit shifts.', 'error'); return; }
+  try {
+    if (data.id) {
+      await model.updateShift(data);
+    } else {
+      await model.addShift(data);
+    }
+    showToast('Shift saved.', 'success');
+    await controlFetchTimesheets(_tsType, _tsValue);
+  } catch (err) {
+    showToast(err.message ?? 'Failed to save shift');
+  }
+};
+
+const controlSaveHourlyRate = async function (staffId, rate) {
+  const canEdit = model.state.role === 'Admin' || model.state.userId === model.state.businessId;
+  if (!canEdit) { showToast('Only admins can edit pay rates.', 'error'); return; }
+  try {
+    const parsed = rate === '' ? null : parseFloat(rate);
+    if (parsed !== null && (isNaN(parsed) || parsed < 0)) { showToast('Enter a valid hourly rate.', 'error'); return; }
+    await model.updateStaffHourlyRate(staffId, parsed);
+    showToast('Hourly rate saved.', 'success');
+    if (_tsValue) await controlFetchTimesheets(_tsType, _tsValue);
+  } catch (err) {
+    showToast(err.message ?? 'Failed to save rate');
   }
 };
 
@@ -3103,6 +3147,7 @@ const _wireApp = function () {
   SettingsView._addHandlerClose();
   SettingsView._addHandlerNavTabs();
   SettingsView._addHandlerSaveBusinessInfo(controlSaveBusinessInfo);
+  SettingsView._addHandlerGenerateTimeclockToken(controlGenerateTimeclockToken);
   MenuListView._addHandlerAddCategory(controlAddCategoryFromSettings);
   MenuListView._addHandlerDeleteCategory(controlDeleteCategory);
   SettingsView._addHandlerAdd();
@@ -3136,7 +3181,6 @@ const _wireApp = function () {
   CashflowView._addHandlerOpenSaleReceipt(controlOpenSaleReceipt);
   CashflowView._addHandlerExport(controlExportCSV);
   CashflowView._addHandlerVoid(controlVoidTransaction);
-  CashflowView._addHandlerRestore(controlRestoreTransaction);
   CashflowView._addHandlerTabChange();
   CashflowView._addHandlerOverrideModal();
 
@@ -3249,6 +3293,12 @@ const _wireApp = function () {
   StaffView._addHandlerRemove(controlRemoveStaff);
   StaffView._addHandlerEditRole(controlEditStaffRole);
   StaffView._addHandlerSetPin(controlSetStaffPin);
+  StaffView._addHandlerPayrollTab(() => {
+    const d = new Date();
+    controlFetchTimesheets('week', `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  });
+  StaffView._addHandlerTimesheetPeriod(controlFetchTimesheets);
+  StaffView._addHandlerSaveShift(controlSaveShift);
 };
 
 const initAuth = async function () {

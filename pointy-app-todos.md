@@ -3,6 +3,8 @@
 This file tracks features and integrations that need to be added to the main Pointy app
 to support the admin panel. Add to this list as we build more admin features.
 
+_Last updated: 2026-05-24_
+
 ---
 
 > ### Sync Process
@@ -20,15 +22,15 @@ to support the admin panel. Add to this list as we build more admin features.
 ## Priority Checklist
 
 ### 🔴 Tier 1 — Ready to Build Now
-- [x] ~~**Show admin replies inside a ticket** — businesses currently see no replies at all (see item A below)~~ ✅ shipped
-- [x] ~~**Clear unread badge when business opens ticket** — set `has_unread_reply = false` on open (see item C below)~~ ✅ shipped
-- [x] ~~**Business can reply to tickets** — add reply input + insert into `ticket_replies` with `sender_type: 'business'` (see item B below). Run the insert policy SQL in item B before building.~~ ✅ shipped (insert policy confirmed working)
-- [x] ~~**Show ticket ID in the Pointy app** — display `#XXXXXXXX` on ticket detail screen (see item 9)~~ ✅ shipped
+- [x] ~~**Show admin replies inside a ticket**~~ ✅ shipped
+- [x] ~~**Clear unread badge when business opens ticket**~~ ✅ shipped
+- [x] ~~**Business can reply to tickets** (insert policy confirmed working)~~ ✅ shipped
+- [x] ~~**Show ticket ID in the Pointy app**~~ ✅ shipped
 - [ ] **Enforce staff `is_active` on login** — admin panel can now deactivate staff members. The Pointy app must check `is_active = false` for the logged-in staff user and block access (show "Your account has been deactivated" or redirect to login). Without this, removed staff can still use the app. (see item 14)
 
 ### 🟡 Tier 2 — Next After Tier 1
-- [x] ~~**Business reply badge for admin panel** — when a business sends a reply, signal the admin panel so they see a badge/indicator on that ticket. Mirrors `has_unread_reply` but in reverse. (see item 16)~~ ✅ shipped
-- [x] ~~**Post-ticket rating** — prompt business to rate support after ticket is solved (see item 8). Run the ALTER TABLE SQL in item 8 before building.~~ ✅ shipped
+- [x] ~~**Business reply badge for admin panel** — `has_business_reply` flag~~ ✅ shipped
+- [x] ~~**Post-ticket rating** — prompt after ticket solved~~ ✅ shipped
 - [ ] **Source ID tracking on registration** — read `?source=` param from URL, fire funnel events to `registration_events` table: `link_opened`, `form_viewed`, `form_started`, `form_abandoned`, `registered` (pass `source_id` + anonymous `session_id` on each event). SQL tables already created in admin panel setup.
 - [ ] **Subscription status realtime sync** — when an admin overrides free ↔ paid from the admin panel, the Pointy app won't see the change until logout/login. Add a Supabase realtime subscription on the `businesses` row for the logged-in user so feature gating updates instantly. (see item 15)
 - [ ] **PostHog: user identification** — `posthog.identify()` on login + key events (see item 2)
@@ -49,99 +51,20 @@ to support the admin panel. Add to this list as we build more admin features.
 - [ ] **Forgot Password (Pointy app)** — "Forgot password?" link on login screen → Supabase recovery email → password reset page. Technically works with Supabase's built-in email today, but the recovery link `redirectTo` URL needs a real domain. Move to Tier 1 once domain is live.
 - [ ] **2FA** — opt-in TOTP for business owner accounts (see item 13)
 - [ ] **Custom email sender domain** — for Supabase auth emails and future notifications
-
----
+- [ ] **Time Clock PIN during invite acceptance** — when a staff member accepts their invite email, redirect them to a "Set Your PIN" onboarding page (same keypad UI) so their PIN is created before they ever touch the time clock. Currently PIN is required on first timeclock login instead. Requires company domain for the Supabase `redirectTo` URL on the invite link.
 
 ---
 
 ## ✅ DONE — Skip These
 - ~~**Item 1** (Support Ticket Submission) — shipped~~
 - ~~**Item 6** (Business Contact Info — Email & Phone) — shipped, columns exist~~
-- ~~**Realtime badge** (Ticket Replies Section B) — confirmed working, businesses receive admin replies in real time~~
+- ~~**Realtime badge** (Ticket Replies Section B) — confirmed working~~
 - ~~**Item A** (Show admin replies inside a ticket) — shipped~~
 - ~~**Item B** (Business can reply to tickets) — shipped, insert RLS policy confirmed working~~
 - ~~**Item C** (Clear unread badge on open) — shipped~~
 - ~~**Item 9** (Show ticket ID) — shipped~~
-
----
-
-## ~~🆕 NEW — Ticket Replies: Still Needed~~ ✅ ALL DONE
-
-### A) Show admin replies inside a ticket ← NOT DONE YET
-
-When a business opens a ticket, fetch and display admin replies below the original message. **Businesses currently see no replies at all** — the thread is one-sided.
-
-```js
-const { data: replies } = await supabase
-  .from('ticket_replies')
-  .select('id, sender_type, message, created_at')
-  .eq('ticket_id', ticketId)
-  .order('created_at', { ascending: true })
-```
-
-Render each reply in order. `sender_type` will be `'admin'` for our replies. Style them clearly as "from support" — different color/alignment from the original message.
-
-### B) Unread badge ~~✅ DONE — realtime is working~~
-
-The `has_unread_reply` flag and realtime subscription are confirmed working. Badge lights up when admin replies. No changes needed here.
-
-### C) Clear the badge when business opens that ticket ← CONFIRM THIS IS DONE
-
-When the business taps into a ticket to read it, make sure `has_unread_reply` is being set to `false`:
-
-```js
-await supabase
-  .from('tickets')
-  .update({ has_unread_reply: false })
-  .eq('id', ticketId)
-```
-
----
-
-## ⚠️ IMPORTANT — Businesses Cannot Reply to Tickets
-
-Right now, **clients can only submit a ticket and read admin replies — they cannot send follow-up messages.** This is a known limitation of the current design.
-
-If you want clients to be able to reply back (instead of just reading):
-
-1. Add a reply input to the ticket detail screen in the Pointy app
-2. Insert into `ticket_replies` with `sender_type: 'business'`:
-
-```js
-await supabase.from('ticket_replies').insert({
-  ticket_id: ticketId,
-  sender_type: 'business',
-  message: replyText,
-})
-```
-
-3. The RLS policy `"business read own replies"` already allows businesses to read replies on their tickets. You'll also need an **insert policy** for businesses — **use this exact version** which also blocks replies on solved tickets at the database level:
-
-```sql
-CREATE POLICY "business insert own replies" ON public.ticket_replies
-  FOR INSERT WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.tickets t
-      WHERE t.id = ticket_id
-        AND t.business_id = auth.uid()
-        AND t.status = 'open'
-    )
-  );
-```
-
-> The `AND t.status = 'open'` check is important — it prevents businesses from replying to solved tickets at the DB level, not just in the UI.
-
-> **Design decision:** Should a business reply re-open a solved ticket? If yes, also update `tickets.status` back to `'open'` when they insert a reply. If no, the policy above already blocks it.
-
----
-
-## ~~1. Support Ticket Submission~~ ✅ DONE
-
-~~Businesses need a way to submit tickets from within the app.~~
-
-~~**Where to add it:** Settings page or a Help/Support section.~~
-
-~~Shipped — businesses can submit tickets with category, subject, message, and optional image attachment.~~
+- ~~**Item 16** (Business reply badge — `has_business_reply`) — shipped~~
+- ~~**Item 8** (Post-ticket rating) — shipped~~
 
 ---
 
@@ -256,14 +179,6 @@ window.addEventListener('beforeunload', () => {
 
 ---
 
-## ~~6. Business Contact Info — Email & Phone~~ ✅ DONE
-
-~~Collect email and phone during signup (or in the Settings page), then save to Supabase.~~
-
-~~Shipped — `businesses.email` and `businesses.phone` columns exist. CSV exports now populate automatically.~~
-
----
-
 ## 7. Mass Emailing — Future Feature (direction not finalized)
 
 The goal is to let admins send bulk emails to segmented lists from the admin panel — e.g. churned businesses, churn risks, inactive accounts, etc.
@@ -285,52 +200,6 @@ The goal is to let admins send bulk emails to segmented lists from the admin pan
 - Do we want a template editor inside the admin panel, or just a plain textarea?
 - Should businesses be able to unsubscribe from admin emails, and if so how do we track that?
 - Do we send from a custom domain (e.g. `hello@pointy.app`)? If yes, domain needs to be set up in the email provider first.
-
----
-
-## 8. Rate This Conversation — Post-Ticket Rating
-
-After a ticket is solved, prompt the business to rate their support experience.
-
-**When to show it:** When the business opens a solved ticket (or immediately after they mark it solved), show a simple rating prompt.
-
-**Suggested UI:** A row of stars or emoji (😞 😐 😊) with an optional short comment field.
-
-**What to store:** Add columns to the `tickets` table:
-
-```sql
-ALTER TABLE public.tickets ADD COLUMN rating smallint; -- 1–5
-ALTER TABLE public.tickets ADD COLUMN rating_comment text;
-ALTER TABLE public.tickets ADD COLUMN rated_at timestamptz;
-```
-
-**Business side — submit rating:**
-```js
-await supabase
-  .from('tickets')
-  .update({ rating: selectedRating, rating_comment: comment, rated_at: new Date().toISOString() })
-  .eq('id', ticketId)
-```
-
-**Admin panel side:** Show the rating on the solved ticket detail view. Useful for spotting poor support interactions.
-
-**Notes:**
-- Only show the prompt once — if `rating` is already set, skip it
-- Optional: surface average rating per admin or per time period in the admin panel later
-
----
-
-## 9. Show Ticket ID in the Pointy App
-
-The admin panel now displays a short ticket ID (e.g. `#523D4AB6`) on every ticket card and in the thread view. Businesses should see the same ID so they can reference it when following up with support.
-
-**Where to show it:** On the ticket detail screen in the Pointy app, below the ticket subject — same position as in the admin panel.
-
-**How to generate it** (no DB change needed — derived from the existing `tickets.id` UUID):
-```js
-const ticketId = (id) => '#' + id.replace(/-/g, '').slice(0, 8).toUpperCase()
-// e.g. "550e8400-e29b-41d4-a716-446655440000" → "#550E8400"
-```
 
 ---
 
@@ -473,8 +342,6 @@ For business owners, 2FA can be opt-in rather than required. Add a toggle in the
 
 ---
 
----
-
 ## 14. Staff Deactivation Enforcement
 
 When an admin removes a staff member from the admin panel, that staff member's `is_active` flag is set to `false` in the `staff` table. The Pointy app needs to enforce this on every session restore or login.
@@ -530,43 +397,7 @@ const channel = supabase
 - Clean up the channel on logout (`supabase.removeChannel(channel)`)
 - Works for both admin overrides and future Stripe webhooks since both write to the same column
 
-## 16. Business Reply Badge — Admin Panel Notification
-
-When a business sends a follow-up reply on a ticket, the admin panel currently has no way to know a response came in unless they manually refresh. This mirrors the existing `has_unread_reply` flag (admin → business) but in reverse.
-
-### Schema change (run before building)
-
-```sql
-ALTER TABLE public.tickets ADD COLUMN has_business_reply boolean NOT NULL DEFAULT false;
-```
-
-### Pointy app change
-
-When a business inserts a reply, set the flag on the ticket:
-
-```js
-// In controlSendReply, after model.submitTicketReply succeeds:
-await supabase
-  .from('tickets')
-  .update({ has_business_reply: true })
-  .eq('id', ticketId);
-```
-
-Or handle it entirely in `model.submitTicketReply` so the flag is always kept in sync.
-
-### Admin panel change
-
-- Show a badge or indicator on any ticket row where `has_business_reply = true`
-- When the admin opens that ticket thread, clear the flag:
-
-```js
-await supabase
-  .from('tickets')
-  .update({ has_business_reply: false })
-  .eq('id', ticketId)
-```
-
-- Optionally add a realtime subscription so the admin panel updates live when a business replies
+---
 
 ## 18. Free Tier vs Premium Tier
 
@@ -610,6 +441,8 @@ Allow businesses to generate and send invoices to customers directly from the PO
 - Is PDF generation done client-side (e.g. `jsPDF`) or via a Supabase Edge Function?
 - Should unpaid invoices feed into cashflow / reports?
 - Do we need a customer contacts table to attach invoices to?
+
+---
 
 ## 19. Staff Invitation Emails
 

@@ -87,17 +87,24 @@ The frontend follows a strict **Model → Controller → View** pattern. No fram
 
 Each view is a class that extends the base `View`. It owns one DOM element and follows a consistent pattern:
 
-| File                   | What it renders                             |
-| ---------------------- | ------------------------------------------- |
-| `authView.js`          | Login / sign-up overlay                     |
-| `newOrderView.js`      | Active order / cart                         |
-| `newOrderItemView.js`  | Item picker + variant selector modal        |
-| `orderCheckoutView.js` | Payment screen, receipt, adjustments        |
-| `menuListView.js`      | Browse all menu items                       |
-| `newMenuItemView.js`   | Add new item form                           |
-| `menuEditView.js`      | Edit existing item form                     |
-| `settingsView.js`      | Categories + adjustment templates           |
-| `view.js`              | Base class (render, spinner, success modal) |
+| File                   | What it renders                                                         |
+| ---------------------- | ----------------------------------------------------------------------- |
+| `authView.js`          | Login / sign-up overlay                                                 |
+| `newOrderView.js`      | Active order / cart                                                     |
+| `newOrderItemView.js`  | Item picker + variant selector modal                                    |
+| `orderCheckoutView.js` | Payment screen, receipt, adjustments                                    |
+| `menuListView.js`      | Browse all menu items                                                   |
+| `newMenuItemView.js`   | Add new item form                                                       |
+| `menuEditView.js`      | Edit existing item form (dynamically injected)                          |
+| `settingsView.js`      | Settings panel: categories, adjustments, toggles, display config        |
+| `cashflowView.js`      | Cashflow panel: summary cards, sales list, expenses, export             |
+| `receiptView.js`       | Thermal receipt generator (80mm format) + popup print                  |
+| `kdsView.js`           | Home page active queue inline list: rows, timers, status badges         |
+| `discountView.js`      | Discount code management panel                                          |
+| `staffView.js`         | Staff panel: members list, roles tab, payroll tab (timesheets, pay summary, export)  |
+| `reportsView.js`       | Reports/Analytics dashboard: KPI strip, charts, compare mode           |
+| `supportView.js`       | Help & Support panel: ticket list, thread view, reply, post-ticket rating |
+| `view.js`              | Base class (render, spinner, success modal)                             |
 
 **Rule:** Views never talk to the model directly. They only fire handler callbacks that the controller provided.
 
@@ -120,52 +127,106 @@ Supabase provides three services used by Pointy:
 
 ### 2. Database (PostgreSQL)
 
-Five tables, all scoped to a `user_id` so data is fully isolated per account:
+All data is scoped to a `business_id` (the owner's Supabase auth UID). Every table has RLS enabled.
+
+**`businesses`**
+
+```
+id, name, email, phone, timezone, timeclock_token, created_at
+```
+
+**`staff`**
+
+```
+id, business_id, first_name, last_name, email, role_id (→ roles),
+pin, status ('active'|'pending'), hourly_rate, created_at
+```
+
+**`roles`**
+
+```
+id, business_id, name, permissions (JSONB), created_at
+```
 
 **`menu_items`**
 
 ```
-id, user_id, item_name, price, category, image_url,
+id, business_id, item_name, price, category, image_url,
 stock, has_variants, variants (JSONB), description,
-status, created_at
+is_active, created_at
 ```
 
 **`menu_categories`**
 
 ```
-id, user_id, name, created_at
-unique(user_id, name)
+id, business_id, name, created_at
+unique(business_id, name)
 ```
 
 **`adjustments`** — fee/discount templates configured in Settings
 
 ```
-id, user_id, name, type (fee|discount),
+id, business_id, name, type (fee|discount),
 calculation (fixed|percentage), value, enabled, created_at
 ```
 
 **`sales`** — completed transaction records
 
 ```
-id, user_id, subtotal, total_price, customer_payment,
-customer_change, items (JSONB), adjustments (JSONB),
-sale_date
+id, business_id, subtotal, total_price, customer_payment, customer_change,
+items (JSONB), adjustments (JSONB), promo_code (JSONB),
+sale_date, cashier_name, added_by, logged_in_cashier,
+order_type ('dine_in'|'takeout'|null), ticket_number,
+prepared_at (null = active in KDS), voided_at
 ```
 
-**`employees`**
+**`expenses`**
 
 ```
-id, user_id, name, role, system_role, created_at
+id, business_id, description, amount, expense_date, created_at
 ```
 
-> `items` and `adjustments` in the sales table are **JSONB snapshots** — a frozen copy of exactly what was in the cart at the time of sale. This means historical records are never affected by future edits to menu items.
+**`discount_codes`**
+
+```
+id, business_id, code, title, description, type, value,
+status, usage_count, usage_limit, created_at
+```
+
+**`shifts`**
+
+```
+id, business_id, staff_id (→ staff), clocked_in_at, clocked_out_at,
+note, created_at
+```
+
+**`shift_breaks`**
+
+```
+id, shift_id (→ shifts), started_at, ended_at, created_at
+```
+
+**`support_tickets`**
+
+```
+id, business_id, category, subject, message, attachments (JSONB),
+status, has_unread_reply, has_biz_reply, solved_at,
+rating, rating_comment, rated_at, created_at
+```
+
+**`ticket_replies`**
+
+```
+id, ticket_id (→ support_tickets), sender_type ('business'|'support'),
+message, created_at
+```
+
+> `items`, `adjustments`, and `promo_code` in the sales table are **JSONB snapshots** — a frozen copy of what was in the cart at the time of sale. Historical records are never affected by future menu edits.
 
 ### 3. Storage
 
-- Bucket: `item-images`
-- Images are uploaded per-user under a folder named after their `user_id`
-- Bucket is public (images are viewable without auth)
-- Write/delete restricted to the owning user via storage RLS policies
+- Bucket: `item-images` — menu item photos; public read, write restricted to owner via RLS
+- Bucket: `ticket-attachments` — support ticket file uploads; public read, write restricted to owner via RLS
 
 ---
 
@@ -174,11 +235,13 @@ id, user_id, name, role, system_role, created_at
 Every table has RLS enabled. The policy on every table follows the same pattern:
 
 ```sql
--- Users can only select/insert/update/delete their own rows
-using (auth.uid() = user_id)
+-- Users can only select/insert/update/delete rows belonging to their business
+using (business_id = auth.uid())
 ```
 
-This means even if someone obtained another user's `user_id`, they could not read or modify that user's data — the database enforces it, not the application code. There is no way to bypass this from the client.
+This means even if someone obtained another user's `business_id`, they could not read or modify that user's data — the database enforces it, not the application code. There is no way to bypass this from the client.
+
+> **Grant policy (enforced Oct 30, 2026):** Every new table migration must include an explicit `GRANT SELECT, INSERT, UPDATE, DELETE ON public.your_table TO authenticated;` or PostgREST returns a `42501` error. See `pointy-admin-updates.md` for all migration history.
 
 ---
 
@@ -245,30 +308,47 @@ App loads
 
 ```
 Pointy Project/
-├── index.html              — App shell + all modal HTML templates
-├── pointy.css              — Single unified stylesheet
-├── Pointy.png              — App logo
-├── .env                    — Supabase URL + anon key (not committed)
-├── package.json            — npm scripts (start, build)
-├── ARCHITECTURE.md         — This file
-├── MIGRATION_PLAN.md       — Supabase migration tracker (all done)
+├── index.html                  — App shell + all modal HTML templates
+├── kds-display.html            — Kitchen Display System popup window
+├── customer-display.html       — Customer-Facing Display popup window
+├── timeclock.html              — Staff time clock page (device registration + staff clock in/out/break)
+├── pointy.css                  — Single unified stylesheet
+├── Pointy.png                  — App logo
+├── .env                        — Supabase URL + anon key (not committed)
+├── package.json                — npm scripts (start, build)
+├── ARCHITECTURE.md             — This file
+├── SYSTEM.md                   — Full feature workflow reference
+├── CLAUDE.md                   — AI assistant instructions
+├── pointy-admin-updates.md     — Backend migration log for admin panel team
+├── pointy-app-todos.md         — Roadmap / in-progress work
 │
 └── Javascript/
-    ├── controller.js       — App entry point, wires everything
-    ├── model.js            — All state + Supabase operations
-    ├── supabase.js         — Supabase client init
-    ├── pointy.js           — Theme toggle (light/dark mode)
+    ├── controller.js           — App entry point, wires everything
+    ├── model.js                — All state + Supabase operations
+    ├── supabase.js             — Supabase client init
+    ├── pointy.js               — Theme toggle (light/dark mode)
+    ├── channel.js              — PointyChannel (Supabase Realtime + BroadcastChannel)
+    ├── kds-display.js          — KDS popup logic
+    ├── customer-display.js     — CFD popup logic
+    ├── timeclock.js            — Staff time clock standalone logic (device auth, clock in/out/break, PIN confirmation)
     │
     └── Views/
-        ├── view.js         — Base view class
-        ├── authView.js     — Login / sign-up
-        ├── newOrderView.js — Order / cart
-        ├── newOrderItemView.js  — Item picker modal
-        ├── orderCheckoutView.js — Payment + receipt
-        ├── menuListView.js      — Menu browser
-        ├── newMenuItemView.js   — Add item form
-        ├── menuEditView.js      — Edit item form
-        └── settingsView.js      — Settings panel
+        ├── view.js             — Base view class
+        ├── authView.js         — Login / sign-up
+        ├── newOrderView.js     — Order / cart
+        ├── newOrderItemView.js — Item picker + variant selector modal
+        ├── orderCheckoutView.js— Payment screen, receipt, adjustments
+        ├── menuListView.js     — Menu browser
+        ├── newMenuItemView.js  — Add item form
+        ├── menuEditView.js     — Edit item form (dynamically injected)
+        ├── settingsView.js     — Settings panel
+        ├── cashflowView.js     — Cashflow panel: sales, expenses, export
+        ├── receiptView.js      — Thermal receipt generator (80mm)
+        ├── kdsView.js          — Home page active queue inline list
+        ├── discountView.js     — Discount code management
+        ├── staffView.js        — Staff panel: members, roles, payroll
+        ├── reportsView.js      — Reports/Analytics dashboard
+        └── supportView.js      — Help & Support panel
 ```
 
 ---
@@ -289,15 +369,38 @@ Speed. Writing every cart change to the database would add latency to every tap.
 
 ---
 
+## Built Features (summary)
+
+| Feature                                | Status  |
+| -------------------------------------- | ------- |
+| Auth (sign in / sign up / sign out)    | ✅ Live |
+| Menu management (CRUD + variants)      | ✅ Live |
+| New order + cart                       | ✅ Live |
+| Checkout + receipt printing            | ✅ Live |
+| Per-receipt adjustments (fees/discounts) | ✅ Live |
+| Promo / discount codes                 | ✅ Live |
+| Cashflow panel (sales + expenses)      | ✅ Live |
+| Reports / Analytics dashboard          | ✅ Live |
+| Multi-staff with roles + PIN login     | ✅ Live |
+| Cashier switcher (sub-in at register)  | ✅ Live |
+| Kitchen Display System (KDS popup)     | ✅ Live |
+| Customer-Facing Display (CFD popup)    | ✅ Live |
+| Active order queue (home page)         | ✅ Live |
+| Order types (Dine In / Takeout)        | ✅ Live |
+| Help & Support (ticket system)         | ✅ Live |
+| Settings (adjustments, display, KDS)   | ✅ Live |
+| Staff time clock & timesheets          | ✅ Live |
+
+---
+
 ## What's Not Built Yet
 
-| Feature                                          | Status                              |
-| ------------------------------------------------ | ----------------------------------- |
-| Reports / Z-Report screen                        | UI button exists, no implementation |
-| Refunds                                          | UI button exists, no implementation |
-| Employee management UI                           | Data model exists in DB, no UI      |
-| Multi-user (cashier accounts under one business) | Planned                             |
-| Custom email (branded confirmation emails)       | Needs custom SMTP at launch         |
-| Onboarding flow (business info after sign-up)    | Planned post-launch                 |
-| Drawer operations                                | UI button exists, no implementation |
-| Scan item (barcode)                              | UI button exists, no implementation |
+| Feature                                     | Status                                                       |
+| ------------------------------------------- | ------------------------------------------------------------ |
+| Formal pay period records (Mark as Paid)    | Toast-only in v1; future: `pay_periods` table to track paid-out periods per staff |
+| Refunds                                     | UI button exists, no implementation                          |
+| Phone SMS verification                      | Settings field + "coming soon" note exists; hook point is `controlSaveBusinessInfo` |
+| Custom email (branded confirmation emails)  | Needs custom SMTP at launch                                  |
+| Drawer operations                           | UI button exists, no implementation                          |
+| Scan item (barcode)                         | UI button exists, no implementation                          |
+| PostHog in-app analytics                    | Waiting on user's PostHog account setup                      |

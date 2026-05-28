@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "modern POS software for small businesses",
   "scripts": {
-    "start": "parcel index.html kds-display.html customer-display.html",
-    "build": "parcel build index.html kds-display.html customer-display.html"
+    "start": "parcel index.html kds-display.html customer-display.html timeclock.html",
+    "build": "parcel build index.html kds-display.html customer-display.html timeclock.html"
   },
   "author": "John David Sarmiento",
   "license": "ISC",

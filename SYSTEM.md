@@ -27,6 +27,7 @@
    - [5.14 Customer Facing Display (CFD)](#514-customer-facing-display-cfd)
    - [5.15 Reports / Analytics Dashboard](#515-reports--analytics-dashboard)
    - [5.16 Help & Support](#516-help--support)
+   - [5.17 Shifts, Timesheets & Pay Summary](#517-shifts-timesheets--pay-summary)
 
 ---
 
@@ -76,6 +77,7 @@ Controller re-renders the relevant View
 | `Views/staffView.js` | `StaffView` | Staff management panel |
 | `Views/reportsView.js` | `ReportsView` | Reports/Analytics dashboard: KPI strip, charts, compare mode |
 | `Views/supportView.js` | `SupportView` | Help & Support panel: ticket list, thread view, reply composer, post-ticket rating |
+| `timeclock.js` | module-level functions | Standalone time clock page: device activation, staff auth, PIN setup, clock in/out/break state machine, PIN/password confirmation on clock-out |
 
 ---
 
@@ -122,6 +124,10 @@ state = {
 
   // KDS / Open Orders
   orderQueue,        // [{ id, saleDate, items, startedAt, totalPrice, orderType, ticketNumber }] — sales where prepared_at IS NULL
+
+  // Shifts / Timesheets (planned — not yet in use)
+  currentShift,      // { id, staffId, clockedInAt } | null — active shift for the current cashier
+  shifts,            // [{ id, staffId, clockedInAt, clockedOutAt, durationMinutes, note }] — fetched for timesheet view
 
   // Settings
   settings: {
@@ -1967,6 +1973,223 @@ A red badge appears on the Help & Support home card when any ticket has `has_unr
 
 ---
 
+### 5.17 Shifts, Timesheets & Pay Summary
+
+> **Status:** Live. `timeclock.html` is a standalone clock-in/out page for a registered device. The Payroll tab in the main app (`staffView.js`) shows timesheets with week/month/year/custom navigation, per-shift edit controls (admin/owner only), and a pay summary card per staff member.
+
+#### Overview
+
+Four parts:
+1. **`timeclock.html`** — dedicated standalone page for a single registered device (tablet at the store entrance); staff log in with their own Supabase accounts to clock in/out
+2. **Break tracking** — shifts can be paused/resumed; breaks stored separately in `shift_breaks`
+3. **Timesheets tab** (main POS Payroll tab) — weekly shift list; editable by owners/admins only
+4. **Pay Summary** — total hours worked × hourly rate per staff member for a chosen period
+
+#### Device Registration
+
+`timeclock.html` is designed for a single fixed device per business. On first open, it shows an **activation screen** where the owner enters a code generated from the main POS Settings panel. The code is validated against `businesses.timeclock_token`, and on success the token is saved to `localStorage` on that device. Subsequent loads skip straight to the staff login.
+
+- Owner generates token: Settings → "Register Time Clock Device" → copies 6-character code
+- Tablet enters code once → stored in `localStorage` as `pointy_timeclock_token`
+- If token is cleared (e.g. different browser/device), re-activation is required
+
+#### New DB Surface
+
+**`shifts` table:**
+```sql
+CREATE TABLE public.shifts (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id    uuid NOT NULL REFERENCES businesses(id),
+  staff_id       uuid NOT NULL REFERENCES staff(id),
+  clocked_in_at  timestamptz NOT NULL,
+  clocked_out_at timestamptz,
+  note           text,
+  created_at     timestamptz DEFAULT now()
+);
+grant select, insert, update, delete on public.shifts to authenticated;
+alter table public.shifts enable row level security;
+-- Owners/admins query by business_id; staff query their own rows
+create policy "shifts_owner_access" on public.shifts
+  for all using (business_id = auth.uid());
+create policy "shifts_staff_own" on public.shifts
+  for all using (
+    EXISTS (
+      SELECT 1 FROM staff
+      WHERE staff.id = shifts.staff_id
+        AND staff.user_id = auth.uid()
+    )
+  );
+```
+
+**`shift_breaks` table:**
+```sql
+CREATE TABLE public.shift_breaks (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  shift_id   uuid NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
+  started_at timestamptz NOT NULL,
+  ended_at   timestamptz,
+  created_at timestamptz DEFAULT now()
+);
+grant select, insert, update, delete on public.shift_breaks to authenticated;
+alter table public.shift_breaks enable row level security;
+-- Owner can access breaks for their business's shifts
+create policy "shift_breaks_owner" on public.shift_breaks
+  for all using (
+    EXISTS (
+      SELECT 1 FROM shifts WHERE shifts.id = shift_breaks.shift_id
+        AND shifts.business_id = auth.uid()
+    )
+  );
+
+-- Staff can access breaks for their own shifts
+create policy "shift_breaks_staff_own" on public.shift_breaks
+  for all using (
+    EXISTS (
+      SELECT 1 FROM shifts
+      JOIN staff ON staff.id = shifts.staff_id
+      WHERE shifts.id = shift_breaks.shift_id
+        AND staff.user_id = auth.uid()
+    )
+  );
+```
+
+**`staff.hourly_rate` column:**
+```sql
+ALTER TABLE public.staff ADD COLUMN hourly_rate numeric(10,2);
+```
+
+**`businesses.timeclock_token` column:**
+```sql
+ALTER TABLE public.businesses ADD COLUMN timeclock_token text;
+```
+
+#### timeclock.html — UI States
+
+```
+On load:
+  → check localStorage for pointy_timeclock_token
+  → if missing: show Activation Screen
+      Owner enters 6-char code → validate against businesses.timeclock_token
+      → on match: store token, show Staff Login
+  → if present (and existing Supabase session): reload staff record → show Shift Screen directly
+  → if present (no session): show Staff Login
+
+Staff Login:
+  → email + password form → supabase.auth.signInWithPassword()
+  → on success: look up staff record by user_id (eq('user_id', authData.user.id)) + business_id
+  → if staff.pin is null: show PIN Setup flow (2-step create + confirm, 4-digit)
+      → saves PIN to staff.pin before proceeding
+  → show Shift Screen for that staff member
+
+Shift Screen (states):
+  ┌─────────────────────────────────────────┐
+  │  Not clocked in  →  [Clock In]          │
+  │  Clocked in      →  [Take Break] [Clock Out]  (running work timer) │
+  │  On break        →  [Resume]            (running break timer) │
+  │  Clocked out     →  Today's summary + [Sign Out] │
+  └─────────────────────────────────────────┘
+```
+
+#### timeclock.html — Action Flows
+
+```
+Clock In:
+  → supabase.from('shifts').insert({ business_id, staff_id, clocked_in_at: now() })
+  → start running work timer
+
+Take Break:
+  → supabase.from('shift_breaks').insert({ shift_id, started_at: now() })
+  → swap to break timer
+
+Resume:
+  → supabase.from('shift_breaks').update({ ended_at: now() }).eq('id', activeBreakId)
+  → swap back to work timer
+
+Clock Out:
+  → PIN confirmation (showPinPad) if staff.pin is set; otherwise re-enter password (showPasswordConfirm)
+  → if active break: close it first (ended_at = now())
+  → supabase.from('shifts').update({ clocked_out_at: now() }).eq('id', shiftId)
+  → show today's summary (clocked in/out times, break time, time worked)
+  → session stays active — staff must tap "Sign out" manually (or the next person logs in over them)
+```
+
+#### Timesheets Tab (main POS — admin/owner only)
+
+Permission check on open: only `Admin` role or the business owner can see the edit controls. The Payroll tab loads automatically when the user switches to it.
+
+```
+Owner/Admin opens Staff panel → Payroll tab
+  → controlFetchTimesheets('week', todayISO)  [defaults to current week]
+    → resolves ISO range from type + value (same logic as _getRangeFromValue)
+    → model.fetchShifts(startISO, endISO)
+        → supabase.from('shifts').select('id, clocked_in_at, clocked_out_at, note, staff_id,
+            shift_breaks(id, started_at, ended_at), staff(first_name, last_name, hourly_rate)')
+        → state.shifts = [...]
+    → StaffView.renderTimesheets(state.shifts, state.staff, canEdit, { type, value, label })
+        → shows period nav (Week/Month/Year/Custom tabs + prev/next arrows + "Open Time Clock" link card)
+        → renders shifts grouped by staff member with break sub-rows
+        → renders pay summary cards (name, total hours; + gross pay if hourly_rate is set)
+
+Period navigation:
+  → Week / Month / Year / Custom tabs → _addHandlerTimesheetPeriod(controlFetchTimesheets)
+  → Prev / Next arrows call controlFetchTimesheets with adjusted value
+  → "Today" chip jumps to the current period
+
+Admin edits a shift row:
+  → staffView._addHandlerEditShift → _showShiftModal(shift, staff)
+  → modal: clocked_in_at, clocked_out_at, note; + break rows (add/remove)
+  → controlSaveShift({ id?, staffId, clockedInAt, clockedOutAt, note })
+    → id present: model.updateShift(data)  → DB update + state mutation
+    → id absent: model.addShift(data)      → DB insert + state push
+    → controlFetchTimesheets(_tsType, _tsValue)  [re-renders with fresh data]
+
+Export (PDF / CSV / Excel):
+  → Export dropdown in Payroll header → exportPdf() or exportCsv()
+```
+
+**Hours worked calculation** (excludes open/active shifts from totals):
+```
+workedMinutes = (clocked_out_at - clocked_in_at) in minutes
+              − sum(ended_at - started_at for each completed break)
+```
+
+#### Pay Summary
+
+Rendered below the timesheet. Purely computed — no extra DB call.
+
+```
+For each staff member with completed shifts in period:
+  totalWorkedMinutes = sum of workedMinutes across shifts
+  → summary card always shows: name, total hours worked
+  → if hourlyRate is set: also shows gross pay = (totalWorkedMinutes / 60) × hourlyRate
+  → if hourlyRate is not set: shows "—" with a hint to set rate in staff settings
+  → [Mark as Paid] button → shows toast (v1); future: writes pay_periods record
+```
+
+Hourly rate is optional — set from the Edit Staff modal (admin/owner only). Staff without a rate still appear in the timesheet with their hours tracked.
+
+#### Function Reference
+
+| Function | File | Purpose |
+|---|---|---|
+| `model.fetchShifts(startISO, endISO)` | model.js | Fetches shifts + breaks + staff name/rate for period → `state.shifts` |
+| `model.addShift(data)` | model.js | Admin: inserts a manual shift |
+| `model.updateShift(data)` | model.js | Admin: updates shift clocked_in/out/note in DB + state |
+| `model.updateStaffHourlyRate(staffId, rate)` | model.js | Updates `staff.hourly_rate` in DB |
+| `model.generateTimeclockToken()` | model.js | Generates 6-char token, saves to `businesses.timeclock_token`, returns it |
+| `controlFetchTimesheets(type, value)` | controller.js | Resolves ISO range from type + value, loads shifts, re-renders Payroll tab |
+| `controlSaveShift(data)` | controller.js | Add or edit shift (id present = update, absent = insert); re-fetches after save |
+| `controlGenerateTimeclockToken()` | controller.js | Calls `model.generateTimeclockToken`, calls `SettingsView.showTimeclockToken(token)` |
+| `StaffView.renderTimesheets(shifts, staff, canEdit, periodMeta)` | staffView.js | Full Payroll tab: period nav, shift list grouped by staff, pay summary, export/add buttons |
+| `StaffView._addHandlerPayrollTab(handler)` | staffView.js | Fires `handler` the first time the Payroll tab is activated |
+| `StaffView._addHandlerTimesheetPeriod(handler)` | staffView.js | Wires period tabs + prev/next arrows + custom apply → `controlFetchTimesheets` |
+| `StaffView._addHandlerSaveShift(handler)` | staffView.js | Listens on shift modal save; passes `{ id?, staffId, clockedInAt, clockedOutAt, note }` |
+| `SettingsView._addHandlerGenerateTimeclockToken(handler)` | settingsView.js | Listens on `#tcGenerateTokenBtn` click |
+| `SettingsView.showTimeclockToken(token)` | settingsView.js | Writes token to `#tcTokenDisplay` |
+| `timeclock.js` (module-level) | timeclock.js | Standalone: device activation, staff Supabase auth, PIN setup, clock in/out/break state machine, PIN/password confirmation on clock-out |
+
+---
+
 ## Adjustment Calculation Reference
 
 `model.calculateAdjustments(subtotal, adjustments)` — called every time checkout totals need to refresh.
@@ -1988,4 +2211,4 @@ Steps:
 
 ---
 
-*Last updated: 2026-05-22. Added §5.16 Help & Support (ticket submission, thread view, business replies, post-ticket emoji rating, unread badge, closure block). Updated §5.11 Staff Management: PIN set/change by owner, mandatory first-login PIN setup overlay (`_maybeShowPinSetup`), `dbToStaff` now includes `hasPin`. Updated §5.12 Cashier Switcher: two-step flow (staff list → PIN numpad), disabled state for staff with no PIN, sub-in audit trail (`logged_in_cashier` column on sales). Updated §2 Module Map: added `supportView.js`. Updated §3 State Shape: added `tickets` array. Update this file when a new feature is added or a workflow changes.*
+*Last updated: 2026-05-28. §5.17 updated from Planned → Live: `timeclock.html` shipped with device activation, staff auth, PIN setup on first login, clock in/out/break state machine, PIN/password confirmation on clock-out; Payroll tab live with week/month/year/custom navigation, shift editing (admin/owner), pay summary, PDF/CSV export. RLS policies corrected to use `staff.user_id = auth.uid()` (not email). Update this file when a new feature is added or a workflow changes.*

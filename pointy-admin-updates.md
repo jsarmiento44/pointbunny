@@ -15,6 +15,352 @@ that the admin panel needs to know about. Add new entries at the top as features
 
 ---
 
+## [2026-05-27] Shifts, Timesheets & Time Clock
+
+Adds shift tracking for staff via a dedicated `timeclock.html` page. Staff clock in/out on a registered tablet; breaks are tracked separately. Owners/admins can view and edit timesheets from the Staff panel's Payroll tab.
+
+### Migrations
+
+```sql
+-- 1. Shifts table
+CREATE TABLE public.shifts (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  business_id    uuid NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  staff_id       uuid NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+  clocked_in_at  timestamptz NOT NULL,
+  clocked_out_at timestamptz,
+  note           text,
+  created_at     timestamptz DEFAULT now()
+);
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.shifts TO authenticated;
+ALTER TABLE public.shifts ENABLE ROW LEVEL SECURITY;
+
+-- Owner can access all shifts for their business
+CREATE POLICY "shifts_owner_access" ON public.shifts
+  FOR ALL USING (business_id = auth.uid());
+
+-- Staff can access their own shifts (via user_id link)
+CREATE POLICY "shifts_staff_own" ON public.shifts
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM staff
+      WHERE staff.id = shifts.staff_id
+        AND staff.user_id = auth.uid()
+    )
+  );
+
+-- 2. Shift breaks table
+CREATE TABLE public.shift_breaks (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  shift_id   uuid NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
+  started_at timestamptz NOT NULL,
+  ended_at   timestamptz,
+  created_at timestamptz DEFAULT now()
+);
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.shift_breaks TO authenticated;
+ALTER TABLE public.shift_breaks ENABLE ROW LEVEL SECURITY;
+
+-- Owner can access breaks for their business's shifts
+CREATE POLICY "shift_breaks_owner" ON public.shift_breaks
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM shifts WHERE shifts.id = shift_breaks.shift_id
+        AND shifts.business_id = auth.uid()
+    )
+  );
+
+-- Staff can access breaks for their own shifts
+CREATE POLICY "shift_breaks_staff_own" ON public.shift_breaks
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM shifts
+      JOIN staff ON staff.id = shifts.staff_id
+      WHERE shifts.id = shift_breaks.shift_id
+        AND staff.user_id = auth.uid()
+    )
+  );
+
+-- 3. New columns on existing tables (inherit existing grants)
+ALTER TABLE public.staff ADD COLUMN IF NOT EXISTS hourly_rate numeric(10,2);
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS timeclock_token text;
+```
+
+### How it works
+
+- Staff clock in on a dedicated tablet running `timeclock.html`. The tablet is registered to the business once via a 6-character code from Settings.
+- Each clock-in creates a `shifts` row. Taking a break creates a `shift_breaks` row with `ended_at = NULL`; resuming sets `ended_at`. Clocking out sets `clocked_out_at` on the shift.
+- **Hours worked** for a shift = `(clocked_out_at − clocked_in_at)` minus the sum of all completed break durations (`ended_at − started_at`). Ignore shifts or breaks where the end time is `NULL` (still active).
+- `staff.hourly_rate` is optional. If set, the app shows gross pay = hours worked × rate. If `NULL`, hours are shown but no dollar amount.
+- A staff member can clock in and out multiple times in a day — multiple `shifts` rows per `staff_id` per day is normal.
+- The timeclock uses standard Supabase auth (staff log in with their own email + password). **The admin panel uses the service role key and bypasses RLS**, so all queries below work without restriction.
+
+### Queries the admin panel can use
+
+**All shifts for a business (with staff name, break details, and hours):**
+```sql
+SELECT
+  sh.id,
+  sh.business_id,
+  sh.staff_id,
+  s.first_name,
+  s.last_name,
+  s.hourly_rate,
+  sh.clocked_in_at,
+  sh.clocked_out_at,
+  sh.note,
+  sh.created_at,
+  EXTRACT(EPOCH FROM (sh.clocked_out_at - sh.clocked_in_at)) / 3600 AS gross_hours,
+  COALESCE((
+    SELECT SUM(EXTRACT(EPOCH FROM (b.ended_at - b.started_at)))
+    FROM shift_breaks b
+    WHERE b.shift_id = sh.id AND b.ended_at IS NOT NULL
+  ), 0) / 3600 AS break_hours
+FROM public.shifts sh
+JOIN public.staff s ON s.id = sh.staff_id
+WHERE sh.business_id = $businessId
+ORDER BY sh.clocked_in_at DESC;
+-- net hours worked = gross_hours - break_hours
+-- only sum closed shifts (clocked_out_at IS NOT NULL) for payroll totals
+```
+
+**Currently active (open) shifts across all businesses:**
+```sql
+SELECT sh.id, sh.business_id, sh.staff_id, sh.clocked_in_at,
+       s.first_name, s.last_name
+FROM public.shifts sh
+JOIN public.staff s ON s.id = sh.staff_id
+WHERE sh.clocked_out_at IS NULL
+ORDER BY sh.clocked_in_at ASC;
+```
+
+**Total hours per staff member for a date range (for payroll summary):**
+```sql
+SELECT
+  sh.staff_id,
+  s.first_name,
+  s.last_name,
+  s.hourly_rate,
+  SUM(
+    EXTRACT(EPOCH FROM (sh.clocked_out_at - sh.clocked_in_at)) / 3600
+    - COALESCE((
+        SELECT SUM(EXTRACT(EPOCH FROM (b.ended_at - b.started_at)))
+        FROM shift_breaks b
+        WHERE b.shift_id = sh.id AND b.ended_at IS NOT NULL
+      ), 0) / 3600
+  ) AS net_hours_worked
+FROM public.shifts sh
+JOIN public.staff s ON s.id = sh.staff_id
+WHERE sh.business_id = $businessId
+  AND sh.clocked_out_at IS NOT NULL          -- exclude open shifts
+  AND sh.clocked_in_at >= $rangeStart
+  AND sh.clocked_in_at <  $rangeEnd
+GROUP BY sh.staff_id, s.first_name, s.last_name, s.hourly_rate
+ORDER BY s.first_name;
+-- gross_pay = net_hours_worked * hourly_rate  (only if hourly_rate IS NOT NULL)
+```
+
+### What to show in the admin panel
+
+**On the business detail page:**
+- `businesses.timeclock_token`: show as a read-only code field labelled "Time Clock Activation Code". This is the code the business enters on a new tablet to register it.
+- A "Timesheets" tab or section showing the queries above (filterable by date range + staff member).
+
+**On a timesheet row:**
+- Staff name, date, clocked in/out times, break time, net hours worked.
+- If `clocked_out_at IS NULL`: show an "Active" badge — the staff member is still clocked in.
+- If `hourly_rate` is set: show gross pay for that shift.
+
+**On a per-staff summary row:**
+- Total hours for the period, hourly rate (if set), gross pay (if rate is set).
+- Staff without a rate still appear — just no dollar amount.
+
+**Admin panel should NOT:**
+- Edit or delete `shift_breaks` rows directly — the Pointy app manages breaks. Admins can edit the shift's `clocked_in_at` / `clocked_out_at` and `note` if needed.
+- Change `businesses.timeclock_token` — it's set by the Pointy app via the "Generate Code" button in Settings. Showing it read-only is fine.
+
+---
+
+## [2026-05-25] Business Timezone Setting
+
+Adds a `timezone` column to the `businesses` table so the owner can set the business's IANA timezone from Settings. All date/time calculations in the app (today's totals, cashflow periods, reports) use this timezone.
+
+### Migration
+
+```sql
+ALTER TABLE public.businesses
+  ADD COLUMN IF NOT EXISTS timezone text;
+```
+
+No RLS change needed — the column is on the existing `businesses` table which already has RLS enabled. The existing policies cover `SELECT`/`UPDATE` for the authenticated owner.
+
+### Admin panel notes
+- Display the `timezone` field on the business detail page (read-only).
+- Valid values are IANA timezone strings (e.g. `"Asia/Manila"`, `"America/New_York"`). `NULL` = not set (app falls back to browser timezone).
+- This column is `NULL` for all existing businesses until the owner sets it.
+
+---
+
+## [2026-05-25] Sales Table — Undocumented Columns (Void/Restore, Ticket Numbers, KDS Flags)
+
+These four columns exist on the `sales` table and are actively written by the app but were never documented here. **The void columns are critical for accurate revenue reporting** — any admin panel query that sums revenue or counts transactions must filter them out.
+
+> No migrations needed — these columns already exist in production.
+
+---
+
+### `voided_at` + `voided_by` — Void & Restore System
+
+| Column | Type | Meaning |
+|---|---|---|
+| `voided_at` | `timestamptz` | When the sale was voided; `NULL` = active sale |
+| `voided_by` | `text` | Name of the person who authorized the void; `NULL` on active sales |
+
+A sale can be voided (soft-deleted) by an authorized user. It can also be restored, which sets both columns back to `NULL`.
+
+- `voided_by` holds the full name of whoever *authorized* the void — either the cashier (if they have cashflow permission) or the manager who entered their override credentials.
+- **All revenue and transaction queries in the Pointy app filter `voided_at IS NULL`.** The admin panel must do the same.
+
+**⚠️ Important for the admin panel:**
+Any query that counts transactions or sums revenue **must exclude voided sales:**
+```sql
+-- Always add this filter
+WHERE voided_at IS NULL
+```
+
+To show voided sales separately (e.g. a "Voided Transactions" view):
+```sql
+SELECT id, total_price, sale_date, items, added_by, voided_at, voided_by
+FROM public.sales
+WHERE user_id = $businessId
+  AND voided_at IS NOT NULL
+ORDER BY voided_at DESC;
+```
+
+---
+
+### `ticket_number` — Short Order Display Number
+
+| Column | Type | Meaning |
+|---|---|---|
+| `ticket_number` | `integer` | Short order number (1–999) shown on KDS and receipts; `NULL` on older sales |
+
+Generated client-side at sale creation as a random number 1–999 that isn't currently active in the queue. Resets naturally as orders complete — it's a display number, not a globally unique ID. The real unique ID is always `sales.id` (UUID).
+
+**What the admin panel can do with it:**
+- Show it on transaction detail views as the order reference (e.g. `Order #42`)
+- Useful for customer-facing receipts or staff references in the transaction list
+
+---
+
+### `timed_out` — KDS Auto-Complete Flag
+
+| Column | Type | Meaning |
+|---|---|---|
+| `timed_out` | `boolean` | `true` = KDS auto-completed this order after the auto-complete timer expired; `false`/`NULL` = staff manually marked it done |
+
+Set when `recordServeTime()` is called by the KDS auto-complete timer rather than a staff tap.
+
+**What the admin panel can do with it:**
+- Flag timed-out orders in a kitchen performance view
+- Count/percentage of orders that weren't manually completed (a proxy for KDS engagement)
+
+---
+
+### `is_manual` — Manual Sale Entry Flag
+
+| Column | Type | Meaning |
+|---|---|---|
+| `is_manual` | `boolean` | `true` = sale was entered manually (not through the normal order flow); always `false` currently |
+
+Always written as `false` at insert right now. Reserved for a future "manual sale entry" feature (e.g. recording a cash sale after the fact). The column exists so the schema doesn't need to change when that feature ships.
+
+**What the admin panel can do with it:** No action needed now. When manual sales are introduced, flag them differently in the transaction list.
+
+---
+
+## [2026-05-24] Post-Ticket Rating — Full Data Reference
+
+> **Context:** This expands on the brief schema note in the `[2026-05-22] Business Reply Badge + Post-Ticket Rating` entry below. The columns are already live — this section documents the full value mapping and how to use the data in the admin panel.
+
+### How it works (business side)
+
+After a ticket is marked **solved**, the business sees a rating prompt the next time they open that ticket. It will not show again once a rating is submitted.
+
+The prompt uses 5 emoji buttons:
+
+| `rating` value | Emoji | Label |
+|---|---|---|
+| `1` | 😤 | Bad |
+| `2` | 😕 | Poor |
+| `3` | 😐 | OK |
+| `4` | 😊 | Good |
+| `5` | 🤩 | Great |
+
+There is an optional free-text comment field. Both are stored together on the `tickets` row.
+
+### Columns on `tickets`
+
+| Column | Type | Meaning |
+|---|---|---|
+| `rating` | `smallint` | 1–5 per table above; `NULL` = business never rated |
+| `rating_comment` | `text` | Optional comment; `NULL` if left blank |
+| `rated_at` | `timestamptz` | When the rating was submitted; `NULL` if not rated |
+
+### Querying ratings
+
+**All rated tickets, newest first:**
+```sql
+SELECT id, business_id, subject, rating, rating_comment, rated_at, solved_at
+FROM public.tickets
+WHERE rating IS NOT NULL
+ORDER BY rated_at DESC;
+```
+
+**Average rating across all time:**
+```sql
+SELECT ROUND(AVG(rating)::numeric, 2) AS avg_rating, COUNT(*) AS total_rated
+FROM public.tickets
+WHERE rating IS NOT NULL;
+```
+
+**Rating distribution (how many 1s, 2s, 3s, etc.):**
+```sql
+SELECT rating, COUNT(*) AS count
+FROM public.tickets
+WHERE rating IS NOT NULL
+GROUP BY rating
+ORDER BY rating;
+```
+
+**Average rating per month:**
+```sql
+SELECT DATE_TRUNC('month', rated_at) AS month,
+       ROUND(AVG(rating)::numeric, 2) AS avg_rating,
+       COUNT(*) AS total
+FROM public.tickets
+WHERE rating IS NOT NULL
+GROUP BY 1
+ORDER BY 1;
+```
+
+### What to show in the admin panel
+
+**On the ticket detail view (already partially documented):**
+- Show the rating as its emoji + label (e.g. `😊 Good`) and the `rating_comment` below it
+- Show `rated_at` formatted as a relative date
+- If `rating IS NULL`, show "Not yet rated" (greyed out)
+
+**On the ticket list view:**
+- Add a small rating badge/pill to each solved ticket row that has a rating
+- Unrated solved tickets can show a dash or nothing
+
+**On a support analytics/dashboard section (future):**
+- Average CSAT score across all time (or filterable by date range)
+- Rating distribution bar chart (1–5 counts)
+- Recent low ratings (1 or 2) surfaced as an alert so the team can follow up
+
+---
+
 ## [2026-05-22] Cashier Sub-In System — PIN + Audit Trail
 
 ### Schema changes

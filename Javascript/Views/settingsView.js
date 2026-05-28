@@ -1,5 +1,78 @@
 ﻿import { initPhoneInput } from '../phoneInput.js';
 
+// ── US timezone whitelist (IANA IDs) ─────────────────────────────────────────
+// Used to filter Intl.supportedValuesOf('timeZone') down to US-relevant entries.
+// Intl generates all display labels + live offsets at runtime — no hardcoded strings.
+const US_TZ_IDS = new Set([
+  'Pacific/Pago_Pago',               // American Samoa   (UTC−11)
+  'Pacific/Honolulu',                // Hawaii            (UTC−10, no DST)
+  'America/Adak',                    // Aleutian Islands  (UTC−10/−9, has DST)
+  'America/Anchorage',               // Alaska            (UTC−9/−8)
+  'America/Juneau',
+  'America/Sitka',
+  'America/Metlakatla',              //                   (UTC−9, no DST)
+  'America/Nome',
+  'America/Yakutat',
+  'America/Los_Angeles',             // Pacific           (UTC−8/−7)
+  'America/Phoenix',                 // Arizona           (UTC−7, no DST)
+  'America/Denver',                  // Mountain          (UTC−7/−6)
+  'America/Boise',
+  'America/Chicago',                 // Central           (UTC−6/−5)
+  'America/Menominee',
+  'America/Indiana/Knox',
+  'America/Indiana/Tell_City',
+  'America/North_Dakota/Center',
+  'America/North_Dakota/New_Salem',
+  'America/North_Dakota/Beulah',
+  'America/New_York',                // Eastern           (UTC−5/−4)
+  'America/Detroit',
+  'America/Indiana/Indianapolis',
+  'America/Indiana/Marengo',
+  'America/Indiana/Petersburg',
+  'America/Indiana/Vevay',
+  'America/Indiana/Vincennes',
+  'America/Indiana/Winamac',
+  'America/Kentucky/Louisville',
+  'America/Kentucky/Monticello',
+  'America/Puerto_Rico',             // Atlantic PR       (UTC−4, no DST)
+  'America/St_Thomas',               // US Virgin Islands (UTC−4)
+  'Pacific/Guam',                    // Chamorro/Guam     (UTC+10, no DST)
+  'Pacific/Saipan',                  // N. Mariana Is.    (UTC+10)
+]);
+
+function _buildTzOptions(selectedTz) {
+  const now = new Date();
+
+  // Pull every timezone the browser's IANA database knows, keep only US ones.
+  // Falls back to the Set itself if supportedValuesOf isn't available (older browsers).
+  const allTz = (typeof Intl.supportedValuesOf === 'function')
+    ? Intl.supportedValuesOf('timeZone').filter(tz => US_TZ_IDS.has(tz))
+    : [...US_TZ_IDS];
+
+  const getPart = (tz, opts) =>
+    new Intl.DateTimeFormat('en-US', { timeZone: tz, ...opts })
+      .formatToParts(now).find(p => p.type === 'timeZoneName')?.value ?? '';
+
+  return allTz
+    .map(tz => {
+      // Familiar abbreviation: PST, EST, CDT, HST …
+      const abbr  = getPart(tz, { timeZoneName: 'short' });
+      // Current UTC offset: GMT-8, GMT+10 …
+      const offset = getPart(tz, { timeZoneName: 'shortOffset' });
+      // Readable city / region from IANA ID tail
+      const city  = tz.split('/').pop().replace(/_/g, ' ');
+      // Numeric offset (ms) for west→east sort
+      const dtStr = new Intl.DateTimeFormat('sv-SE', {
+        timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+      }).format(now).replace(' ', 'T');
+      const offsetMs = now.getTime() - new Date(dtStr + 'Z').getTime();
+
+      return { tz, label: `${city} — ${abbr} (${offset})`, offsetMs, selected: tz === selectedTz };
+    })
+    .sort((a, b) => a.offsetMs - b.offsetMs);
+}
+
 class SettingsView {
   _modal    = document.getElementById("settingsModal");
   _phoneIti = null;
@@ -46,20 +119,59 @@ class SettingsView {
 
   // ── Business info ─────────────────────────────────────────────────────────────
 
-  syncBusinessInfo({ name, email, phone }) {
-    const n = document.getElementById('settingsBusinessName');
-    const e = document.getElementById('settingsBusinessEmail');
-    if (n) n.value = name ?? '';
-    if (e) e.value = email ?? '';
+  syncBusinessInfo({ name, email, phone, timezone, address, city, state, zip, isOwner }) {
+    const n  = document.getElementById('settingsBusinessName');
+    const e  = document.getElementById('settingsBusinessEmail');
+    const a  = document.getElementById('settingsBusinessAddress');
+    const c  = document.getElementById('settingsBusinessCity');
+    const st = document.getElementById('settingsBusinessState');
+    const z  = document.getElementById('settingsBusinessZip');
+    if (n)  n.value  = name    ?? '';
+    if (e)  e.value  = email   ?? '';
+    if (a)  a.value  = address ?? '';
+    if (c)  c.value  = city    ?? '';
+    if (st) st.value = state   ?? '';
+    if (z)  z.value  = zip     ?? '';
     if (this._phoneIti) this._phoneIti.setNumber(phone ?? '');
+
+    // Timezone field — only shown to the business owner
+    const tzField = document.getElementById('settingsTimezoneField');
+    if (tzField) {
+      tzField.classList.toggle('hidden', !isOwner);
+      if (isOwner) {
+        const tzSel = document.getElementById('settingsTimezone');
+        if (tzSel) {
+          // Default to current browser timezone if none saved
+          const activeTz = timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+          const options = _buildTzOptions(activeTz);
+          tzSel.innerHTML = options
+            .map(o => `<option value="${o.tz}"${o.selected ? ' selected' : ''}>${o.label}</option>`)
+            .join('');
+          // Fallback: if saved tz not in list, prepend it
+          if (!options.some(o => o.selected) && activeTz) {
+            tzSel.insertAdjacentHTML('afterbegin',
+              `<option value="${activeTz}" selected>${activeTz}</option>`);
+          }
+        }
+      }
+    }
   }
 
   _getBusinessFormData() {
     const phone = this._phoneIti ? this._phoneIti.getNumber() : '';
+    const tzField = document.getElementById('settingsTimezoneField');
+    const timezone = (!tzField || tzField.classList.contains('hidden'))
+      ? null
+      : (document.getElementById('settingsTimezone')?.value || null);
     return {
-      name:  document.getElementById('settingsBusinessName')?.value.trim() ?? '',
-      email: document.getElementById('settingsBusinessEmail')?.value.trim() ?? '',
+      name:    document.getElementById('settingsBusinessName')?.value.trim()    ?? '',
+      email:   document.getElementById('settingsBusinessEmail')?.value.trim()   ?? '',
       phone,
+      timezone,
+      address: document.getElementById('settingsBusinessAddress')?.value.trim() ?? '',
+      city:    document.getElementById('settingsBusinessCity')?.value.trim()    ?? '',
+      state:   document.getElementById('settingsBusinessState')?.value.trim()   ?? '',
+      zip:     document.getElementById('settingsBusinessZip')?.value.trim()     ?? '',
     };
   }
 
@@ -69,6 +181,19 @@ class SettingsView {
       if (!data.name) { this.showBusinessSaveStatus(false, 'Business name is required.'); return; }
       handler(data);
     });
+  }
+
+  _addHandlerGenerateTimeclockToken(handler) {
+    document.getElementById('tcGenerateTokenBtn')?.addEventListener('click', () => handler());
+  }
+
+  showTimeclockToken(token) {
+    const el = document.getElementById('tcTokenDisplay');
+    if (!el) return;
+    el.textContent = token;
+    el.classList.remove('hidden');
+    const btn = document.getElementById('tcGenerateTokenBtn');
+    if (btn) btn.textContent = 'Regenerate';
   }
 
   showBusinessSaveStatus(success, msg) {

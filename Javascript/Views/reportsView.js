@@ -852,7 +852,7 @@ class ReportsView extends View {
       if (this._charts.servingHour) { this._charts.servingHour.destroy(); this._charts.servingHour = null; }
       this._observers["rpServingHourCanvas"]?.disconnect();
       canvas.style.display = "none";
-      emptyMsg.textContent = "No serving time data. Orders must be marked done in the Kitchen Display to track this.";
+      emptyMsg.textContent = "No serving time data. Orders must be marked done in the Queue Display to track this.";
       emptyMsg.style.display = "";
       return;
     }

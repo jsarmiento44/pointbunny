@@ -16,6 +16,7 @@ export const state = {
   businessName: null,
   businessEmail: null,
   businessPhone: null,
+  businessTimezone: null,  // IANA timezone string, e.g. "Asia/Manila"
   username: "Wowa",
   role: null,           // role name of the logged-in user
   currentStaff: null,   // logged-in user's staff record
@@ -35,6 +36,8 @@ export const state = {
   expenses: [],
   discountCodes: [],
   currentPromoCode: null,
+  shifts: [],
+  currentShift: null,
   settings: {
     adjustments: [],
     showRemovedAdjustments: true,
@@ -169,34 +172,53 @@ export const loadBusinessContext = async function (user) {
 
   const { data: bizData } = await supabase
     .from('businesses')
-    .select('name')
+    .select('name, timezone')
     .eq('id', state.businessId)
     .single();
-  if (bizData) state.businessName = bizData.name ?? null;
+  if (bizData) {
+    state.businessName     = bizData.name     ?? null;
+    state.businessTimezone = bizData.timezone ?? null;
+  }
+
+  // Auto-detect timezone on first login if the owner hasn't set one yet.
+  // Only the owner writes this — staff logins leave it untouched.
+  if (!state.businessTimezone && state.userId === state.businessId) {
+    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (detected) {
+      state.businessTimezone = detected;
+      supabase
+        .from('businesses')
+        .update({ timezone: detected })
+        .eq('id', state.businessId)
+        .then(() => {}); // fire-and-forget, non-blocking
+    }
+  }
 };
 
 export const loadBusinessProfile = async function () {
   const { data } = await supabase
     .from('businesses')
-    .select('name, email, phone')
+    .select('name, email, phone, timezone')
     .eq('id', state.businessId)
     .single();
   if (data) {
-    state.businessName  = data.name  ?? null;
-    state.businessEmail = data.email ?? null;
-    state.businessPhone = data.phone ?? null;
+    state.businessName     = data.name     ?? null;
+    state.businessEmail    = data.email    ?? null;
+    state.businessPhone    = data.phone    ?? null;
+    state.businessTimezone = data.timezone ?? null;
   }
 };
 
-export const saveBusinessInfo = async function ({ name, email, phone }) {
+export const saveBusinessInfo = async function ({ name, email, phone, timezone }) {
   const { error } = await supabase
     .from('businesses')
-    .update({ name, email: email || null, phone: phone || null })
+    .update({ name, email: email || null, phone: phone || null, timezone: timezone || null })
     .eq('id', state.businessId);
   if (error) throw error;
-  state.businessName  = name;
-  state.businessEmail = email || null;
-  state.businessPhone = phone || null;
+  state.businessName     = name;
+  state.businessEmail    = email || null;
+  state.businessPhone    = phone || null;
+  state.businessTimezone = timezone || null;
 };
 
 // ── DB ↔ app shape mapping ────────────────────────────────────────────────────
@@ -641,7 +663,7 @@ export const fetchCashflowData = async function (startISO, endISO) {
       .order("expense_date", { ascending: false }),
     supabase
       .from("sales")
-      .select("id, total_price, subtotal, sale_date, items, added_by, order_type, ticket_number, voided_at, voided_by")
+      .select("id, total_price, subtotal, customer_payment, customer_change, adjustments, sale_date, items, added_by, order_type, ticket_number, voided_at, voided_by")
       .eq("user_id", state.businessId)
       .gte("sale_date", startISO)
       .lte("sale_date", endISO)
@@ -674,24 +696,6 @@ export const voidSale = async function (id, voidedBy) {
   return { wasInQueue };
 };
 
-export const restoreSale = async function (id) {
-  const { data, error } = await supabase
-    .from('sales')
-    .update({ voided_at: null, voided_by: null })
-    .eq('id', id)
-    .eq('user_id', state.businessId)
-    .select('id, sale_date, items, total_price, order_type, ticket_number, prepared_at, timed_out')
-    .single();
-  if (error) throw error;
-  const restoredSale = state.voidedSales.find(s => s.id === id);
-  state.voidedSales = state.voidedSales.filter(s => s.id !== id);
-  if (restoredSale) {
-    const { voided_at, voided_by, ...cleanSale } = restoredSale;
-    state.cashflowSales = [cleanSale, ...state.cashflowSales]
-      .sort((a, b) => new Date(b.sale_date) - new Date(a.sale_date));
-  }
-  return data;
-};
 
 
 export const verifyOverrideCredentials = async function (email, password) {
@@ -1035,10 +1039,11 @@ function parseVariants(raw) {
 // ── Staff management ──────────────────────────────────────────────────────────
 
 const dbToStaff = (row) => ({
-  id:        row.id,
-  firstName: row.first_name,
-  lastName:  row.last_name,
-  email:     row.email,
+  id:         row.id,
+  firstName:  row.first_name,
+  lastName:   row.last_name,
+  email:      row.email,
+  hourlyRate: row.hourly_rate ?? null,
   isActive:  row.is_active,
   joinedAt:  row.joined_at,
   isPending: !row.user_id,
@@ -1052,7 +1057,7 @@ const dbToStaff = (row) => ({
 export const loadStaff = async function () {
   const { data, error } = await supabase
     .from('staff')
-    .select('id, first_name, last_name, email, is_active, joined_at, user_id, pin, roles(id, name)')
+    .select('id, first_name, last_name, email, is_active, joined_at, user_id, pin, hourly_rate, roles(id, name)')
     .eq('business_id', state.businessId)
     .order('invited_at', { ascending: true });
   if (error) throw error;
@@ -1180,6 +1185,73 @@ export const markRepliesRead = async function (ticketId) {
   if (error) throw error;
   const t = state.tickets.find(t => t.id === ticketId);
   if (t) t.has_unread_reply = false;
+};
+
+// ── Shifts & timeclock ────────────────────────────────────────────────────────
+
+export const generateTimeclockToken = async function () {
+  const token = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const { error } = await supabase
+    .from('businesses')
+    .update({ timeclock_token: token })
+    .eq('id', state.businessId);
+  if (error) throw error;
+  return token;
+};
+
+export const fetchShifts = async function (startISO, endISO) {
+  const { data, error } = await supabase
+    .from('shifts')
+    .select('id, clocked_in_at, clocked_out_at, note, staff_id, shift_breaks(id, started_at, ended_at), staff(first_name, last_name, hourly_rate)')
+    .eq('business_id', state.businessId)
+    .gte('clocked_in_at', startISO)
+    .lte('clocked_in_at', endISO)
+    .order('clocked_in_at', { ascending: true });
+  if (error) throw error;
+  state.shifts = data.map(r => ({
+    id:           r.id,
+    staffId:      r.staff_id,
+    staffName:    `${r.staff?.first_name ?? ''} ${r.staff?.last_name ?? ''}`.trim(),
+    hourlyRate:   r.staff?.hourly_rate ?? null,
+    clockedInAt:  r.clocked_in_at,
+    clockedOutAt: r.clocked_out_at ?? null,
+    note:         r.note ?? '',
+    breaks:       (r.shift_breaks ?? []).map(b => ({
+      id:        b.id,
+      startedAt: b.started_at,
+      endedAt:   b.ended_at ?? null,
+    })),
+  }));
+};
+
+export const addShift = async function ({ staffId, clockedInAt, clockedOutAt, note }) {
+  const { data, error } = await supabase
+    .from('shifts')
+    .insert({ business_id: state.businessId, staff_id: staffId, clocked_in_at: clockedInAt, clocked_out_at: clockedOutAt || null, note: note || null })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return data.id;
+};
+
+export const updateShift = async function ({ id, clockedInAt, clockedOutAt, note }) {
+  const { error } = await supabase
+    .from('shifts')
+    .update({ clocked_in_at: clockedInAt, clocked_out_at: clockedOutAt || null, note: note || null })
+    .eq('id', id)
+    .eq('business_id', state.businessId);
+  if (error) throw error;
+};
+
+export const updateStaffHourlyRate = async function (staffId, rate) {
+  const { error } = await supabase
+    .from('staff')
+    .update({ hourly_rate: rate ?? null })
+    .eq('id', staffId)
+    .eq('business_id', state.businessId);
+  if (error) throw error;
+  const s = state.staff.find(s => s.id === staffId);
+  if (s) s.hourlyRate = rate ?? null;
 };
 
 export const submitTicket = async function ({ category, subject, message, files }) {

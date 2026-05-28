@@ -36,13 +36,13 @@
         </button>
 
         <div class="nav-actions" id="navActions">
-          <button class="btn nav-display-btn hidden" type="button" id="kdsWindowBtn" aria-label="Open Kitchen Display" title="Kitchen Display">
+          <button class="btn nav-display-btn hidden" type="button" id="kdsWindowBtn" aria-label="Open Queue Display" title="Queue Display">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
               <rect x="2" y="3" width="20" height="14" rx="2"/>
               <line x1="8" y1="21" x2="16" y2="21"/>
               <line x1="12" y1="17" x2="12" y2="21"/>
             </svg>
-            <span class="nav-display-label">Kitchen<span class="nav-display-sub">Screen</span></span>
+            <span class="nav-display-label">Queue<span class="nav-display-sub">Screen</span></span>
           </button>
           <button class="btn nav-display-btn hidden" type="button" id="cfdWindowBtn" aria-label="Open Customer Display" title="Customer Display">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
@@ -115,26 +115,83 @@
 
               <!-- Business tab -->
               <div class="settings-tab hidden" id="settingsTabBusiness" data-min-role="admin">
-                <div>
-                  <h3 class="settings-tab-title">Business Profile</h3>
-                  <p class="settings-tab-hint">Edit your details below and hit Save to update.</p>
+                <h3 class="settings-tab-title">Business</h3>
+
+                <div class="settings-section">
+                  <div class="settings-section-header">
+                    <div>
+                      <h3 class="settings-section-title">Business Details</h3>
+                      <p class="settings-section-hint">Your business name, contact info, and address.</p>
+                    </div>
+                  </div>
+
+                  <div class="settings-field">
+                    <label for="settingsBusinessName">Business name</label>
+                    <input type="text" id="settingsBusinessName" placeholder="My Business" autocomplete="organization" />
+                  </div>
+                  <div class="settings-field">
+                    <label for="settingsBusinessAddress">Street address</label>
+                    <input type="text" id="settingsBusinessAddress" placeholder="123 Main St" autocomplete="street-address" />
+                  </div>
+                  <div class="settings-field-row">
+                    <div class="settings-field">
+                      <label for="settingsBusinessCity">City</label>
+                      <input type="text" id="settingsBusinessCity" placeholder="City" autocomplete="address-level2" />
+                    </div>
+                    <div class="settings-field settings-field--narrow">
+                      <label for="settingsBusinessState">State</label>
+                      <input type="text" id="settingsBusinessState" placeholder="State" autocomplete="address-level1" maxlength="30" />
+                    </div>
+                    <div class="settings-field settings-field--narrow">
+                      <label for="settingsBusinessZip">ZIP</label>
+                      <input type="text" id="settingsBusinessZip" placeholder="00000" autocomplete="postal-code" maxlength="10" />
+                    </div>
+                  </div>
+                  <div class="settings-field">
+                    <label for="settingsBusinessEmail">Contact email</label>
+                    <input type="email" id="settingsBusinessEmail" placeholder="contact@example.com" autocomplete="email" />
+                  </div>
+                  <div class="settings-field">
+                    <label for="settingsBusinessPhoneNumber">Phone number</label>
+                    <input type="tel" id="settingsBusinessPhoneNumber" placeholder="912 345 6789" autocomplete="tel" />
+                    <p class="settings-phone-note">SMS verification will be required when updating this — coming soon.</p>
+                  </div>
+
+                  <div class="settings-field hidden" id="settingsTimezoneField">
+                    <label for="settingsTimezone">Timezone</label>
+                    <select id="settingsTimezone" class="settings-select"></select>
+                    <p class="settings-section-hint" style="margin-top:6px">Used for all date &amp; time calculations — reports, cashflow, and daily totals.</p>
+                  </div>
+
+                  <div class="settings-save-row">
+                    <span class="settings-save-status" id="businessSaveStatus"></span>
+                    <button class="btn primary" id="saveBusinessInfoBtn" type="button">Save Changes</button>
+                  </div>
                 </div>
-                <div class="settings-field">
-                  <label for="settingsBusinessName">Business name</label>
-                  <input type="text" id="settingsBusinessName" placeholder="My Business" autocomplete="organization" />
-                </div>
-                <div class="settings-field">
-                  <label for="settingsBusinessEmail">Contact email</label>
-                  <input type="email" id="settingsBusinessEmail" placeholder="contact@example.com" autocomplete="email" />
-                </div>
-                <div class="settings-field">
-                  <label for="settingsBusinessPhoneNumber">Phone number</label>
-                  <input type="tel" id="settingsBusinessPhoneNumber" placeholder="912 345 6789" autocomplete="tel" />
-                  <p class="settings-phone-note">SMS verification will be required when updating this — coming soon.</p>
-                </div>
-                <div class="settings-save-row">
-                  <span class="settings-save-status" id="businessSaveStatus"></span>
-                  <button class="btn primary" id="saveBusinessInfoBtn" type="button">Save Changes</button>
+
+                <div class="settings-section" style="margin-top:16px">
+                  <div class="settings-section-header">
+                    <div>
+                      <h3 class="settings-section-title">Time Clock Device</h3>
+                      <p class="settings-section-hint">Set up a dedicated tablet or shared device where staff can clock in and out. The Time Clock page is separate from the main POS.</p>
+                    </div>
+                  </div>
+                  <ol class="settings-steps-list">
+                    <li>Click <strong>Generate Code</strong> to create a 6-character activation code.</li>
+                    <li>On the device you want to use, open <strong>timeclock.html</strong> (same URL as this app, different page).</li>
+                    <li>Tap <strong>Activate Device</strong> on that page and enter the code. The device is now registered.</li>
+                    <li>Staff sign in with their <em>own</em> accounts — not the owner account — to clock in and out.</li>
+                  </ol>
+                  <div class="settings-toggle-row" style="margin-top:12px">
+                    <div>
+                      <p class="settings-toggle-label">Activation Code</p>
+                      <p class="settings-section-hint">Generating a new code immediately invalidates the previous one. The device only needs to be activated once.</p>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+                      <span class="tc-token-badge hidden" id="tcTokenDisplay"></span>
+                      <button class="btn" id="tcGenerateTokenBtn" type="button">Generate Code</button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -260,11 +317,11 @@
               <!-- Displays tab -->
               <div class="settings-tab hidden" id="settingsTabDisplays">
                 <h3 class="settings-tab-title">Displays</h3>
-                <p class="settings-tab-hint">Configure the Kitchen Display and Customer Display windows.</p>
+                <p class="settings-tab-hint">Configure the Queue Display and Customer Display windows.</p>
 
                 <div class="display-settings-group">
-                  <p class="settings-toggle-label">Kitchen Display</p>
-                  <p class="settings-section-hint" style="margin-bottom: 10px">Screen size for the kitchen window.</p>
+                  <p class="settings-toggle-label">Queue Display</p>
+                  <p class="settings-section-hint" style="margin-bottom: 10px">Screen size for the queue window.</p>
                   <div class="display-size-row">
                     <select class="display-size-select" id="kdsWindowSizeSelect">
                       <option value="1024x768">Tablet — 1024×768</option>
@@ -1240,7 +1297,7 @@
           </button>
           <button class="rp-nav-tab" data-section="kitchen" type="button">
             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14.5 14.5"/><path d="M16.24 7.76A6 6 0 0 1 18 12"/></svg>
-            Kitchen
+            Queue
           </button>
           <div class="rp-sidebar-spacer"></div>
         </nav>
@@ -1496,8 +1553,8 @@
             <div class="rp-chart-wrap"><canvas id="rpCmpDowCanvas"></canvas></div>
           </div>
 
-          <!-- ── Kitchen ── -->
-          <h4 class="rp-cmp-section-title">Kitchen</h4>
+          <!-- ── Queue ── -->
+          <h4 class="rp-cmp-section-title">Queue</h4>
 
           <div class="rp-card rp-card--full">
             <div class="rp-card-head">
@@ -1815,7 +1872,7 @@
             <div class="rp-kpi">
               <div class="rp-kpi-label-row">
                 <span class="rp-kpi-label">Avg. Serving Time</span>
-                <button class="rp-info-btn" data-tip="Average time from order placed to kitchen marking it done." aria-label="Info" tabindex="-1">i</button>
+                <button class="rp-info-btn" data-tip="Average time from order placed to marking it done on the queue display." aria-label="Info" tabindex="-1">i</button>
               </div>
               <div class="rp-kpi-val-row"><span class="rp-kpi-emoji">🍳</span><span class="rp-kpi-val rp-kpi-val--muted" id="reportsServingTime">—</span></div>
               <span class="rp-kpi-cmp" id="reportsServingCmp"></span>
@@ -1827,7 +1884,7 @@
                 <h3>⏱️ Serving Time by Hour</h3>
                 <div class="rp-card-head-right">
                   <span class="rp-phase-badge" id="rpServingHourBadge">Loading…</span>
-                  <button class="rp-info-btn" data-tip="Average minutes from checkout to order served, by hour of day. Peaks reveal which rush windows slow your kitchen down the most." aria-label="Info" tabindex="-1">i</button>
+                  <button class="rp-info-btn" data-tip="Average minutes from checkout to order served, by hour of day. Peaks reveal which rush windows slow your throughput the most." aria-label="Info" tabindex="-1">i</button>
                 </div>
               </div>
               <div class="rp-ph rp-ph--bars rp-ph--bars-sm" id="rpServingHourPh">
@@ -1848,7 +1905,7 @@
                 <h3>📆 Serving Time by Day</h3>
                 <div class="rp-card-head-right">
                   <span class="rp-phase-badge" id="rpServingDayBadge">Loading…</span>
-                  <button class="rp-info-btn" data-tip="Average serving time by day of the week. The brightest bar is your most pressured day in the kitchen." aria-label="Info" tabindex="-1">i</button>
+                  <button class="rp-info-btn" data-tip="Average serving time by day of the week. The brightest bar is your most pressured day." aria-label="Info" tabindex="-1">i</button>
                 </div>
               </div>
               <div class="rp-ph rp-ph--bars" id="rpServingDayPh">
@@ -1946,15 +2003,6 @@
               </datalist>
             </label>
 
-            <label class="expense-label">
-              Date &amp; Time
-              <input
-                type="datetime-local"
-                id="expenseDate"
-                name="expense_date"
-                required
-              />
-            </label>
           </div>
 
           <button
