@@ -403,8 +403,7 @@
                     <span class="info-icon">
                       i
                       <span class="tooltip-text-parent-price">
-                        Enable this if your item has multiple variants, like
-                        sizes, flavors, or types.
+                        If the price depends on variants (e.g. sizes or flavors), set this to 0 and put the price on each variant instead.
                       </span>
                     </span>
                   </span>
@@ -450,30 +449,38 @@
 
               <div class="form-column form-column-right">
                 <label class="file-upload-label">
-                  Upload Image
+                  Image
                   <input type="file" name="image" accept="image/*" />
-                  <span class="file-upload-btn">Choose File</span>
-                  <span class="file-upload-name">No file chosen</span>
+                  <div class="file-upload-zone">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+                      <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+                    </svg>
+                    <span class="file-upload-zone-main">Click to upload</span>
+                    <span class="file-upload-name">PNG or JPG — optional</span>
+                  </div>
                 </label>
 
-                <span class="toggle-label">
-                  Item Has Multiple Options?
-                  <span class="info-icon">
-                    i
-                    <span class="tooltip-text">
-                      Enable this if your item has multiple variants, like
-                      sizes, flavors, or types.
+                <div class="variants-toggle-row">
+                  <div class="variants-toggle-text">
+                    <span class="variants-toggle-title">
+                      Multiple options?
+                      <span class="info-icon">
+                        i
+                        <span class="tooltip-text">
+                          Enable this if your item has variants like sizes, flavors, or types.
+                        </span>
+                      </span>
                     </span>
-                  </span>
-                </span>
-
-                <!-- Checkbox below -->
-                <div class="variant-btn-section">
+                    <span class="variants-toggle-hint">Sizes, flavors, add-ons</span>
+                  </div>
                   <label class="switch">
                     <input type="checkbox" id="hasVariantsCheckbox" />
                     <span class="slider round"></span>
                   </label>
+                </div>
 
+                <div class="variant-btn-section">
                   <div id="variantsSection" class="hidden variants-section">
                     <button
                       type="button"
@@ -669,20 +676,6 @@
               </button>
             </article>
 
-            <article class="home-shortcut-card home-shortcut-card--soon" tabindex="-1" aria-disabled="true">
-              <button class="home-shortcut-btn" disabled aria-label="Inventory — coming soon">
-                <span class="home-shortcut-icon" aria-hidden="true">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                    <line x1="12" y1="22.08" x2="12" y2="12"/>
-                  </svg>
-                </span>
-                <span class="home-shortcut-title">Inventory</span>
-                <span class="home-shortcut-sub">Coming soon</span>
-              </button>
-            </article>
-
             <article class="home-shortcut-card" tabindex="0" data-min-role="admin">
               <button class="home-shortcut-btn" data-action="staff" aria-label="Manage staff">
                 <span class="home-shortcut-icon" aria-hidden="true">
@@ -725,6 +718,20 @@
                 </span>
                 <span class="home-shortcut-title">Help</span>
                 <span class="home-shortcut-sub">Support &amp; issues</span>
+              </button>
+            </article>
+
+            <article class="home-shortcut-card home-shortcut-card--soon" tabindex="-1" aria-disabled="true">
+              <button class="home-shortcut-btn" disabled aria-label="Inventory — coming soon">
+                <span class="home-shortcut-icon" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                    <line x1="12" y1="22.08" x2="12" y2="12"/>
+                  </svg>
+                </span>
+                <span class="home-shortcut-title">Inventory</span>
+                <span class="home-shortcut-sub">Coming soon</span>
               </button>
             </article>
 
@@ -1109,11 +1116,9 @@
             Roles
           </button>
 
-          <p class="staff-sidebar-label" style="margin-top:10px;">Coming Soon</p>
-          <button class="staff-tab staff-tab--soon" data-tab="payroll" type="button">
+          <button class="staff-tab" data-tab="payroll" type="button">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <span style="flex:1">Payroll / Time Tracker</span>
-            <span class="staff-soon-badge">Soon</span>
+            Payroll / Time Tracker
           </button>
         </nav>
         <div class="staff-main" id="staffMain">

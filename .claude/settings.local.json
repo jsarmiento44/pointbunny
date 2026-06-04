@@ -55,7 +55,11 @@
       "Bash(git diff *)",
       "Bash(grep -v \"^\\\\\\(+\\\\|-\\\\\\)\\\\s*<\\\\|^\\\\\\(+\\\\|-\\\\\\)\\\\s*$\")",
       "Bash(grep -iv \"xmlns\\\\|viewBox\\\\|stroke\\\\|fill=\\\\|width=\\\\|height=\\\\|stroke-\\\\|class=\\\\|type=\\\\|id=\\\\|aria-\\\\|data-\\\\|href=\\\\|src=\\\\|title=\\\\|placeholder=\\\\|tabindex\\\\|role=\\\\|name=\\\\|value=\\\\|for=\\\\|rows=\\\\|cols=\\\\|target=\\\\|rel=\\\\|action=\\\\|method=\\\\|enctype=\\\\|autocomplete=\\\\|min=\\\\|max=\\\\|step=\\\\|pattern=\\\\|required\\\\|disabled\\\\|readonly\\\\|checked=\\\\|selected=\\\\|multiple\\\\|size=\\\\|><\\\\|><\\\\/\\\\| \\\\/>$\\\\|^+ *>\\\\|^+ *<\\\\/\")",
-      "Bash(fc /b index.html dist/index.html)"
+      "Bash(fc /b index.html dist/index.html)",
+      "Bash(git *)",
+      "Bash(Get-ChildItem *)",
+      "Bash(grep -v \"^--$\")",
+      "Bash(grep \"\\\\..*{$\\\\|^[0-9]\")"
     ]
   }
 }

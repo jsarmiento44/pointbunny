@@ -94,7 +94,7 @@ class NewMenuItemView extends View {
     this._showVariantBtn.classList.add("hidden");
     this._addedVariants = [];
     const fileNameSpan = this._parentElement.querySelector(".file-upload-name");
-    fileNameSpan.textContent = "No file chosen";
+    fileNameSpan.textContent = "PNG or JPG — optional";
     fileNameSpan.style.color = "";
   }
 
@@ -283,19 +283,22 @@ class NewMenuItemView extends View {
 
     fileInput.addEventListener("change", () => {
       const file = fileInput.files?.[0];
+      const zone = this._parentElement.querySelector(".file-upload-zone");
       if (!file) {
-        fileNameSpan.textContent = "No file chosen";
+        fileNameSpan.textContent = "PNG or JPG — optional";
         fileNameSpan.style.color = "";
+        zone?.classList.remove("file-upload-zone--selected");
         return;
       }
       if (!file.type.startsWith("image/")) {
         fileInput.value = "";
         fileNameSpan.textContent = "Please select an image file";
-        fileNameSpan.style.color = "red";
+        fileNameSpan.style.color = "var(--color-danger, #ef4444)";
         return;
       }
-      fileNameSpan.textContent = file.name;
-      fileNameSpan.style.color = "green";
+      fileNameSpan.textContent = "✓ " + file.name;
+      fileNameSpan.style.color = "";
+      zone?.classList.add("file-upload-zone--selected");
     });
   }
 }

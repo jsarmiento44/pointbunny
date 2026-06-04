@@ -183,11 +183,16 @@ All external display windows use the same channel instance via the shared `chann
 
 ## 5. Feature Workflows
 
-> **Home Page Stat Cards** — four cards at the top of the home screen, each with a `.stat-icon` Lucide SVG pill (green-tinted):
-> - **Today's Sales** (`#totalStr`) — animated count-up via `_animateSalesTotal`; trending arrow badge (`#salesVsYesterday`) vs yesterday, loaded once at login via `model.loadYesterdaySalesTotal()` and cached in `_yesterdayTotal`
-> - **Date & Time** (`#dateTimeStr`) — combined single card, updated every 15s by `setDateTime()` in `pointy.js`
-> - **Transactions** (`#basketCountStr`) — today's transaction count with % badge (`#basketsVsYesterday`) vs yesterday; counts fetched once at login via `model.loadTransactionCounts()`, cached in `_todayTransactionCount` / `_yesterdayTransactionCount`; increments locally by 1 after each `_finaliseSale`
-> - **Cashier** (`#shiftStr`) — active cashier first name; clickable to switch via `controlSwitchCashier()`
+> **Home Page Layout** — two-column layout (`.home-layout`):
+> - **Left column** — New Order CTA (`.home-cta`), action row with Cashier card (`#cashierCard`) + Activity card, shortcuts grid (Catalogue, Adjustments, Inventory coming-soon, Staff, Reports, Help)
+> - **Right column** — unified quick-dashboard card (`home-dash-card`) + Active Queue section (`home-queue-panel`)
+>
+> **Quick Dashboard Card** (`home-dash-card`) — three inline stats with emoji icons, each clickable to the matching Reports section:
+> - **Today's Sales** (💰 `#totalStr`) — animated count-up via `_animateSalesTotal`; trending badge (`#salesVsYesterday`) vs yesterday, loaded once at login via `model.loadYesterdaySalesTotal()` and cached in `_yesterdayTotal`; click → `controlOpenReports('sales')`
+> - **Transactions** (🧾 `#basketCountStr`) — today's count with badge (`#basketsVsYesterday`) vs yesterday; counts fetched once at login via `model.loadTransactionCounts()`, cached in `_todayTransactionCount` / `_yesterdayTransactionCount`; increments locally by 1 after each `_finaliseSale`; click → `controlOpenReports('traffic')`
+> - **Avg. Serving** (⏱️ `#homeAvgServing`) — today's average KDS serving time (formatted as `Xm Ys`); vs-yesterday badge (`#homeServingVs`); loaded via `_loadServingComparison()` which calls `model.fetchPeriodTotals()` for today + yesterday; shows `—` if no KDS data; click → `controlOpenReports('kitchen')`
+>
+> **Cashier Card** (`#cashierCard`, `.home-cashier-card`) — `#shiftStr` shows active cashier first name; clickable to switch via `controlSwitchCashier()`
 
 ---
 
@@ -1804,7 +1809,8 @@ The Export button in the report header is a **dropdown** with two options: "Down
 | Function | File | Purpose |
 |---|---|---|
 | `ReportsView._addHandlerOpen(handler)` | reportsView.js | Listens on `[data-action='reports']` click |
-| `controlOpenReports()` | controller.js | Fetches today data, renders dashboard |
+| `controlOpenReports(section='overview')` | controller.js | Fetches today data, renders dashboard; optional `section` arg jumps to that tab on open ('overview'\|'sales'\|'traffic'\|'kitchen') — used by home page stat cards |
+| `_loadServingComparison()` | controller.js | Fetches today + yesterday avg serving via `model.fetchPeriodTotals`; updates `#homeAvgServing` + `#homeServingVs` (home page Avg. Serving stat) |
 | `ReportsView.open()` | reportsView.js | Shows `#reportsPanel` |
 | `ReportsView.renderLoading()` | reportsView.js | Shows loading skeleton placeholders |
 | `ReportsView.setPeriodLabel(label)` | reportsView.js | Updates period label display |
@@ -2211,4 +2217,4 @@ Steps:
 
 ---
 
-*Last updated: 2026-05-28. §5.17 updated from Planned → Live: `timeclock.html` shipped with device activation, staff auth, PIN setup on first login, clock in/out/break state machine, PIN/password confirmation on clock-out; Payroll tab live with week/month/year/custom navigation, shift editing (admin/owner), pay summary, PDF/CSV export. RLS policies corrected to use `staff.user_id = auth.uid()` (not email). Update this file when a new feature is added or a workflow changes.*
+*Last updated: 2026-06-04. Home page layout updated: unified `home-dash-card` (Today's Sales + Transactions + Avg. Serving) replaces old four-card grid; Cashier moved to action row; each stat card links to matching Reports section. §5.17 updated from Planned → Live (timesheets/timeclock). Update this file when a new feature is added or a workflow changes.*

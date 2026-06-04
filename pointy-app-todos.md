@@ -3,7 +3,7 @@
 This file tracks features and integrations that need to be added to the main Pointy app
 to support the admin panel. Add to this list as we build more admin features.
 
-_Last updated: 2026-05-24_
+_Last updated: 2026-06-04_
 
 ---
 
