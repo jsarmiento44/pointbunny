@@ -232,7 +232,7 @@ class ReportsView extends View {
     try {
       Chart = await this._ensureChart();
     } catch (err) {
-      console.error('[Pointy] Chart.js failed to load after retries:', err);
+      console.error('[Pointbunny] Chart.js failed to load after retries:', err);
       this._setChartsError();
       return;
     }

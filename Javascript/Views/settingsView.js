@@ -1,4 +1,4 @@
-﻿import { initPhoneInput } from '../phoneInput.js';
+import { initPhoneInput } from '../phoneInput.js';
 
 // ── US timezone whitelist (IANA IDs) ─────────────────────────────────────────
 // Used to filter Intl.supportedValuesOf('timeZone') down to US-relevant entries.
@@ -504,7 +504,7 @@ class SettingsView {
     }
 
     // Sync ad preview
-    const adUrl = localStorage.getItem('pointy_cfd_ad');
+    const adUrl = localStorage.getItem('pointbunny_cfd_ad');
     if (adUrl) {
       document.getElementById('cfdAdPreview').classList.remove('hidden');
       document.getElementById('cfdAdPreviewImg').src = adUrl;

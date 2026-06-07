@@ -1,17 +1,17 @@
-# Pointy Admin — Server-Side Updates
+# Pointbunny Admin — Server-Side Updates
 
-This is the master reference for all backend changes made in the main Pointy app
+This is the master reference for all backend changes made in the main Pointbunny app
 that the admin panel needs to know about. Add new entries at the top as features ship.
 
 ---
 
 > ### Sync Process
-> **Source of truth lives in the admin panel repo** (`pointy-admin`).
+> **Source of truth lives in the admin panel repo** (`pointbunny-admin`).
 >
 > When this file is updated, the admin panel team will send a copy renamed as:
-> `pointy-admin-updates.YYYY-MM-DD.update.md`
+> `pointbunny-admin-updates.YYYY-MM-DD.update.md`
 >
-> **Pointy app team:** replace your `pointy-admin-updates.md` with the contents of that file, then delete the `.update.md` file. If you've made local edits, diff and merge manually before deleting.
+> **Pointbunny app team:** replace your `pointbunny-admin-updates.md` with the contents of that file, then delete the `.update.md` file. If you've made local edits, diff and merge manually before deleting.
 
 ---
 
@@ -175,8 +175,8 @@ ORDER BY s.first_name;
 - Staff without a rate still appear — just no dollar amount.
 
 **Admin panel should NOT:**
-- Edit or delete `shift_breaks` rows directly — the Pointy app manages breaks. Admins can edit the shift's `clocked_in_at` / `clocked_out_at` and `note` if needed.
-- Change `businesses.timeclock_token` — it's set by the Pointy app via the "Generate Code" button in Settings. Showing it read-only is fine.
+- Edit or delete `shift_breaks` rows directly — the Pointbunny app manages breaks. Admins can edit the shift's `clocked_in_at` / `clocked_out_at` and `note` if needed.
+- Change `businesses.timeclock_token` — it's set by the Pointbunny app via the "Generate Code" button in Settings. Showing it read-only is fine.
 
 ---
 
@@ -218,7 +218,7 @@ These four columns exist on the `sales` table and are actively written by the ap
 A sale can be voided (soft-deleted) by an authorized user. It can also be restored, which sets both columns back to `NULL`.
 
 - `voided_by` holds the full name of whoever *authorized* the void — either the cashier (if they have cashflow permission) or the manager who entered their override credentials.
-- **All revenue and transaction queries in the Pointy app filter `voided_at IS NULL`.** The admin panel must do the same.
+- **All revenue and transaction queries in the Pointbunny app filter `voided_at IS NULL`.** The admin panel must do the same.
 
 **⚠️ Important for the admin panel:**
 Any query that counts transactions or sums revenue **must exclude voided sales:**
@@ -392,7 +392,7 @@ If `added_by` ≠ `logged_in_cashier`, the sale was rung under a sub-in.
 ### Staff PIN
 
 - `staff.pin` stores the 6-digit PIN (plaintext). **Each staff member sets their own PIN** on first login — the PIN setup screen is mandatory and cannot be dismissed.
-- Business owners can also reset/change a staff member's PIN via Staff management in the Pointy app.
+- Business owners can also reset/change a staff member's PIN via Staff management in the Pointbunny app.
 - Staff without a PIN appear greyed-out and are not selectable in the cashier switcher.
 - The PIN is only used for the register switch — not for login.
 
@@ -418,7 +418,7 @@ ALTER TABLE public.tickets ADD COLUMN rated_at timestamptz;
 
 ### Business reply badge (`has_business_reply`)
 
-When a business sends a reply from the Pointy app, `has_business_reply` is set to `true` on the ticket.
+When a business sends a reply from the Pointbunny app, `has_business_reply` is set to `true` on the ticket.
 
 **What the admin panel should do:**
 - Show a badge/indicator on ticket rows where `has_business_reply = true` (mirrors the existing `has_unread_reply` flag but in reverse)
@@ -434,14 +434,14 @@ After a ticket is marked solved, the business is shown a 1–5 star rating promp
 
 **What the admin panel should do:**
 - Display the rating and comment on the solved ticket detail view
-- The prompt only shows once — if `rating` is already set, it's hidden in the Pointy app
+- The prompt only shows once — if `rating` is already set, it's hidden in the Pointbunny app
 - `rating` is `null` if the business never rated
 
 ---
 
 ## [2026-05-22] RLS Policies — Admin Panel Read Access
 
-The admin panel now reads the following Pointy app tables. These `SELECT` policies were added so the admin panel can display business data (menu counts, staff list, discount usage, employee count, adjustments) in the User Management view.
+The admin panel now reads the following Pointbunny app tables. These `SELECT` policies were added so the admin panel can display business data (menu counts, staff list, discount usage, employee count, adjustments) in the User Management view.
 
 **SQL that was run:**
 ```sql
@@ -472,20 +472,20 @@ CREATE POLICY "admin panel can read adjustments"
 ```
 
 > These are read-only — the admin panel never writes to these tables directly.
-> The Pointy app's own write policies are unchanged.
+> The Pointbunny app's own write policies are unchanged.
 
 ---
 
-## [2026-05-22] Staff Deactivation — Pointy App Must Enforce
+## [2026-05-22] Staff Deactivation — Pointbunny App Must Enforce
 
-The admin panel can now deactivate a staff member by setting `staff.is_active = false`. The **Pointy app must check this flag** on every login and session restore — if `is_active = false`, the staff member should be signed out and shown a clear message.
+The admin panel can now deactivate a staff member by setting `staff.is_active = false`. The **Pointbunny app must check this flag** on every login and session restore — if `is_active = false`, the staff member should be signed out and shown a clear message.
 
 **What the admin panel does:**
 ```js
 await supabase.from('staff').update({ is_active: false }).eq('id', member.id)
 ```
 
-**What the Pointy app needs to add** (on login + session restore):
+**What the Pointbunny app needs to add** (on login + session restore):
 ```js
 const { data: staffRecord } = await supabase
   .from('staff')
@@ -507,9 +507,9 @@ if (staffRecord && !staffRecord.is_active) {
 
 ## [2026-05-22] Subscription Status — Realtime Sync Needed
 
-The admin panel can override a business's `subscription_status` (free ↔ paid). Without a realtime listener in the Pointy app, the change won't take effect until the business owner logs out and back in.
+The admin panel can override a business's `subscription_status` (free ↔ paid). Without a realtime listener in the Pointbunny app, the change won't take effect until the business owner logs out and back in.
 
-**What the Pointy app needs to add** (after login, while session is active):
+**What the Pointbunny app needs to add** (after login, while session is active):
 ```js
 const channel = supabase
   .channel('business-subscription-' + currentUser.id)
@@ -527,7 +527,7 @@ const channel = supabase
 
 Clean up on logout: `supabase.removeChannel(channel)`
 
-> Only matters once feature gating (paid vs free) is implemented in the Pointy app. Wire it now so it's ready.
+> Only matters once feature gating (paid vs free) is implemented in the Pointbunny app. Wire it now so it's ready.
 
 ---
 

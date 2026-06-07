@@ -41,15 +41,15 @@ export const state = {
   settings: {
     adjustments: [],
     showRemovedAdjustments: true,
-    printingEnabled: localStorage.getItem('pointy_printing_enabled') !== 'false',
-    confirmPrint: localStorage.getItem('pointy_confirm_print') !== 'false',
-    printTwoCopies: localStorage.getItem('pointy_print_two_copies') === 'true',
-    kdsYellowThreshold: parseInt(localStorage.getItem('pointy_kds_yellow') || '180'),
-    kdsRedThreshold: parseInt(localStorage.getItem('pointy_kds_red') || '300'),
-    kdsAutoCompleteThreshold: parseInt(localStorage.getItem('pointy_kds_auto') || '900'),
-    kdsWindowSize: safeParse(localStorage.getItem('pointy_kds_window_size'), { width: 1920, height: 1080 }),
-    cfdWindowSize: safeParse(localStorage.getItem('pointy_cfd_window_size'), { width: 1920, height: 1080 }),
-    orderTypeEnabled: localStorage.getItem('pointy_order_type_enabled') !== 'false',
+    printingEnabled: localStorage.getItem('pointbunny_printing_enabled') !== 'false',
+    confirmPrint: localStorage.getItem('pointbunny_confirm_print') !== 'false',
+    printTwoCopies: localStorage.getItem('pointbunny_print_two_copies') === 'true',
+    kdsYellowThreshold: parseInt(localStorage.getItem('pointbunny_kds_yellow') || '180'),
+    kdsRedThreshold: parseInt(localStorage.getItem('pointbunny_kds_red') || '300'),
+    kdsAutoCompleteThreshold: parseInt(localStorage.getItem('pointbunny_kds_auto') || '900'),
+    kdsWindowSize: safeParse(localStorage.getItem('pointbunny_kds_window_size'), { width: 1920, height: 1080 }),
+    cfdWindowSize: safeParse(localStorage.getItem('pointbunny_cfd_window_size'), { width: 1920, height: 1080 }),
+    orderTypeEnabled: localStorage.getItem('pointbunny_order_type_enabled') !== 'false',
   },
   currentReceiptAdjustments: [],
 };
@@ -949,12 +949,12 @@ export const redeemDiscountCode = async function (id) {
 
 export const uploadCFDAdImage = async function (file) {
   const url = await uploadImage(file);
-  localStorage.setItem('pointy_cfd_ad', url);
+  localStorage.setItem('pointbunny_cfd_ad', url);
   return url;
 };
 
 export const removeCFDAdImage = function () {
-  localStorage.removeItem('pointy_cfd_ad');
+  localStorage.removeItem('pointbunny_cfd_ad');
 };
 
 export const loadOrderQueue = async function () {

@@ -89,7 +89,7 @@ create policy "Users can delete their own expenses"
 
 ---
 
-## Phase 6 — CSS (`pointy.css`)
+## Phase 6 — CSS (`pointbunny.css`)
 
 - [x] **6.1** Full-screen panel base (z-index 8500, fade-in/out animation)
 - [x] **6.2** Header bar

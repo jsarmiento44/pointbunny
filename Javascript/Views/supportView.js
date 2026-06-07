@@ -148,7 +148,7 @@ class SupportView {
           <p class="support-msg-text">${esc(msg.message)}</p>
           ${msg.attachment ? `<a class="support-msg-attachment" href="${esc(msg.attachment)}" target="_blank" rel="noopener">View attachment</a>` : ''}
         </div>
-        <span class="support-msg-time">${msg.sender_type === 'admin' ? 'Pointy Support' : 'You'} &middot; ${this._relativeDate(msg.created_at)}</span>
+        <span class="support-msg-time">${msg.sender_type === 'admin' ? 'Pointbunny Support' : 'You'} &middot; ${this._relativeDate(msg.created_at)}</span>
       </div>
     `).join('') + closureBlock;
 

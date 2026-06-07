@@ -1,6 +1,6 @@
-# Things to Build in the Main Pointy App
+# Things to Build in the Main Pointbunny App
 
-This file tracks features and integrations that need to be added to the main Pointy app
+This file tracks features and integrations that need to be added to the main Pointbunny app
 to support the admin panel. Add to this list as we build more admin features.
 
 _Last updated: 2026-06-04_
@@ -8,12 +8,12 @@ _Last updated: 2026-06-04_
 ---
 
 > ### Sync Process
-> **Source of truth lives in the admin panel repo** (`pointy-admin`).
+> **Source of truth lives in the admin panel repo** (`pointbunny-admin`).
 >
 > When this file is updated, the admin panel team will send a copy renamed as:
-> `pointy-app-todos.YYYY-MM-DD.update.md`
+> `pointbunny-app-todos.YYYY-MM-DD.update.md`
 >
-> **Pointy app team:** replace your `pointy-app-todos.md` with the contents of that file, then delete the `.update.md` file. If you've made local edits, diff and merge manually before deleting.
+> **Pointbunny app team:** replace your `pointbunny-app-todos.md` with the contents of that file, then delete the `.update.md` file. If you've made local edits, diff and merge manually before deleting.
 
 > **Note:** Some items depend on external services (Stripe, PostHog) not yet set up. No company domain yet — skip domain-dependent items for now.
 
@@ -25,21 +25,21 @@ _Last updated: 2026-06-04_
 - [x] ~~**Show admin replies inside a ticket**~~ ✅ shipped
 - [x] ~~**Clear unread badge when business opens ticket**~~ ✅ shipped
 - [x] ~~**Business can reply to tickets** (insert policy confirmed working)~~ ✅ shipped
-- [x] ~~**Show ticket ID in the Pointy app**~~ ✅ shipped
-- [ ] **Enforce staff `is_active` on login** — admin panel can now deactivate staff members. The Pointy app must check `is_active = false` for the logged-in staff user and block access (show "Your account has been deactivated" or redirect to login). Without this, removed staff can still use the app. (see item 14)
+- [x] ~~**Show ticket ID in the Pointbunny app**~~ ✅ shipped
+- [ ] **Enforce staff `is_active` on login** — admin panel can now deactivate staff members. The Pointbunny app must check `is_active = false` for the logged-in staff user and block access (show "Your account has been deactivated" or redirect to login). Without this, removed staff can still use the app. (see item 14)
 
 ### 🟡 Tier 2 — Next After Tier 1
 - [x] ~~**Business reply badge for admin panel** — `has_business_reply` flag~~ ✅ shipped
 - [x] ~~**Post-ticket rating** — prompt after ticket solved~~ ✅ shipped
 - [ ] **Source ID tracking on registration** — read `?source=` param from URL, fire funnel events to `registration_events` table: `link_opened`, `form_viewed`, `form_started`, `form_abandoned`, `registered` (pass `source_id` + anonymous `session_id` on each event). SQL tables already created in admin panel setup.
-- [ ] **Subscription status realtime sync** — when an admin overrides free ↔ paid from the admin panel, the Pointy app won't see the change until logout/login. Add a Supabase realtime subscription on the `businesses` row for the logged-in user so feature gating updates instantly. (see item 15)
+- [ ] **Subscription status realtime sync** — when an admin overrides free ↔ paid from the admin panel, the Pointbunny app won't see the change until logout/login. Add a Supabase realtime subscription on the `businesses` row for the logged-in user so feature gating updates instantly. (see item 15)
 - [ ] **PostHog: user identification** — `posthog.identify()` on login + key events (see item 2)
 - [ ] **PostHog: registration funnel tracking** — fire events at each signup step (see item 5)
 
 ### 🔵 Tier 3 — Needs Stripe First
 - [ ] **Free vs Paid feature differentiation** — gate certain features behind paid plan, show upgrade prompts for free users. Details TBD — awaiting spec.
 - [ ] **Subscription status via Stripe webhook** — webhook updates `businesses.subscription_status` (see item 3)
-- [ ] **Show subscription/billing info** in the Pointy app settings page
+- [ ] **Show subscription/billing info** in the Pointbunny app settings page
 
 ### ⬛ Tier 4 — Needs PostHog Wired Up First
 - [ ] **Feature usage tracking** — capture button clicks for key features (see item 4)
@@ -48,7 +48,7 @@ _Last updated: 2026-06-04_
 
 ### 🟣 Tier 5 — Needs Company Domain
 - [ ] **Staff invitation emails** — when a staff member is invited, send an email with signup instructions so they don't have to be told manually. Currently staff must sign up at the POS using the email address they were invited with. Requires company domain + email provider (Resend/Brevo via Supabase Edge Function). See item 19 below.
-- [ ] **Forgot Password (Pointy app)** — "Forgot password?" link on login screen → Supabase recovery email → password reset page. Technically works with Supabase's built-in email today, but the recovery link `redirectTo` URL needs a real domain. Move to Tier 1 once domain is live.
+- [ ] **Forgot Password (Pointbunny app)** — "Forgot password?" link on login screen → Supabase recovery email → password reset page. Technically works with Supabase's built-in email today, but the recovery link `redirectTo` URL needs a real domain. Move to Tier 1 once domain is live.
 - [ ] **2FA** — opt-in TOTP for business owner accounts (see item 13)
 - [ ] **Custom email sender domain** — for Supabase auth emails and future notifications
 - [ ] **Time Clock PIN during invite acceptance** — when a staff member accepts their invite email, redirect them to a "Set Your PIN" onboarding page (same keypad UI) so their PIN is created before they ever touch the time clock. Currently PIN is required on first timeclock login instead. Requires company domain for the Supabase `redirectTo` URL on the invite link.
@@ -119,7 +119,7 @@ and free tier views. No admin panel changes needed — just wire the webhook.
 ## 4. Platform Analytics — What the Admin Panel Needs from PostHog
 
 The **Platform → Accounts** view has placeholder cards for these features.
-All require PostHog to be wired up in the main Pointy app first.
+All require PostHog to be wired up in the main Pointbunny app first.
 
 ### Active Sessions
 Track who is currently logged in so the admin panel can show a live count.
@@ -199,7 +199,7 @@ The goal is to let admins send bulk emails to segmented lists from the admin pan
 - Resend vs Brevo (or another provider)?
 - Do we want a template editor inside the admin panel, or just a plain textarea?
 - Should businesses be able to unsubscribe from admin emails, and if so how do we track that?
-- Do we send from a custom domain (e.g. `hello@pointy.app`)? If yes, domain needs to be set up in the email provider first.
+- Do we send from a custom domain (e.g. `hello@pointbunny.app`)? If yes, domain needs to be set up in the email provider first.
 
 ---
 
@@ -215,7 +215,7 @@ When an admin is @mentioned in a CRM note, they should also receive an email so 
 3. Also call a Supabase Edge Function → Edge Function calls email API (Resend or Brevo) to send a notification email to the mentioned admin
 
 **Email content (suggested):**
-- Subject: `[Pointy] @yourusername mentioned you in a note`
+- Subject: `[Pointbunny] @yourusername mentioned you in a note`
 - Body: who mentioned them, which business, a preview of the note, a link to Contacts
 
 **Notes:**
@@ -230,7 +230,7 @@ When an admin is @mentioned in a CRM note, they should also receive an email so 
 
 ## 11. Team Invites — Activation Email & Status (Admin Panel)
 
-> **Note:** This is an admin panel feature, not a Pointy app change. Listed here for visibility.
+> **Note:** This is an admin panel feature, not a Pointbunny app change. Listed here for visibility.
 
 When a new team member is added in **Settings → Team**, they should receive an activation email with a one-time link so they can set their password and access the panel. The team list should also show whether each invite has been activated.
 
@@ -270,7 +270,7 @@ In the admin panel team list, show a status badge next to each member:
 
 ## 12. Forgot Password — Both Apps
 
-> **Applies to:** Admin panel + Pointy app
+> **Applies to:** Admin panel + Pointbunny app
 
 Neither app currently has a "Forgot password?" flow. Users who forget their password have no self-service recovery option.
 
@@ -289,7 +289,7 @@ Supabase sends a recovery email with a one-time link. Add a `/reset-password` ro
 await supabase.auth.updateUser({ password: newPassword })
 ```
 
-### Pointy app
+### Pointbunny app
 Same flow — "Forgot password?" on the login screen → recovery email → password reset page.
 
 **Notes:**
@@ -303,7 +303,7 @@ Same flow — "Forgot password?" on the login screen → recovery email → pass
 
 ## 13. Two-Factor Authentication (2FA) — Both Apps
 
-> **Applies to:** Admin panel (higher priority) + Pointy app (optional, for business owner accounts)
+> **Applies to:** Admin panel (higher priority) + Pointbunny app (optional, for business owner accounts)
 
 Supabase supports TOTP-based 2FA (Google Authenticator, Authy, etc.) via `supabase.auth.mfa.*`.
 
@@ -331,7 +331,7 @@ await supabase.auth.mfa.verify({ factorId, challengeId: data.id, code: userEnter
 
 **Where to add it:** After successful password login in `LoginView.vue`, check if MFA is required (`supabase.auth.mfa.getAuthenticatorAssuranceLevel()`). If yes, show a 6-digit code input before granting access.
 
-### Pointy app — optional 2FA
+### Pointbunny app — optional 2FA
 For business owners, 2FA can be opt-in rather than required. Add a toggle in their Settings page to enroll/unenroll.
 
 **Notes:**
@@ -344,7 +344,7 @@ For business owners, 2FA can be opt-in rather than required. Add a toggle in the
 
 ## 14. Staff Deactivation Enforcement
 
-When an admin removes a staff member from the admin panel, that staff member's `is_active` flag is set to `false` in the `staff` table. The Pointy app needs to enforce this on every session restore or login.
+When an admin removes a staff member from the admin panel, that staff member's `is_active` flag is set to `false` in the `staff` table. The Pointbunny app needs to enforce this on every session restore or login.
 
 **Where to add it:** Wherever the app checks the current user's role/permissions after login (likely in `initApp()` or an auth guard).
 
@@ -372,7 +372,7 @@ if (staffRecord && !staffRecord.is_active) {
 
 ## 15. Subscription Status Realtime Sync
 
-When an admin overrides a business's subscription plan (free ↔ paid) from the admin panel, the change is written to `businesses.subscription_status`. Without a realtime listener, the Pointy app won't reflect this until the business owner logs out and back in.
+When an admin overrides a business's subscription plan (free ↔ paid) from the admin panel, the change is written to `businesses.subscription_status`. Without a realtime listener, the Pointbunny app won't reflect this until the business owner logs out and back in.
 
 **Where to add it:** In the main app init, after the user is identified.
 
@@ -446,7 +446,7 @@ Allow businesses to generate and send invoices to customers directly from the PO
 
 ## 19. Staff Invitation Emails
 
-When a business owner adds a staff member in the Pointy app, the invited person currently has to be told verbally to sign up at the POS using their email. There's no automated onboarding email.
+When a business owner adds a staff member in the Pointbunny app, the invited person currently has to be told verbally to sign up at the POS using their email. There's no automated onboarding email.
 
 **What to build once domain is live:**
 1. After `inviteStaff()` succeeds, call a Supabase Edge Function that sends an email to the invited address

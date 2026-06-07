@@ -341,14 +341,14 @@ const controlMarkOrderDone = function (id, timedOut = false) {
 
 const controlOpenKDSWindow = function () {
   const { width, height } = model.state.settings.kdsWindowSize;
-  const win = window.open('kds-display.html', 'pointy-kds', `width=${width},height=${height},menubar=no,toolbar=no,location=no`);
+  const win = window.open('kds-display.html', 'pointbunny-kds', `width=${width},height=${height},menubar=no,toolbar=no,location=no`);
   if (!win) showToast('Popup was blocked. Allow popups for this site to open the Queue Display.', 'error');
   else win.focus();
 };
 
 const controlOpenCFDWindow = function () {
   const { width, height } = model.state.settings.cfdWindowSize;
-  const win = window.open('customer-display.html', 'pointy-cfd', `width=${width},height=${height},menubar=no,toolbar=no,location=no`);
+  const win = window.open('customer-display.html', 'pointbunny-cfd', `width=${width},height=${height},menubar=no,toolbar=no,location=no`);
   if (!win) showToast('Popup was blocked. Allow popups for this site to open the Customer Display.', 'error');
   else win.focus();
 };
@@ -364,12 +364,12 @@ const _broadcastCart = function () {
 
 const controlSaveKDSWindowSize = function (size) {
   model.state.settings.kdsWindowSize = size;
-  localStorage.setItem('pointy_kds_window_size', JSON.stringify(size));
+  localStorage.setItem('pointbunny_kds_window_size', JSON.stringify(size));
 };
 
 const controlSaveCFDWindowSize = function (size) {
   model.state.settings.cfdWindowSize = size;
-  localStorage.setItem('pointy_cfd_window_size', JSON.stringify(size));
+  localStorage.setItem('pointbunny_cfd_window_size', JSON.stringify(size));
 };
 
 const controlUploadCFDAd = async function (file) {
@@ -389,9 +389,9 @@ const controlSaveKDSThresholds = function ({ yellow, red, auto }) {
   model.state.settings.kdsYellowThreshold = yellow;
   model.state.settings.kdsRedThreshold = red;
   model.state.settings.kdsAutoCompleteThreshold = auto;
-  localStorage.setItem('pointy_kds_yellow', yellow);
-  localStorage.setItem('pointy_kds_red', red);
-  localStorage.setItem('pointy_kds_auto', auto);
+  localStorage.setItem('pointbunny_kds_yellow', yellow);
+  localStorage.setItem('pointbunny_kds_red', red);
+  localStorage.setItem('pointbunny_kds_auto', auto);
 };
 
 // ── Sale finalisation ─────────────────────────────────────────────────────────
@@ -696,22 +696,22 @@ const controlOpenSettings = function () {
 
 const controlTogglePrinting = function (value) {
   model.state.settings.printingEnabled = value;
-  localStorage.setItem('pointy_printing_enabled', value);
+  localStorage.setItem('pointbunny_printing_enabled', value);
 };
 
 const controlToggleConfirmPrint = function (value) {
   model.state.settings.confirmPrint = value;
-  localStorage.setItem('pointy_confirm_print', value);
+  localStorage.setItem('pointbunny_confirm_print', value);
 };
 
 const controlTogglePrintTwoCopies = function (value) {
   model.state.settings.printTwoCopies = value;
-  localStorage.setItem('pointy_print_two_copies', value);
+  localStorage.setItem('pointbunny_print_two_copies', value);
 };
 
 const controlToggleOrderType = function (value) {
   model.state.settings.orderTypeEnabled = value;
-  localStorage.setItem('pointy_order_type_enabled', value);
+  localStorage.setItem('pointbunny_order_type_enabled', value);
 };
 
 const _refreshCategoryDropdowns = function () {
@@ -1108,8 +1108,8 @@ const initApp = async function (user) {
     user.email;
   const companyNameEl = document.querySelector('.company-name');
   if (companyNameEl) companyNameEl.textContent = model.state.username;
-  localStorage.setItem('pointy_store_name', model.state.username);
-  localStorage.setItem('pointy_business_id', model.state.businessId);
+  localStorage.setItem('pointbunny_store_name', model.state.username);
+  localStorage.setItem('pointbunny_business_id', model.state.businessId);
   document.body.classList.remove('role-admin', 'role-manager', 'role-cashier');
   document.body.classList.add(`role-${model.state.role.toLowerCase()}`);
   if (model.state.currentStaff) model.state.currentCashier = model.state.currentStaff;
@@ -2806,7 +2806,7 @@ const controlExportReportsPDF = function () {
 
     const cmpHtml = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/>
-<title>Pointy Comparison — ${esc(labelA)} vs ${esc(labelB)}</title>
+<title>Pointbunny Comparison — ${esc(labelA)} vs ${esc(labelB)}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -2854,7 +2854,7 @@ tr:last-child td{border-bottom:none}
 
 <div class="pdf-header">
   <div>
-    <div class="pdf-logo">Pointy</div>
+    <div class="pdf-logo">Pointbunny</div>
     <div class="pdf-period">Comparison Report</div>
   </div>
   <div class="pdf-meta"><div>${eDate}</div><div>${eTime}</div></div>
@@ -2889,10 +2889,10 @@ ${cmpChart ? `<div class="section-heading">Gross Income Over Time</div>
   </table></div>
 </div>
 
-<div class="pdf-footer">Pointy POS &nbsp;·&nbsp; ${esc(labelA)} vs ${esc(labelB)} &nbsp;·&nbsp; Exported ${eDate} at ${eTime}</div>
+<div class="pdf-footer">Pointbunny POS &nbsp;·&nbsp; ${esc(labelA)} vs ${esc(labelB)} &nbsp;·&nbsp; Exported ${eDate} at ${eTime}</div>
 </body></html>`;
 
-    const pop = window.open("", "pointy-pdf-report", "width=960,height=720");
+    const pop = window.open("", "pointbunny-pdf-report", "width=960,height=720");
     if (!pop) { showToast("Pop-up blocked. Allow pop-ups for this site to export PDF.", "error"); return; }
     pop.document.write(cmpHtml);
     pop.document.close();
@@ -2942,7 +2942,7 @@ ${cmpChart ? `<div class="section-heading">Gross Income Over Time</div>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Pointy Report — ${esc(periodLabel)}</title>
+<title>Pointbunny Report — ${esc(periodLabel)}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -2978,7 +2978,7 @@ tr:last-child td{border-bottom:none}
 
 <div class="pdf-header">
   <div>
-    <div class="pdf-logo">Pointy</div>
+    <div class="pdf-logo">Pointbunny</div>
     <div class="pdf-period">${esc(periodLabel)}</div>
   </div>
   <div class="pdf-meta">
@@ -3025,12 +3025,12 @@ ${staff.length ? `<div class="section-heading">Staff Performance</div>
   </table>
 </div>
 
-<div class="pdf-footer">Pointy POS &nbsp;·&nbsp; ${esc(periodLabel)} &nbsp;·&nbsp; Exported ${exportDate} at ${exportTime}</div>
+<div class="pdf-footer">Pointbunny POS &nbsp;·&nbsp; ${esc(periodLabel)} &nbsp;·&nbsp; Exported ${exportDate} at ${exportTime}</div>
 
 </body>
 </html>`;
 
-  const popup = window.open("", "pointy-pdf-report", "width=960,height=720");
+  const popup = window.open("", "pointbunny-pdf-report", "width=960,height=720");
   if (!popup) { showToast("Pop-up blocked. Allow pop-ups for this site to export PDF.", "error"); return; }
   popup.document.write(html);
   popup.document.close();

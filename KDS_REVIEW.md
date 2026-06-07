@@ -15,7 +15,7 @@ A full-screen Kitchen Display System (KDS) accessible from the main screen via t
 | `Javascript/Views/kdsView.js` | New | Full KDS view — render, timers, sound |
 | `Javascript/Views/settingsView.js` | Modified | KDS threshold inputs |
 | `index.html` | Modified | Order Queue card, KDS panel, Settings section |
-| `pointy.css` | Modified | KDS card grid, timer colors, threshold inputs |
+| `pointbunny.css` | Modified | KDS card grid, timer colors, threshold inputs |
 
 ---
 
@@ -86,9 +86,9 @@ orderQueue: [
 ]
 
 // Added to model.state.settings
-kdsYellowThreshold:      number  // default 180  (3 min) — localStorage: pointy_kds_yellow
-kdsRedThreshold:         number  // default 300  (5 min) — localStorage: pointy_kds_red
-kdsAutoCompleteThreshold: number // default 900  (15 min) — localStorage: pointy_kds_auto
+kdsYellowThreshold:      number  // default 180  (3 min) — localStorage: pointbunny_kds_yellow
+kdsRedThreshold:         number  // default 300  (5 min) — localStorage: pointbunny_kds_red
+kdsAutoCompleteThreshold: number // default 900  (15 min) — localStorage: pointbunny_kds_auto
 ```
 
 **Where these are declared:**

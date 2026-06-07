@@ -49,8 +49,8 @@ const avatarColor = name => {
 
 // ── Device activation ─────────────────────────────────────────────────────────
 
-const TOKEN_KEY = 'pointy_timeclock_token';
-const BIZ_KEY   = 'pointy_timeclock_biz';
+const TOKEN_KEY = 'pointbunny_timeclock_token';
+const BIZ_KEY   = 'pointbunny_timeclock_biz';
 
 const checkDeviceRegistration = async () => {
   const stored = localStorage.getItem(TOKEN_KEY);

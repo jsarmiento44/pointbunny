@@ -1,4 +1,4 @@
-# SYSTEM.md — Pointy POS: Architecture & Feature Workflows
+# SYSTEM.md — Pointbunny POS: Architecture & Feature Workflows
 
 > Living reference for the full system. Every feature traces from user action → view handler → controller function → model mutation → re-render, plus a function-level quick reference for each feature so devs know exactly what to touch.
 
@@ -33,7 +33,7 @@
 
 ## 1. Architecture Overview
 
-**Pointy** is a SPA (Single Page Application) following a strict **MVC** pattern. Persistence is via **Supabase** (Postgres DB + Auth + Storage + Realtime).
+**Pointbunny** is a SPA (Single Page Application) following a strict **MVC** pattern. Persistence is via **Supabase** (Postgres DB + Auth + Storage + Realtime).
 
 ```
 User Action
@@ -50,7 +50,7 @@ Controller re-renders the relevant View
 - **No framework.** Vanilla JS (ES6 modules), bundled by Parcel.
 - **No persistent local state.** All state lives in the `state` object (`model.js`) and resets on reload. Persistence is via Supabase.
 - **No direct View→Model calls.** Views only call handlers passed to them by the controller.
-- **External displays** (KDS window, CFD window) communicate via `PointyChannel` — a thin wrapper around Supabase Realtime.
+- **External displays** (KDS window, CFD window) communicate via `PointbunnyChannel` — a thin wrapper around Supabase Realtime.
 
 ---
 
@@ -60,7 +60,7 @@ Controller re-renders the relevant View
 |---|---|---|
 | `model.js` | `state`, named functions | All data, all DB calls, state mutations |
 | `controller.js` | `init()` entry point + all `control*` functions | Wires views to model; handles app logic |
-| `channel.js` | `PointyChannel` (default export `channel`) | Realtime messaging between cashier app and KDS/CFD windows |
+| `channel.js` | `PointbunnyChannel` (default export `channel`) | Realtime messaging between cashier app and KDS/CFD windows |
 | `Views/view.js` | `View` (base class) | `render()`, `renderSpinner()`, confirm modal, success overlay |
 | `Views/authView.js` | `AuthView` | Login/signup forms, loading states, animations |
 | `Views/newOrderView.js` | `NewOrderView` | Order modal: category tabs, item grid, cart sidebar |
@@ -150,12 +150,12 @@ state = {
 
 ## 4. Cross-Cutting: Channel Messages
 
-`channel.js` exposes a `PointyChannel` instance that sends and receives over **two parallel transports**:
+`channel.js` exposes a `PointbunnyChannel` instance that sends and receives over **two parallel transports**:
 
 | Transport | Mechanism | When it's used |
 |---|---|---|
-| **Native `BroadcastChannel`** (`pointy-local`) | Browser API, synchronous, zero-network | Same-browser windows (KDS popup, CFD popup on the same machine) |
-| **Supabase Realtime** (`pointy-displays`, `self: false`) | WebSocket via Supabase | Cross-device scenarios; fallback if `BroadcastChannel` is unavailable |
+| **Native `BroadcastChannel`** (`pointbunny-local`) | Browser API, synchronous, zero-network | Same-browser windows (KDS popup, CFD popup on the same machine) |
+| **Supabase Realtime** (`pointbunny-displays`, `self: false`) | WebSocket via Supabase | Cross-device scenarios; fallback if `BroadcastChannel` is unavailable |
 
 Every `channel.postMessage(data)` call sends on **both** transports simultaneously. The receiving window's `onmessage` handler fires on whichever arrives first; all handlers are idempotent so a second delivery is harmless.
 
@@ -217,7 +217,7 @@ User submits login form
       → model.loadDiscountCodes()   → state.discountCodes
       → model.loadTodaySalesTotal() → #totalStr display
       → model.loadOrderQueue()      → state.orderQueue
-      → localStorage.setItem('pointy_business_id', state.businessId)  [used by KDS popup for direct DB load]
+      → localStorage.setItem('pointbunny_business_id', state.businessId)  [used by KDS popup for direct DB load]
       → authView.hide()
       → _wireApp()  [wires all view handlers to controller functions]
 ```
@@ -779,7 +779,7 @@ User flips order type toggle
   → settingsView._addHandlerToggleOrderType
   → controlToggleOrderType(value)
     → state.settings.orderTypeEnabled = value
-    → localStorage.setItem('pointy_order_type_enabled', value)
+    → localStorage.setItem('pointbunny_order_type_enabled', value)
 ```
 
 When off: the Dine In / Takeout selector is hidden from checkout, `orderType` is stored as `null`, and no type label appears on receipts, the Active Queue rows, or KDS cards.
@@ -812,7 +812,7 @@ User flips "Print 2 Copies" toggle
   → settingsView._addHandlerToggleTwoCopies
   → controlTogglePrintTwoCopies(value)
     → state.settings.printTwoCopies = value
-    → localStorage.setItem('pointy_print_two_copies', value)
+    → localStorage.setItem('pointbunny_print_two_copies', value)
 
 On transaction conclude (if printTwoCopies is true):
   → controlConcludeTransaction() prints receipt once (customer copy)
@@ -873,10 +873,10 @@ User clicks remove
 | `controlToggleConfirmPrint(value)` | controller.js | Updates `state.settings.confirmPrint` + localStorage |
 | `syncTwoCopiesToggle(value)` | settingsView.js | Sets `#twoCopiesToggle` checkbox state |
 | `_addHandlerToggleTwoCopies(handler)` | settingsView.js | Listens on `#twoCopiesToggle` change |
-| `controlTogglePrintTwoCopies(value)` | controller.js | Updates `state.settings.printTwoCopies` + localStorage (`pointy_print_two_copies`) |
+| `controlTogglePrintTwoCopies(value)` | controller.js | Updates `state.settings.printTwoCopies` + localStorage (`pointbunny_print_two_copies`) |
 | `syncOrderTypeToggle(value)` | settingsView.js | Sets `#orderTypeToggle` checkbox state |
 | `_addHandlerToggleOrderType(handler)` | settingsView.js | Listens on `#orderTypeToggle` change |
-| `controlToggleOrderType(value)` | controller.js | Updates `state.settings.orderTypeEnabled` + localStorage (`pointy_order_type_enabled`) |
+| `controlToggleOrderType(value)` | controller.js | Updates `state.settings.orderTypeEnabled` + localStorage (`pointbunny_order_type_enabled`) |
 | `syncKDSThresholds(yellow, red, auto)` | settingsView.js | Populates threshold inputs from state |
 | `_addHandlerKDSThresholds(handler)` | settingsView.js | Listens on threshold input changes |
 | `controlSaveKDSThresholds({ yellow, red, auto })` | controller.js | Updates all three thresholds in state + localStorage |
@@ -1487,7 +1487,7 @@ User clicks "Open KDS Window" (in Settings or nav)
     → window.open('kds-display.html', 'kds', `width=...,height=...`)
     → KDS window loads
     → loadFromDB() queries Supabase directly:
-        → reads pointy_business_id from localStorage
+        → reads pointbunny_business_id from localStorage
         → fetches today's sales where prepared_at IS NULL
         → populates queue, renders card grid
         → header flips from pulsing amber "Syncing…" dot → solid green "Live" dot
@@ -1796,7 +1796,7 @@ The Export button in the report header is a **dropdown** with two options: "Down
 
 **PDF export** (`controlExportReportsPDF`) — opens a styled print popup (`window.open`) then calls `popup.print()` after 700ms. The browser's print dialog offers "Save as PDF". Branches on `_compareModeActive`:
 
-- **Regular mode PDF** — Pointy green header, 4 KPI cards (Revenue / Transactions / Avg. Order / Avg. Serving), chart images captured live via `canvas.toDataURL()` (Revenue full-width, Category + Hourly side-by-side, DOW + Serving Time if visible), Top Items table (up to 10), Staff Performance table, Transactions table (capped at 50). Charts are only included if their wrap element does not have the `hidden` class and the canvas `style.display !== 'none'`.
+- **Regular mode PDF** — Pointbunny green header, 4 KPI cards (Revenue / Transactions / Avg. Order / Avg. Serving), chart images captured live via `canvas.toDataURL()` (Revenue full-width, Category + Hourly side-by-side, DOW + Serving Time if visible), Top Items table (up to 10), Staff Performance table, Transactions table (capped at 50). Charts are only included if their wrap element does not have the `hidden` class and the canvas `style.display !== 'none'`.
 
 - **Compare mode PDF** (active when `_compareModeActive && _cmpSalesA && _cmpSalesB`) — "Comparison Report" header, **KPI card grid** (2×2) styled to match the UI: green dot + Period A value (green text) + delta badge pill (green/red) + blue dot + Period B value (colored green if B won, red if B lost); inverted logic for Avg. Serving. Below the cards: the live compare revenue chart image, then Top Items side-by-side for A and B.
 
@@ -1996,7 +1996,7 @@ Four parts:
 `timeclock.html` is designed for a single fixed device per business. On first open, it shows an **activation screen** where the owner enters a code generated from the main POS Settings panel. The code is validated against `businesses.timeclock_token`, and on success the token is saved to `localStorage` on that device. Subsequent loads skip straight to the staff login.
 
 - Owner generates token: Settings → "Register Time Clock Device" → copies 6-character code
-- Tablet enters code once → stored in `localStorage` as `pointy_timeclock_token`
+- Tablet enters code once → stored in `localStorage` as `pointbunny_timeclock_token`
 - If token is cleared (e.g. different browser/device), re-activation is required
 
 #### New DB Surface
@@ -2073,7 +2073,7 @@ ALTER TABLE public.businesses ADD COLUMN timeclock_token text;
 
 ```
 On load:
-  → check localStorage for pointy_timeclock_token
+  → check localStorage for pointbunny_timeclock_token
   → if missing: show Activation Screen
       Owner enters 6-char code → validate against businesses.timeclock_token
       → on match: store token, show Staff Login

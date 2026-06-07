@@ -2,7 +2,7 @@
 
 ## What Was Built
 
-Three major features added on top of the existing Pointy POS:
+Three major features added on top of the existing Pointbunny POS:
 
 | Feature | Description |
 |---|---|
@@ -36,7 +36,7 @@ All three communicate using the browser's native **`BroadcastChannel` API** — 
 | `Javascript/model.js` | `kdsWindowSize`, `cfdWindowSize` added to settings; `uploadCFDAdImage`, `removeCFDAdImage` added |
 | `Javascript/Views/settingsView.js` | Display size selectors, ad image upload/preview/remove methods |
 | `index.html` | Kitchen + Customer nav buttons; Displays section in Settings modal |
-| `pointy.css` | Nav display button styles + reveal animation; Display settings CSS |
+| `pointbunny.css` | Nav display button styles + reveal animation; Display settings CSS |
 | `package.json` | Parcel entry points expanded to include all three HTML files |
 
 ---
@@ -58,7 +58,7 @@ All three communicate using the browser's native **`BroadcastChannel` API** — 
 │                                                     │
 │       │  broadcasts via                             │
 │       ▼                                             │
-│  channel.js (BroadcastChannel 'pointy-displays')    │
+│  channel.js (BroadcastChannel 'pointbunny-displays')    │
 └───────────────────────┬─────────────────────────────┘
                         │
           ┌─────────────┴──────────────┐
@@ -90,7 +90,7 @@ All three communicate using the browser's native **`BroadcastChannel` API** — 
 The single shared communication channel. Both the main app and display pages import this file to get the same `BroadcastChannel` instance.
 
 ```js
-const channel = new BroadcastChannel('pointy-displays');
+const channel = new BroadcastChannel('pointbunny-displays');
 export default channel;
 ```
 
@@ -125,7 +125,7 @@ channel.onmessage receives:
 ```
 User clicks "Kitchen" nav button
   → controlOpenKDSWindow() [controller.js]
-  → window.open('kds-display.html', 'pointy-kds', 'width=X,height=Y')
+  → window.open('kds-display.html', 'pointbunny-kds', 'width=X,height=Y')
   → if blocked: showToast with instructions
   → if opened: win.focus()
 ```
@@ -217,7 +217,7 @@ Every 1 second (setInterval in kds-display.js):
 ```
 User clicks "Customer" nav button
   → controlOpenCFDWindow() [controller.js]
-  → window.open('customer-display.html', 'pointy-cfd', 'width=X,height=Y')
+  → window.open('customer-display.html', 'pointbunny-cfd', 'width=X,height=Y')
   → if blocked: showToast with instructions
   → if opened: win.focus()
 ```
@@ -227,8 +227,8 @@ User clicks "Customer" nav button
 ```
 customer-display.js loads
   → imports display-theme.js (applies saved theme)
-  → reads localStorage('pointy_cfd_ad') — shows ad image if set
-  → reads localStorage('pointy_store_name') — sets store name in header
+  → reads localStorage('pointbunny_cfd_ad') — shows ad image if set
+  → reads localStorage('pointbunny_store_name') — sets store name in header
   → channel.postMessage({ type: CFD_REQUEST_SYNC })
   → controller.js receives it
   → replies: { type: CFD_CART_UPDATE, cart: [...], total: X }
@@ -299,13 +299,13 @@ Shared module imported by both display pages. Runs immediately on import.
 
 ```
 display-theme.js loads
-  → reads localStorage('pointy-theme') — defaults to 'dark' if not set
+  → reads localStorage('pointbunny-theme') — defaults to 'dark' if not set
   → apply(theme) → document.body.setAttribute('data-theme', theme)
   → updates toggle button icon: dark = '☀︎', light = '✦'
 
 window 'storage' event listener:
   → fires when any other tab/window writes to localStorage
-  → if key === 'pointy-theme' → apply(newValue)
+  → if key === 'pointbunny-theme' → apply(newValue)
   → display page updates without any refresh
 
 Toggle button click:
@@ -397,7 +397,7 @@ A new **Displays** section was added to the Settings modal with two sub-sections
 
 - **Screen size selector** — presets: Tablet (1024×768), HD (1280×720), Full HD (1920×1080), Custom
 - Custom inputs appear when "Custom…" is selected
-- Changes are saved immediately to `model.state.settings.kdsWindowSize` and `localStorage('pointy_kds_window_size')`
+- Changes are saved immediately to `model.state.settings.kdsWindowSize` and `localStorage('pointbunny_kds_window_size')`
 
 ```
 User changes KDS size select
@@ -405,14 +405,14 @@ User changes KDS size select
   → reads selected preset or custom width/height
   → controlSaveKDSWindowSize({ width, height }) [controller.js]
   → model.state.settings.kdsWindowSize = size
-  → localStorage.setItem('pointy_kds_window_size', JSON.stringify(size))
+  → localStorage.setItem('pointbunny_kds_window_size', JSON.stringify(size))
   → next window.open() uses the new size
 ```
 
 ### Customer Display sub-section
 
 - **Screen size selector** — same presets as KDS
-- **Ad image upload** — uploads to Supabase storage (same bucket as menu images), saves URL to `localStorage('pointy_cfd_ad')`
+- **Ad image upload** — uploads to Supabase storage (same bucket as menu images), saves URL to `localStorage('pointbunny_cfd_ad')`
 - **Thumbnail preview** — shown immediately after upload
 - **Remove button** — clears localStorage and hides preview
 
@@ -423,17 +423,17 @@ User uploads ad image
   → model.uploadCFDAdImage(file)
       → uploadImage(file) [model.js] → Supabase storage upload
       → returns public URL
-      → localStorage.setItem('pointy_cfd_ad', url)
+      → localStorage.setItem('pointbunny_cfd_ad', url)
   → SettingsView.showCFDAdPreview(url) — shows thumbnail
 
 User removes ad image
   → controlRemoveCFDAd() [controller.js]
   → model.removeCFDAdImage()
-      → localStorage.removeItem('pointy_cfd_ad')
+      → localStorage.removeItem('pointbunny_cfd_ad')
   → settingsView hides preview and remove button
 
 CFD window reads ad on load:
-  → localStorage.getItem('pointy_cfd_ad')
+  → localStorage.getItem('pointbunny_cfd_ad')
   → if exists: sets img src, shows .cfd-ad container
 ```
 

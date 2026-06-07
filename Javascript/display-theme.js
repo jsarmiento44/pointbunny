@@ -1,4 +1,4 @@
-const THEME_KEY = 'pointy-theme';
+const THEME_KEY = 'pointbunny-theme';
 
 const getTheme = () => localStorage.getItem(THEME_KEY) || 'dark';
 

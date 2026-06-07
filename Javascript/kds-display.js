@@ -28,7 +28,7 @@ const cardMarkup = (order, num) => {
     return `<li class="kds-item">${esc(item.itemName)} ×${item.quantity}${variants ? `<span class="kds-item-variants"> · ${esc(variants)}</span>` : ''}</li>`;
   }).join('');
 
-  const orderTypeEnabled = localStorage.getItem('pointy_order_type_enabled') !== 'false';
+  const orderTypeEnabled = localStorage.getItem('pointbunny_order_type_enabled') !== 'false';
   const typeBadge = (orderTypeEnabled && order.orderType)
     ? `<span class="kds-order-type kds-badge--${order.orderType === 'takeout' ? 'takeout' : 'dine-in'}">${order.orderType === 'takeout' ? 'Takeout' : 'Dine In'}</span>`
     : '';
@@ -199,7 +199,7 @@ channel.onmessage = ({ data }) => {
 // ── Init — load queue directly from DB (no dependency on main window) ────────
 
 const loadFromDB = async () => {
-  const businessId = localStorage.getItem('pointy_business_id');
+  const businessId = localStorage.getItem('pointbunny_business_id');
   if (!businessId) return;
   const now = new Date();
   const start = new Date(now); start.setHours(0, 0, 0, 0);

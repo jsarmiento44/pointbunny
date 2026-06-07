@@ -106,7 +106,7 @@ class KDSView {
   }
 
   _rowMarkup(order, num, hidden) {
-    const orderTypeEnabled = localStorage.getItem('pointy_order_type_enabled') !== 'false';
+    const orderTypeEnabled = localStorage.getItem('pointbunny_order_type_enabled') !== 'false';
     const typeLabel = (!orderTypeEnabled || !order.orderType) ? '' : order.orderType === 'takeout' ? 'Takeout' : 'Dine In';
     const preview = this._buildItemPreview(order.items);
     const elapsed = Math.floor((Date.now() - order.startedAt) / 1000);

@@ -1,8 +1,8 @@
-# Pointy POS — System Architecture
+# Pointbunny POS — System Architecture
 
-## What is Pointy?
+## What is Pointbunny?
 
-Pointy is a **Point of Sale (POS) web application** built for businesses — coffee shops, cafés, restaurants, retail stores, service businesses and more. It runs entirely in the browser with no installation required. Each business gets their own isolated account with persistent data stored in the cloud.
+Pointbunny is a **Point of Sale (POS) web application** built for businesses — coffee shops, cafés, restaurants, retail stores, service businesses and more. It runs entirely in the browser with no installation required. Each business gets their own isolated account with persistent data stored in the cloud.
 
 ---
 
@@ -116,7 +116,7 @@ Initializes and exports the Supabase JS client using environment variables (`.en
 
 ## Backend — Supabase
 
-Supabase provides three services used by Pointy:
+Supabase provides three services used by Pointbunny:
 
 ### 1. Authentication
 
@@ -241,7 +241,7 @@ using (business_id = auth.uid())
 
 This means even if someone obtained another user's `business_id`, they could not read or modify that user's data — the database enforces it, not the application code. There is no way to bypass this from the client.
 
-> **Grant policy (enforced Oct 30, 2026):** Every new table migration must include an explicit `GRANT SELECT, INSERT, UPDATE, DELETE ON public.your_table TO authenticated;` or PostgREST returns a `42501` error. See `pointy-admin-updates.md` for all migration history.
+> **Grant policy (enforced Oct 30, 2026):** Every new table migration must include an explicit `GRANT SELECT, INSERT, UPDATE, DELETE ON public.your_table TO authenticated;` or PostgREST returns a `42501` error. See `pointbunny-admin-updates.md` for all migration history.
 
 ---
 
@@ -307,27 +307,27 @@ App loads
 ## File Structure
 
 ```
-Pointy Project/
+Pointbunny Project/
 ├── index.html                  — App shell + all modal HTML templates
 ├── kds-display.html            — Kitchen Display System popup window
 ├── customer-display.html       — Customer-Facing Display popup window
 ├── timeclock.html              — Staff time clock page (device registration + staff clock in/out/break)
-├── pointy.css                  — Single unified stylesheet
-├── Pointy.png                  — App logo
+├── pointbunny.css                  — Single unified stylesheet
+├── Pointbunny.png                  — App logo
 ├── .env                        — Supabase URL + anon key (not committed)
 ├── package.json                — npm scripts (start, build)
 ├── ARCHITECTURE.md             — This file
 ├── SYSTEM.md                   — Full feature workflow reference
 ├── CLAUDE.md                   — AI assistant instructions
-├── pointy-admin-updates.md     — Backend migration log for admin panel team
-├── pointy-app-todos.md         — Roadmap / in-progress work
+├── pointbunny-admin-updates.md     — Backend migration log for admin panel team
+├── pointbunny-app-todos.md         — Roadmap / in-progress work
 │
 └── Javascript/
     ├── controller.js           — App entry point, wires everything
     ├── model.js                — All state + Supabase operations
     ├── supabase.js             — Supabase client init
-    ├── pointy.js               — Theme toggle (light/dark mode)
-    ├── channel.js              — PointyChannel (Supabase Realtime + BroadcastChannel)
+    ├── pointbunny.js               — Theme toggle (light/dark mode)
+    ├── channel.js              — PointbunnyChannel (Supabase Realtime + BroadcastChannel)
     ├── kds-display.js          — KDS popup logic
     ├── customer-display.js     — CFD popup logic
     ├── timeclock.js            — Staff time clock standalone logic (device auth, clock in/out/break, PIN confirmation)

@@ -1,4 +1,4 @@
-﻿import View from "./view.js";
+import View from "./view.js";
 
 const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -22,7 +22,7 @@ class ReceiptView extends View {
       : [];
 
     const storeName = esc(
-      sale.storeName?.includes("@") ? "POINTY POS" : (sale.storeName ?? "POINTY POS")
+      sale.storeName?.includes("@") ? "POINTBUNNY POS" : (sale.storeName ?? "POINTBUNNY POS")
     );
 
     const itemsHtml = sale.items
@@ -87,7 +87,7 @@ class ReceiptView extends View {
 </style>
 <script>
   window.addEventListener('afterprint', function() {
-    if (window.opener) window.opener.postMessage('pointy-afterprint', window.location.origin);
+    if (window.opener) window.opener.postMessage('pointbunny-afterprint', window.location.origin);
     setTimeout(function() { window.close(); }, 150);
   });
 </script>
@@ -126,7 +126,7 @@ class ReceiptView extends View {
   <hr class="divider">
   <div class="center" style="font-size:10px;color:#555;margin-top:4px;">
     <p>Thank you for your purchase!</p>
-    <p style="margin-top:2px;">Powered by Pointy POS</p>
+    <p style="margin-top:2px;">Powered by Pointbunny POS</p>
   </div>
 </body>
 </html>`;
@@ -151,7 +151,7 @@ class ReceiptView extends View {
         clearTimeout(fallback);
         resolve();
       };
-      const handler = (e) => { if (e.data === "pointy-afterprint") cleanup(); };
+      const handler = (e) => { if (e.data === "pointbunny-afterprint") cleanup(); };
       const fallback = setTimeout(cleanup, 60_000);
       window.addEventListener("message", handler);
     });

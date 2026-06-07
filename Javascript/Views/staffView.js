@@ -202,7 +202,7 @@ class StaffView {
         }
       }
       rows.unshift(['Staff', 'Date', 'Clock In', 'Clock Out', 'Break', 'Hours Worked', 'Hourly Rate', 'Gross Pay']);
-      rows.unshift([`Pointy Timesheets – ${label}`]);
+      rows.unshift([`Pointbunny Timesheets – ${label}`]);
       const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
       const slug = label.replace(/\s+[–-]\s+|[^a-z0-9]+/gi, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
       const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });

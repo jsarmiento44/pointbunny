@@ -71,7 +71,7 @@ onReady(function () {
     themeSweep();
     document.body.setAttribute("data-theme", theme);
     try {
-      localStorage.setItem("pointy-theme", theme);
+      localStorage.setItem("pointbunny-theme", theme);
     } catch (_) {}
     // Sync optional buttons
     var lightBtn = document.getElementById("lightBtn");
@@ -91,7 +91,7 @@ onReady(function () {
   function initialTheme() {
     var saved = null;
     try {
-      saved = localStorage.getItem("pointy-theme");
+      saved = localStorage.getItem("pointbunny-theme");
     } catch (_) {}
     if (saved === "light" || saved === "dark") return saved;
     try {
@@ -202,7 +202,7 @@ onReady(function () {
   })();
 
   // Minimal debug hook so you can verify quickly from DevTools:
-  window.__pointyTheme = {
+  window.__pointbunnyTheme = {
     get: function () {
       return document.body.getAttribute("data-theme");
     },

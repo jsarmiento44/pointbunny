@@ -12,13 +12,13 @@ const storeEl    = document.getElementById('cfdStoreName');
 
 // ── Ad image ──────────────────────────────────────────────────────────────────
 
-const adUrl = localStorage.getItem('pointy_cfd_ad');
+const adUrl = localStorage.getItem('pointbunny_cfd_ad');
 if (adUrl) {
   adImg.src = adUrl;
   adEl.classList.remove('hidden');
 }
 
-const storedName = localStorage.getItem('pointy_store_name');
+const storedName = localStorage.getItem('pointbunny_store_name');
 if (storedName) storeEl.textContent = storedName;
 
 // ── Rendering ─────────────────────────────────────────────────────────────────

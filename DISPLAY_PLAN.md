@@ -19,7 +19,7 @@ Both displays sync via the **`BroadcastChannel` API** — a native browser featu
 
 Shared communication layer used by both features. Build this first — everything else depends on it.
 
-- [x] Create `Javascript/channel.js` — exports a single `BroadcastChannel` instance named `'pointy-displays'`
+- [x] Create `Javascript/channel.js` — exports a single `BroadcastChannel` instance named `'pointbunny-displays'`
 - [x] Define and document the message types the channel will carry:
   - `KDS_QUEUE_SYNC` — full queue snapshot (sent when a new KDS window opens so it gets current state immediately)
   - `KDS_ORDER_DONE` — an order was marked done from the kitchen window (cashier side must receive this and update `state.orderQueue`)
@@ -68,7 +68,7 @@ Shared communication layer used by both features. Build this first — everythin
 
 ### 3c — Advertisement image
 
-- [x] `customer-display.js` reads `pointy_cfd_ad` from localStorage on load
+- [x] `customer-display.js` reads `pointbunny_cfd_ad` from localStorage on load
 - [ ] Ad image upload in Settings UI (Chunk 5)
 - [ ] `uploadCFDAdImage()` in `model.js` (Chunk 5)
 
@@ -88,7 +88,7 @@ The open buttons for both displays live in the **navigation bar**, not alongside
 
 - [x] Add **Kitchen Display** nav button to `index.html` nav bar
 - [x] Add **Customer Display** nav button to `index.html` nav bar
-- [x] Style both buttons in `pointy.css` (`.nav-display-btn`)
+- [x] Style both buttons in `pointbunny.css` (`.nav-display-btn`)
 - [ ] Both buttons should be visible only when logged in (same as current nav behavior) — deferred to Chunk 6
 
 ---

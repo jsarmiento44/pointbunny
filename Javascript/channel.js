@@ -1,9 +1,9 @@
 import { supabase } from './supabase.js';
 
 const BROADCAST_EVENT = 'msg';
-const BC_NAME = 'pointy-local';
+const BC_NAME = 'pointbunny-local';
 
-class PointyChannel {
+class PointbunnyChannel {
   constructor() {
     this._handler = null;
 
@@ -19,7 +19,7 @@ class PointyChannel {
     }
 
     this.ready = new Promise(resolve => {
-      this._ch = supabase.channel('pointy-displays', {
+      this._ch = supabase.channel('pointbunny-displays', {
         config: { broadcast: { self: false } },
       });
       this._ch.on('broadcast', { event: BROADCAST_EVENT }, ({ payload }) => {
@@ -41,7 +41,7 @@ class PointyChannel {
   }
 }
 
-const channel = new PointyChannel();
+const channel = new PointbunnyChannel();
 export default channel;
 
 // ── Message types ─────────────────────────────────────────────────────────────

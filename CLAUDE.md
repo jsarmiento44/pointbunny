@@ -13,7 +13,7 @@ No test or lint commands are configured.
 
 ## Architecture
 
-**Pointy** is a POS (Point of Sale) SPA built with vanilla JavaScript (ES6 modules) and Parcel as the bundler. No framework (no React/Vue). State is backed by **Supabase** (auth + Postgres database).
+**Pointbunny** is a POS (Point of Sale) SPA built with vanilla JavaScript (ES6 modules) and Parcel as the bundler. No framework (no React/Vue). State is backed by **Supabase** (auth + Postgres database).
 
 The app follows a strict **MVC** pattern:
 
@@ -65,7 +65,7 @@ Wires model and views together. `initApp()` is the app entry point after auth. K
 - `_cmpRangeA` / `_cmpRangeB` — active compare period ranges `{ startISO, endISO, label }`
 - `_compareModeActive` — boolean, true when the compare panel is open
 
-`initApp()` stores `pointy_business_id` to `localStorage` after loading business context so the KDS popup can query Supabase directly without depending on the main window.
+`initApp()` stores `pointbunny_business_id` to `localStorage` after loading business context so the KDS popup can query Supabase directly without depending on the main window.
 
 **Reports helpers in controller:**
 - `_getRangeFromValue(type, value)` — converts a type (`"day"/"week"/"month"/"year"`) + raw input value into `{ startISO, endISO, label }`. Week snaps Mon–Sun.
@@ -90,8 +90,8 @@ Wires model and views together. `initApp()` is the app entry point after auth. K
 ### Entry point (`index.html`)
 All modal HTML templates are defined directly in `index.html` as hidden elements. Views target specific `id`/`class` selectors to render into or toggle visibility. The edit menu modal is an exception — dynamically injected into `.edit-form-parent` by `menuEditView.js`.
 
-### Styling (`pointy.css`)
-Single unified stylesheet using CSS custom properties for theming. Theme switching (light/dark) handled in `Javascript/pointy.js`, persisted to `localStorage`. Key variables: `--radius-lg: 28px`, `--panel-strong`, `--shadow-lg`, `--brand-1` (green), `--text`, `--muted`.
+### Styling (`pointbunny.css`)
+Single unified stylesheet using CSS custom properties for theming. Theme switching (light/dark) handled in `Javascript/pointbunny.js`, persisted to `localStorage`. Key variables: `--radius-lg: 28px`, `--panel-strong`, `--shadow-lg`, `--brand-1` (green), `--text`, `--muted`.
 
 **CSS cascade gotcha:** Several overlay classes (`.modal-overlay-form`, `.modal-backdrop`) have duplicate definitions later in the file that override earlier media queries. Mobile responsive overrides must be placed immediately after the duplicate definition, not in the central responsive block at line ~1071.
 
@@ -154,7 +154,7 @@ Both `fetchReportsSales` and `fetchReportsSalesRaw` select `prepared_at` so serv
 
 ### Supabase Data API Grant Policy (enforced Oct 30, 2026)
 
-Pointy uses `supabase-js` (the Data API). From Oct 30, 2026 all existing projects require **explicit grants on every new table**. Existing tables are unaffected — new columns on existing tables inherit the table's grants.
+Pointbunny uses `supabase-js` (the Data API). From Oct 30, 2026 all existing projects require **explicit grants on every new table**. Existing tables are unaffected — new columns on existing tables inherit the table's grants.
 
 **Every new table migration must include:**
 
@@ -199,7 +199,7 @@ Card-based kitchen display. Timer shows elapsed time; emojis added at thresholds
 - Warning → `⏰ 3:45`
 - Urgent → `🔥 6:12`
 
-**Initial load**: On open, `kds-display.js` queries Supabase directly (using `pointy_business_id` from `localStorage`) for today's unprepared sales. This avoids all race conditions with the main window's load sequence. After initial load, real-time updates arrive via the broadcast channel (`KDS_QUEUE_SYNC`).
+**Initial load**: On open, `kds-display.js` queries Supabase directly (using `pointbunny_business_id` from `localStorage`) for today's unprepared sales. This avoids all race conditions with the main window's load sequence. After initial load, real-time updates arrive via the broadcast channel (`KDS_QUEUE_SYNC`).
 
 **Status indicator**: Header shows a pulsing amber "Syncing…" dot until the DB query returns, then flips to a solid green "Live" dot.
 
@@ -211,14 +211,14 @@ Settings are persisted to `localStorage` and loaded into `model.state.settings` 
 
 | Key | Default | Description |
 |---|---|---|
-| `pointy_printing_enabled` | `true` | Receipt printing on/off |
-| `pointy_confirm_print` | `true` | Ask "did it print?" before recording sale |
-| `pointy_print_two_copies` | `false` | Print customer + business copy |
-| `pointy_order_type_enabled` | `true` | Show Dine In / Takeout selector on checkout |
-| `pointy_kds_yellow` | `180` | Seconds before order turns yellow |
-| `pointy_kds_red` | `300` | Seconds before order turns red |
-| `pointy_kds_auto` | `900` | Seconds before order auto-completes |
-| `pointy_business_id` | — | Set at login; used by KDS popup to query Supabase directly |
+| `pointbunny_printing_enabled` | `true` | Receipt printing on/off |
+| `pointbunny_confirm_print` | `true` | Ask "did it print?" before recording sale |
+| `pointbunny_print_two_copies` | `false` | Print customer + business copy |
+| `pointbunny_order_type_enabled` | `true` | Show Dine In / Takeout selector on checkout |
+| `pointbunny_kds_yellow` | `180` | Seconds before order turns yellow |
+| `pointbunny_kds_red` | `300` | Seconds before order turns red |
+| `pointbunny_kds_auto` | `900` | Seconds before order auto-completes |
+| `pointbunny_business_id` | — | Set at login; used by KDS popup to query Supabase directly |
 
 **`orderTypeEnabled`**: When off, the Dine In / Takeout toggle is hidden from checkout, `orderType` is stored as `null`, and no type label appears on receipts, the active queue, or KDS cards.
 
@@ -272,7 +272,7 @@ This is being built into a **full commercial POS product**. Keep in mind:
 
 ## Admin Panel Changelog (Required)
 
-Any time a backend change is made — new table, new column, new storage bucket, new RLS policy, schema change of any kind — **always add an entry to `pointy-admin-updates.md`** before finishing the task.
+Any time a backend change is made — new table, new column, new storage bucket, new RLS policy, schema change of any kind — **always add an entry to `pointbunny-admin-updates.md`** before finishing the task.
 
 This file is the admin panel team's source of truth for what migrations to run and what new data to handle. Every entry must include:
 - The SQL migration (full `CREATE TABLE` or `ALTER TABLE` statement)
@@ -286,7 +286,7 @@ Reports/Analytics is **implemented** (multi-metric overview chart with KPI toggl
 ## Queued Work (not started, do when user asks)
 
 ### CSS Technical Debt Cleanup
-`pointy.css` has accumulated significant debt:
+`pointbunny.css` has accumulated significant debt:
 - No z-index scale — values like 1060, 9999, 99999 scattered with no system. Plan: define a CSS custom property z-index ladder (`--z-modal`, `--z-dropdown`, `--z-toast`, etc.)
 - Duplicate rule blocks — `.modal-backdrop` and `.modal-overlay-form` each defined twice; second definition silently wins. The CLAUDE.md note "CSS cascade gotcha" documents this.
 - Excessive `!important` usage fighting specificity wars instead of a clean cascade
