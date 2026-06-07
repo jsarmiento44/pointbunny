@@ -467,7 +467,7 @@ class StaffView {
         </div>
         <div class="edit-field" style="margin-top:10px">
           <label>Note (optional)</label>
-          <input type="text" id="shiftNote" class="settings-input" placeholder="e.g. Covered for Maria" value="${shift?.note ?? ''}" />
+          <input type="text" id="shiftNote" class="settings-input" placeholder="e.g. Covered for Jane" value="${shift?.note ?? ''}" />
         </div>
         <div class="adj-form-actions" style="margin-top:16px">
           <button type="button" class="btn" data-action="close">Cancel</button>
@@ -600,11 +600,11 @@ class StaffView {
       <div class="auth-col-pair">
         <div class="edit-field">
           <label for="inviteFirstName">First name</label>
-          <input type="text" id="inviteFirstName" placeholder="Maria" autocomplete="off" />
+          <input type="text" id="inviteFirstName" placeholder="Jane" autocomplete="off" />
         </div>
         <div class="edit-field">
           <label for="inviteLastName">Last name</label>
-          <input type="text" id="inviteLastName" placeholder="Santos" autocomplete="off" />
+          <input type="text" id="inviteLastName" placeholder="Smith" autocomplete="off" />
         </div>
       </div>
 
