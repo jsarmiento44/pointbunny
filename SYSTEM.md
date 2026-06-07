@@ -35,6 +35,8 @@
 
 **Pointbunny** is a SPA (Single Page Application) following a strict **MVC** pattern. Persistence is via **Supabase** (Postgres DB + Auth + Storage + Realtime).
 
+**Production:** `https://pointbunny.com` — hosted on Netlify, deployed from the `wip` branch via `netlify.toml` (`npm run build` → `dist/`). Domain registered on Porkbun; DNS uses an ALIAS record pointing to `apex-loadbalancer.netlify.com`. Supabase Auth is configured with site URL and redirect URLs set to `https://pointbunny.com`. Environment variables (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) are set in the Netlify dashboard — not committed to the repo.
+
 ```
 User Action
     ↓
@@ -2217,4 +2219,4 @@ Steps:
 
 ---
 
-*Last updated: 2026-06-04. Home page layout updated: unified `home-dash-card` (Today's Sales + Transactions + Avg. Serving) replaces old four-card grid; Cashier moved to action row; each stat card links to matching Reports section. §5.17 updated from Planned → Live (timesheets/timeclock). Update this file when a new feature is added or a workflow changes.*
+*Last updated: 2026-06-07. Production deployment live at https://pointbunny.com (Netlify + Porkbun domain). Home page layout updated: unified `home-dash-card` (Today's Sales + Transactions + Avg. Serving) replaces old four-card grid; Cashier moved to action row; each stat card links to matching Reports section. §5.17 updated from Planned → Live (timesheets/timeclock). Update this file when a new feature is added or a workflow changes.*

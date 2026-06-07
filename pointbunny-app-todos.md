@@ -3,7 +3,7 @@
 This file tracks features and integrations that need to be added to the main Pointbunny app
 to support the admin panel. Add to this list as we build more admin features.
 
-_Last updated: 2026-06-04_
+_Last updated: 2026-06-07_
 
 ---
 
@@ -15,18 +15,22 @@ _Last updated: 2026-06-04_
 >
 > **Pointbunny app team:** replace your `pointbunny-app-todos.md` with the contents of that file, then delete the `.update.md` file. If you've made local edits, diff and merge manually before deleting.
 
-> **Note:** Some items depend on external services (Stripe, PostHog) not yet set up. No company domain yet — skip domain-dependent items for now.
+> **Note:** Some items depend on external services (Stripe, PostHog) not yet set up. **Company domain is now live: `pointbunny.com`** — Tier 5 items that were blocked on the domain are now unblocked.
 
 ---
 
 ## Priority Checklist
 
 ### 🔴 Tier 1 — Ready to Build Now
+- [ ] **Staging environment** — set up a second Netlify site pointing to a `staging` branch for testing fixes before they go live. See setup instructions below.
+- [ ] **First-login onboarding** — after a new user confirms their email and signs in for the first time, show a blocking onboarding screen (before the app loads) to collect: Business name + Phone number. Save both to `businesses.name` and `businesses.phone`. Skip if already set (i.e. not a first login). Hook point: after `initApp()` loads business context, check if `businesses.name` is null/empty and show the onboarding overlay.
+- [ ] **Social auth (Google, Microsoft, etc.)** — add OAuth sign-in buttons to the login form. Supabase supports Google, Microsoft, Apple, and others via `supabase.auth.signInWithOAuth({ provider: 'google' })`. Requires enabling each provider in Supabase → Authentication → Providers and adding redirect URLs (`https://pointbunny.com`). On first OAuth login, the first-login onboarding above should fire to collect business name + phone.
 - [x] ~~**Show admin replies inside a ticket**~~ ✅ shipped
 - [x] ~~**Clear unread badge when business opens ticket**~~ ✅ shipped
 - [x] ~~**Business can reply to tickets** (insert policy confirmed working)~~ ✅ shipped
 - [x] ~~**Show ticket ID in the Pointbunny app**~~ ✅ shipped
 - [ ] **Enforce staff `is_active` on login** — admin panel can now deactivate staff members. The Pointbunny app must check `is_active = false` for the logged-in staff user and block access (show "Your account has been deactivated" or redirect to login). Without this, removed staff can still use the app. (see item 14)
+- [ ] **Forgot Password** — "Forgot password?" link on login screen → Supabase recovery email → password reset page. `redirectTo` = `https://pointbunny.com`. Domain is live so this is unblocked. (see item 12)
 
 ### 🟡 Tier 2 — Next After Tier 1
 - [x] ~~**Business reply badge for admin panel** — `has_business_reply` flag~~ ✅ shipped
@@ -46,12 +50,12 @@ _Last updated: 2026-06-04_
 - [ ] **Active session tracking** — `session_start` event on every app init (see item 4)
 - [ ] **Feature adoption tracking** — first-use events per feature (see item 4)
 
-### 🟣 Tier 5 — Needs Company Domain
-- [ ] **Staff invitation emails** — when a staff member is invited, send an email with signup instructions so they don't have to be told manually. Currently staff must sign up at the POS using the email address they were invited with. Requires company domain + email provider (Resend/Brevo via Supabase Edge Function). See item 19 below.
-- [ ] **Forgot Password (Pointbunny app)** — "Forgot password?" link on login screen → Supabase recovery email → password reset page. Technically works with Supabase's built-in email today, but the recovery link `redirectTo` URL needs a real domain. Move to Tier 1 once domain is live.
+### 🟣 Tier 5 — Domain-Dependent (domain is now live: pointbunny.com — these are unblocked)
+- [ ] **Staff invitation emails** — domain is live, now unblocked. When a staff member is invited, send an email with signup instructions. Requires email provider (Resend/Brevo via Supabase Edge Function). See item 19 below.
+- [ ] **Forgot Password (Pointbunny app)** — domain is live, ready to build. Moved to Tier 1. "Forgot password?" link on login screen → Supabase recovery email → password reset page. `redirectTo` = `https://pointbunny.com`. See item 12 for implementation details.
 - [ ] **2FA** — opt-in TOTP for business owner accounts (see item 13)
-- [ ] **Custom email sender domain** — for Supabase auth emails and future notifications
-- [ ] **Time Clock PIN during invite acceptance** — when a staff member accepts their invite email, redirect them to a "Set Your PIN" onboarding page (same keypad UI) so their PIN is created before they ever touch the time clock. Currently PIN is required on first timeclock login instead. Requires company domain for the Supabase `redirectTo` URL on the invite link.
+- [ ] **Custom email sender domain** — configure custom SMTP in Supabase for branded auth emails from `@pointbunny.com`
+- [ ] **Time Clock PIN during invite acceptance** — when a staff member accepts their invite email, redirect them to a "Set Your PIN" onboarding page so their PIN is created before they ever touch the time clock. `redirectTo` = `https://pointbunny.com`. See item 19.
 
 ---
 
@@ -460,5 +464,57 @@ When a business owner adds a staff member in the Pointbunny app, the invited per
 **Blocked by:** Company domain not yet purchased. The `from` address needs a real domain, and `redirectTo` on any links requires a hosted URL.
 
 ---
+
+---
+
+## Staging Environment — Setup & Usage
+
+### What it is
+A second live site that's identical to production but invisible to real users. You test bug fixes and new features here before pushing to `pointbunny.com`.
+
+### One-time setup (takes ~5 minutes)
+
+**1. Create the staging branch:**
+```
+git checkout wip
+git checkout -b staging
+git push origin staging
+```
+
+**2. Create a second Netlify site:**
+- Netlify dashboard → **Add new site → Import an existing project**
+- Same GitHub repo, but set branch to `staging`
+- It will auto-detect `netlify.toml` (same build settings)
+- Add the same environment variables: `SUPABASE_URL` and `SUPABASE_ANON_KEY`
+- Netlify will give it a random URL like `pointbunny-staging.netlify.app` — that's fine, leave it as-is (no custom domain needed)
+
+### Daily workflow with staging
+
+**Testing a bug fix or feature:**
+```
+git checkout -b fix/your-bug-name
+# do your work and test locally with npm start
+git push origin fix/your-bug-name
+
+# merge into staging to test on the live staging site
+git checkout staging
+git merge fix/your-bug-name
+git push
+# wait ~2 min → test on pointbunny-staging.netlify.app
+
+# looks good → merge into wip to go live
+git checkout wip
+git merge fix/your-bug-name
+git push
+# wait ~2 min → live on pointbunny.com
+
+# clean up
+git branch -d fix/your-bug-name
+```
+
+### Rules
+- **`staging` is for testing only** — never give the staging URL to real customers
+- **`wip` is always production** — only merge into it when the feature/fix is confirmed working on staging
+- Both staging and production point to the **same Supabase project**, so any DB changes (new tables, migrations) affect both immediately — be careful when testing schema changes
 
 _Add new items here as the admin panel grows._

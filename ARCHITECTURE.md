@@ -15,7 +15,7 @@ Pointbunny is a **Point of Sale (POS) web application** built for businesses —
 | Backend / Database | Supabase (PostgreSQL + Auth + Storage)          |
 | Authentication     | Supabase Auth (email + password, JWT sessions)  |
 | File Storage       | Supabase Storage (menu item images)             |
-| Hosting (planned)  | Static host (Netlify / Vercel) + Supabase cloud |
+| Hosting            | Netlify (https://pointbunny.com) + Supabase cloud |
 
 ---
 
@@ -315,6 +315,7 @@ Pointbunny Project/
 ├── pointbunny.css                  — Single unified stylesheet
 ├── Pointbunny.png                  — App logo
 ├── .env                        — Supabase URL + anon key (not committed)
+├── netlify.toml                — Netlify build config (build command, publish dir, Node version)
 ├── package.json                — npm scripts (start, build)
 ├── ARCHITECTURE.md             — This file
 ├── SYSTEM.md                   — Full feature workflow reference

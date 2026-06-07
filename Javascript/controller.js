@@ -23,6 +23,13 @@ import { fetchReportsSalesRaw } from "./model.js";
 const modelState = model.state;
 let item;
 
+const _randomUUID = () => {
+  if (typeof crypto?.randomUUID === 'function') return crypto.randomUUID();
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+    (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)
+  );
+};
+
 const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 // ── Toast notifications ───────────────────────────────────────────────────────
@@ -230,7 +237,7 @@ const _buildSale = function () {
   const cashierName    = _cashierDisplayName(model.state.currentCashier) || model.state.username || '';
   const loggedInCashier = model.state.username || '';
   return {
-    id: crypto.randomUUID(),
+    id: _randomUUID(),
     items: [...modelState.cart],
     subtotal: OrderCheckOutView._subtotal ?? OrderCheckOutView._totalPrice,
     adjustments: OrderCheckOutView._adjResult?.lineItems ?? [],
@@ -284,7 +291,7 @@ const _tickKDS = function () {
 };
 
 // ── Undo "done" window ────────────────────────────────────────────────────────
-const UNDO_WINDOW_MS = 30_000;
+const UNDO_WINDOW_MS = 10_000;
 const _pendingDone = new Map(); // id → { timer, order, idx, timedOut, dismissToast }
 
 
@@ -1273,7 +1280,7 @@ const controlSignIn = async function (email, password) {
   _maybeShowPinSetup();
 };
 
-const controlSignUp = async function ({ firstName, lastName, email, businessName, phone, password }) {
+const controlSignUp = async function ({ firstName, lastName, email, password }) {
   AuthView.setSignUpLoading(true);
   const { error } = await supabase.auth.signUp({
     email,
@@ -1283,8 +1290,6 @@ const controlSignUp = async function ({ firstName, lastName, email, businessName
         first_name: firstName,
         last_name: lastName,
         display_name: `${firstName} ${lastName}`,
-        business_name: businessName,
-        phone: phone || null,
       },
     },
   });
@@ -3334,6 +3339,12 @@ channel.onmessage = function ({ data }) {
       break;
     case MSG.KDS_ORDER_DONE:
       controlMarkOrderDone(data.id);
+      break;
+    case MSG.KDS_QUEUE_SYNC:
+      model.state.orderQueue = data.queue;
+      KDSView.renderQueue(model.state.orderQueue);
+      if (model.state.orderQueue.length === 0) _stopKDSTick();
+      else _ensureKDSTick();
       break;
     case MSG.CFD_REQUEST_SYNC:
       channel.postMessage({
