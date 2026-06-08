@@ -73,7 +73,7 @@ const _initBusiness = async function (user) {
 
   const { error: bizError } = await supabase
     .from('businesses')
-    .upsert({ id: user.id, name: null, email: user.email, phone: null });
+    .upsert({ id: user.id, name: null, email: user.email, phone: null }, { ignoreDuplicates: true });
   if (bizError) throw new Error(`businesses upsert failed: ${bizError.message}`);
 
   const { data: existingRole } = await supabase
@@ -180,12 +180,20 @@ export const loadBusinessContext = async function (user) {
 
   const { data: bizData } = await supabase
     .from('businesses')
-    .select('name, timezone')
+    .select('name, timezone, phone, address_street, address_city, address_province, address_zip, address_country, business_type, business_industry')
     .eq('id', state.businessId)
     .single();
   if (bizData) {
-    state.businessName     = bizData.name     ?? null;
-    state.businessTimezone = bizData.timezone ?? null;
+    state.businessName            = bizData.name              ?? null;
+    state.businessTimezone        = bizData.timezone          ?? null;
+    state.businessPhone           = bizData.phone             ?? null;
+    state.businessAddressStreet   = bizData.address_street    ?? null;
+    state.businessAddressCity     = bizData.address_city      ?? null;
+    state.businessAddressProvince = bizData.address_province  ?? null;
+    state.businessAddressZip      = bizData.address_zip       ?? null;
+    state.businessAddressCountry  = bizData.address_country   ?? null;
+    state.businessType            = bizData.business_type     ?? null;
+    state.businessIndustry        = bizData.business_industry ?? null;
   }
 
   if (!state.businessName && state.userId === state.businessId) state.needsOnboarding = true;
@@ -249,7 +257,7 @@ export const saveBusinessInfo = async function ({ name, email, phone, timezone, 
 };
 
 export const saveOnboardingInfo = async function ({ businessName, businessType, industry, phone, street, city, province, zip, country }) {
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('businesses')
     .update({
       name:              businessName,
@@ -262,8 +270,10 @@ export const saveOnboardingInfo = async function ({ businessName, businessType, 
       address_zip:       zip              || null,
       address_country:   country          || null,
     })
-    .eq('id', state.businessId);
+    .eq('id', state.businessId)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!updated?.length) throw new Error(`Business record not found (id: ${state.businessId}). Please refresh and try again.`);
   state.businessName            = businessName;
   state.businessType            = businessType     || null;
   state.businessIndustry        = industry         || null;

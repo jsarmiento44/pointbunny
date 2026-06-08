@@ -41,6 +41,7 @@ _Last updated: 2026-06-07_
 - [ ] **PostHog: registration funnel tracking** — fire events at each signup step (see item 5)
 
 ### 🟡 Tier 2 (continued)
+- [ ] **Invoice/receipt number** — assign a sequential invoice number to every sale and display it on the receipt and across the app (order queue, sales history, reports). Requires a `receipt_number` column on the `sales` table (auto-incrementing per business, not global). Format TBD — e.g. `#0001` or `INV-2026-0001`. Useful for accounting, customer reference, and refunds.
 - [ ] **Auto tax rate by province/state** — after onboarding collects the business address, look up the standard VAT/sales tax rate for that province or country and auto-create a tax adjustment in `adjustments`. The owner can still edit or remove it. Implementation: maintain a tax rate lookup table (could be a static JS map or a `tax_rates` Supabase table keyed by country + province code). On first login after onboarding, if no tax adjustment exists yet, create one via `model.addAdjustment`. PH default: 12% VAT. Should also handle the case where the business later changes their address in Settings.
 
 ### 🔵 Tier 3 — Needs Stripe First
@@ -59,6 +60,12 @@ _Last updated: 2026-06-07_
 - [ ] **2FA (TOTP, not SMS)** — opt-in two-factor authentication for business owner accounts via authenticator app (Google Authenticator, Authy). Use Supabase's built-in MFA: `supabase.auth.mfa.enroll({ factorType: 'totp' })` returns a QR code URI → render it in Settings so the owner scans it once. On login, after password succeeds, call `supabase.auth.mfa.challenge()` + `supabase.auth.mfa.verify()` for the 6-digit code. No SMS/Twilio needed — free and more secure than SMS 2FA (no SIM-swap risk).
 - [ ] **Custom email sender domain** — configure custom SMTP in Supabase for branded auth emails from `@pointbunny.com`
 - [ ] **Time Clock PIN during invite acceptance** — when a staff member accepts their invite email, redirect them to a "Set Your PIN" onboarding page so their PIN is created before they ever touch the time clock. `redirectTo` = `https://pointbunny.com`. See item 19.
+
+---
+
+## ⚙️ GitHub / Repo Hygiene (non-code)
+- [ ] **Require PR reviews before merging to `main`** — enable once a second developer joins. Go to GitHub → Settings → Branches → edit the `Protect main` ruleset → check "Require a pull request before merging" → set required approvals to 1. Currently skipped because the team is solo and it would block self-merges.
+- [ ] **Delete merged feature branches** — after merging a PR, delete the source branch from GitHub (there's a "Delete branch" button right after merge). Keeps the branch list clean. Consider enabling "Automatically delete head branches" in GitHub → Settings → General.
 
 ---
 

@@ -683,10 +683,14 @@ const controlOpenSettings = function () {
   if (model.state.role === 'Admin') {
     const isOwner = model.state.userId === model.state.businessId;
     SettingsView.syncBusinessInfo({
-      name:     model.state.businessName     ?? '',
-      email:    model.state.businessEmail    ?? model.state.currentStaff?.email ?? '',
-      phone:    model.state.businessPhone    ?? '',
-      timezone: model.state.businessTimezone ?? null,
+      name:     model.state.businessName            ?? '',
+      email:    model.state.businessEmail           ?? model.state.currentStaff?.email ?? '',
+      phone:    model.state.businessPhone           ?? '',
+      timezone: model.state.businessTimezone        ?? null,
+      address:  model.state.businessAddressStreet   ?? '',
+      city:     model.state.businessAddressCity     ?? '',
+      state:    model.state.businessAddressProvince ?? '',
+      zip:      model.state.businessAddressZip      ?? '',
       isOwner,
     });
   }
