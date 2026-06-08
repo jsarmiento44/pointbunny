@@ -21,8 +21,11 @@ _Last updated: 2026-06-07_
 
 ## Priority Checklist
 
+### 🚨 Open Bug — New User Registration Broken
+New business owner sign-up fails with "Something went wrong loading the app." on first login (after email confirmation). `initApp` throws inside `_initBusiness`. The `null businessName` error was fixed (commit 245ae27) but the error persists — grab a fresh DevTools console screenshot to see the current error. Also verify the **staff invite flow vs owner registration flow** in `loadBusinessContext`: owner path calls `_initBusiness`; staff path claims a pending row by email and must NOT call `_initBusiness`. Confirm the pending-invite lookup works correctly when staff clicks their invite email link.
+
 ### 🔴 Tier 1 — Ready to Build Now
-- [ ] **Staging environment** — set up a second Netlify site pointing to a `staging` branch for testing fixes before they go live. See setup instructions below.
+- [x] ~~**Staging environment**~~ ✅ shipped — `pointybunny-staging.netlify.app` live on `staging` branch. Branch protection on `main` (no force push, no deletion). Staging auto-deploys on push.
 - [x] ~~**First-login onboarding**~~ ✅ shipped — collects business name (required), phone (required), and address (optional). Detected via `businesses.name IS NULL`. Reappears on every login until completed.
 - [ ] **Social auth (Google, Microsoft, etc.)** — add OAuth sign-in buttons to the login form. Supabase supports Google, Microsoft, Apple, and others via `supabase.auth.signInWithOAuth({ provider: 'google' })`. Requires enabling each provider in Supabase → Authentication → Providers and adding redirect URLs (`https://pointbunny.com`). On first OAuth login, the first-login onboarding above should fire to collect business name + phone.
 - [x] ~~**Show admin replies inside a ticket**~~ ✅ shipped
@@ -30,7 +33,7 @@ _Last updated: 2026-06-07_
 - [x] ~~**Business can reply to tickets** (insert policy confirmed working)~~ ✅ shipped
 - [x] ~~**Show ticket ID in the Pointbunny app**~~ ✅ shipped
 - [ ] **Enforce staff `is_active` on login** — admin panel can now deactivate staff members. The Pointbunny app must check `is_active = false` for the logged-in staff user and block access (show "Your account has been deactivated" or redirect to login). Without this, removed staff can still use the app. (see item 14)
-- [ ] **Forgot Password** — "Forgot password?" link on login screen → Supabase recovery email → password reset page. `redirectTo` = `https://pointbunny.com`. Domain is live so this is unblocked. (see item 12)
+- [x] ~~**Forgot Password**~~ ✅ shipped — "Forgot password?" link on login form → slides to email input → Supabase recovery email via Resend → user lands on `#type=recovery` → reset form shown → `supabase.auth.updateUser({ password })`. Redirect URLs added to Supabase allowlist.
 
 ### 🟡 Tier 2 — Next After Tier 1
 - [x] ~~**Business reply badge for admin panel** — `has_business_reply` flag~~ ✅ shipped
@@ -56,9 +59,9 @@ _Last updated: 2026-06-07_
 
 ### 🟣 Tier 5 — Domain-Dependent (domain is now live: pointbunny.com — these are unblocked)
 - [ ] **Staff invitation emails** — domain is live, now unblocked. When a staff member is invited, send an email with signup instructions. Requires email provider (Resend/Brevo via Supabase Edge Function). See item 19 below.
-- [ ] **Forgot Password (Pointbunny app)** — domain is live, ready to build. Moved to Tier 1. "Forgot password?" link on login screen → Supabase recovery email → password reset page. `redirectTo` = `https://pointbunny.com`. See item 12 for implementation details.
+- [x] ~~**Forgot Password (Pointbunny app)**~~ ✅ shipped — see Tier 1 entry above.
 - [ ] **2FA (TOTP, not SMS)** — opt-in two-factor authentication for business owner accounts via authenticator app (Google Authenticator, Authy). Use Supabase's built-in MFA: `supabase.auth.mfa.enroll({ factorType: 'totp' })` returns a QR code URI → render it in Settings so the owner scans it once. On login, after password succeeds, call `supabase.auth.mfa.challenge()` + `supabase.auth.mfa.verify()` for the 6-digit code. No SMS/Twilio needed — free and more secure than SMS 2FA (no SIM-swap risk).
-- [ ] **Custom email sender domain** — configure custom SMTP in Supabase for branded auth emails from `@pointbunny.com`
+- [x] ~~**Custom email sender domain**~~ ✅ shipped — Resend configured with `pointbunny.com` domain (DNS verified in Porkbun). Supabase SMTP set to `smtp.resend.com:465`. Branded HTML templates live for: Confirm Signup, Reset Password, Invite User (generic).
 - [ ] **Time Clock PIN during invite acceptance** — when a staff member accepts their invite email, redirect them to a "Set Your PIN" onboarding page so their PIN is created before they ever touch the time clock. `redirectTo` = `https://pointbunny.com`. See item 19.
 
 ---

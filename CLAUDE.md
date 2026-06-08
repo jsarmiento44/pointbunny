@@ -283,7 +283,38 @@ If a task has no backend changes, no entry is needed.
 
 Reports/Analytics is **implemented** (multi-metric overview chart with KPI toggles, category mix, item mix, hourly, day-of-week, serving time charts + compare mode + sales/traffic/kitchen peak stat cards).
 
+## Auth Flow
+
+The auth overlay (`#authOverlay`) contains a card with four sliding panels inside `#authFormsWrapper`:
+
+| Panel ID | Shown when |
+|---|---|
+| `loginForm` | Default (visible on load) |
+| `signUpForm` | User clicks "Create one" |
+| `forgotForm` | User clicks "Forgot password?" |
+| `resetForm` | URL hash contains `type=recovery` (user clicked reset email link) |
+
+`authView.js` manages all four panels. `_slideTo(fromEl, toEl, direction, makeWide)` handles the animated transition between any two panels. The wide card style (`auth-card--wide`) is only applied when sliding to the signup form.
+
+**Recovery flow:** `initAuth()` checks `window.location.hash.includes('type=recovery')` before calling `getSession()`. If true, it shows the auth overlay + reset form immediately and returns early (skips `initApp`).
+
+**Error handling:** Both `controlSignIn` and `initAuth` wrap `initApp` in try/catch. On failure, the loading screen is hidden, the session is cleared, and the user is returned to the login form with an error message. This prevents the loading screen from hanging forever if `_initBusiness` throws.
+
+**`_initBusiness` (model.js):** Runs on first login for a brand new business owner (no existing staff row). Creates: businesses row, 3 default roles (Admin/Manager/Cashier), owner staff row. Does NOT run for invited staff — they are matched by email to a pending staff row instead. **Known bug (2026-06-07):** new owner registration fails — `initApp` still throws after the `null businessName` fix; needs fresh console error to diagnose.
+
+## Email (Resend)
+
+Custom SMTP configured in Supabase Auth: `smtp.resend.com:465`, username `resend`, API key as password. Sending domain: `pointbunny.com` (DNS verified in Porkbun). Branded HTML templates are live in Supabase → Authentication → Email Templates for:
+- **Confirm signup** — uses `{{ .ConfirmationURL }}`
+- **Reset password** — uses `{{ .ConfirmationURL }}`
+- **Invite user** — uses `{{ .ConfirmationURL }}`
+
+Redirect URLs allowlisted in Supabase → Authentication → URL Configuration: `https://pointbunny.com`, `https://www.pointbunny.com`, `https://pointybunny-staging.netlify.app`, `http://localhost:1234`.
+
 ## Queued Work (not started, do when user asks)
+
+### Open Bug — New User Registration
+New business owner sign-up fails on first login with "Something went wrong." `initApp` throws inside `_initBusiness`. The `null businessName` crash was patched (commit 245ae27) but an error still persists. **To diagnose:** open DevTools Console after the error, copy the `initApp failed:` line, and fix whichever DB operation is throwing. Also audit the staff-invite flow vs owner flow in `loadBusinessContext` to ensure invited staff correctly skip `_initBusiness`.
 
 ### CSS Technical Debt Cleanup
 `pointbunny.css` has accumulated significant debt:
@@ -295,7 +326,7 @@ Reports/Analytics is **implemented** (multi-metric overview chart with KPI toggl
 **Do not mix this into feature work.** Dedicate a standalone pass when the user is ready.
 
 ### Phone SMS Verification (settings)
-The Business tab phone field has a visible "SMS verification coming soon" note. When building this:
+The Business tab phone field previously had a "SMS verification coming soon" note (now removed). When building OTP verification:
 - The hook point is `controlSaveBusinessInfo` in `controller.js` — add an OTP step there before calling `model.saveBusinessInfo`
 - No schema changes needed; the `businesses.phone` column already exists
 
