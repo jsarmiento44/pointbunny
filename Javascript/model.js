@@ -1367,3 +1367,15 @@ export const submitTicketRating = async function (ticketId, rating, comment) {
   const t = state.tickets.find(t => t.id === ticketId);
   if (t) { t.rating = rating; t.rating_comment = comment || null; }
 };
+
+export const sendPasswordResetEmail = async function (email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin,
+  });
+  if (error) throw error;
+};
+
+export const updatePassword = async function (newPassword) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+};

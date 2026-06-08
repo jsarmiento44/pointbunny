@@ -1344,6 +1344,28 @@ const controlSignOut = async function () {
   setTimeout(() => window.location.reload(), 500);
 };
 
+const controlForgotPassword = async function (email) {
+  try {
+    AuthView.setForgotLoading(true);
+    await model.sendPasswordResetEmail(email);
+    AuthView.showForgotSent(email);
+  } catch (err) {
+    AuthView.showForgotError(err.message ?? 'Something went wrong. Please try again.');
+    AuthView.setForgotLoading(false);
+  }
+};
+
+const controlResetPassword = async function (password) {
+  try {
+    AuthView.setResetLoading(true);
+    await model.updatePassword(password);
+    AuthView.showResetSuccess();
+  } catch (err) {
+    AuthView.showResetError(err.message ?? 'Something went wrong. Please try again.');
+    AuthView.setResetLoading(false);
+  }
+};
+
 // ── Cashflow ──────────────────────────────────────────────────────────────────
 
 const _getCashflowRange = function (period, from, to) {
@@ -3348,8 +3370,17 @@ const _wireApp = function () {
 const initAuth = async function () {
   AuthView._addHandlerSignIn(controlSignIn);
   AuthView._addHandlerSignUp(controlSignUp);
+  AuthView._addHandlerForgotPassword(controlForgotPassword);
+  AuthView._addHandlerResetPassword(controlResetPassword);
   OnboardingView._addHandlerSubmit(controlOnboardingSubmit);
   document.getElementById('logoutBtn').addEventListener('click', controlSignOut);
+
+  // Recovery flow: user clicked a password-reset link in email
+  if (window.location.hash.includes('type=recovery')) {
+    AuthView.show();
+    AuthView.showResetPassword();
+    return;
+  }
 
   const { data: { session } } = await supabase.auth.getSession();
   if (session) {

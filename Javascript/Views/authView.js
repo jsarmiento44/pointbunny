@@ -3,12 +3,18 @@ class AuthView {
   _wrapper       = document.getElementById('authFormsWrapper');
   _loginForm     = document.getElementById('loginForm');
   _signUpForm    = document.getElementById('signUpForm');
+  _forgotForm    = document.getElementById('forgotForm');
+  _resetForm     = document.getElementById('resetForm');
   _emailInput    = document.getElementById('loginEmail');
   _passwordInput = document.getElementById('loginPassword');
   _errorEl       = document.getElementById('loginError');
   _signUpErrorEl = document.getElementById('signUpError');
+  _forgotErrorEl = document.getElementById('forgotError');
+  _resetErrorEl  = document.getElementById('resetError');
   _signInBtn     = document.getElementById('signInBtn');
   _signUpBtn     = document.getElementById('signUpBtn');
+  _forgotBtn     = document.getElementById('forgotBtn');
+  _resetBtn      = document.getElementById('resetBtn');
   _onSignUp      = false;
 
   constructor() {
@@ -20,6 +26,14 @@ class AuthView {
       e.preventDefault();
       if (this._onSignUp) this._slide('back');
     });
+    document.getElementById('showForgotLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      this._slideTo(this._loginForm, this._forgotForm, 'forward', false);
+    });
+    document.getElementById('backToLoginFromForgot').addEventListener('click', (e) => {
+      e.preventDefault();
+      this._slideTo(this._forgotForm, this._loginForm, 'back', false);
+    });
   }
 
   // ── Public ────────────────────────────────────────────────────────────────
@@ -29,10 +43,14 @@ class AuthView {
 
   showError(msg)       { this._errorEl.textContent = msg; }
   showSignUpError(msg) { this._signUpErrorEl.textContent = msg; }
+  showForgotError(msg) { this._forgotErrorEl.textContent = msg; }
+  showResetError(msg)  { this._resetErrorEl.textContent = msg; }
 
   clearErrors() {
-    this._errorEl.textContent = '';
+    this._errorEl.textContent       = '';
     this._signUpErrorEl.textContent = '';
+    this._forgotErrorEl.textContent = '';
+    this._resetErrorEl.textContent  = '';
   }
 
   setLoading(bool) {
@@ -47,6 +65,16 @@ class AuthView {
   setSignUpLoading(bool) {
     this._signUpBtn.disabled = bool;
     this._signUpBtn.textContent = bool ? 'Creating account…' : 'Create Account';
+  }
+
+  setForgotLoading(bool) {
+    this._forgotBtn.disabled = bool;
+    this._forgotBtn.textContent = bool ? 'Sending…' : 'Send Reset Link';
+  }
+
+  setResetLoading(bool) {
+    this._resetBtn.disabled = bool;
+    this._resetBtn.textContent = bool ? 'Saving…' : 'Set New Password';
   }
 
   showCheckEmail(email) {
@@ -66,6 +94,50 @@ class AuthView {
     document.getElementById('backToSignIn')?.addEventListener('click', (e) => {
       e.preventDefault();
       this._slide('back');
+    });
+  }
+
+  showForgotSent(email) {
+    this._forgotForm.innerHTML = `
+      <p style="text-align:center; font-size:1.05rem; font-weight:600; margin:8px 0;">Check your email</p>
+      <p class="auth-switch" style="text-align:center; margin-top:8px;">
+        A password reset link was sent to <strong>${email}</strong>.
+      </p>
+      <p class="auth-switch" style="text-align:center; margin-top:10px; font-size:0.8rem;">
+        Don't see it? Check your <strong>spam or junk folder</strong>.
+      </p>
+      <p class="auth-switch" style="margin-top:20px;">
+        <a href="#" id="backToLoginFromSent">Back to sign in</a>
+      </p>
+    `;
+    document.getElementById('backToLoginFromSent')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this._slideTo(this._forgotForm, this._loginForm, 'back', false);
+    });
+  }
+
+  showResetPassword() {
+    this._loginForm.classList.add('hidden');
+    this._signUpForm.classList.add('hidden');
+    this._forgotForm.classList.add('hidden');
+    this._resetForm.classList.remove('hidden');
+  }
+
+  showResetSuccess() {
+    this._resetForm.innerHTML = `
+      <p style="text-align:center; font-size:1.05rem; font-weight:600; margin:8px 0;">Password updated</p>
+      <p class="auth-switch" style="text-align:center; margin-top:8px;">
+        Your password has been changed successfully.
+      </p>
+      <p class="auth-switch" style="margin-top:20px;">
+        <a href="#" id="goToSignInAfterReset">Sign in with your new password</a>
+      </p>
+    `;
+    document.getElementById('goToSignInAfterReset')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.hash = '';
+      this._resetForm.classList.add('hidden');
+      this._loginForm.classList.remove('hidden');
     });
   }
 
@@ -90,13 +162,35 @@ class AuthView {
       const password  = document.getElementById('signUpPassword')?.value;
       const confirm   = document.getElementById('signUpConfirm')?.value;
 
-      if (!firstName)          { this._signUpErrorEl.textContent = 'Please enter your first name.'; return; }
-      if (!lastName)           { this._signUpErrorEl.textContent = 'Please enter your last name.'; return; }
-      if (!email)              { this._signUpErrorEl.textContent = 'Please enter your email.'; return; }
-      if (password.length < 6) { this._signUpErrorEl.textContent = 'Password must be at least 6 characters.'; return; }
-      if (password !== confirm) { this._signUpErrorEl.textContent = 'Passwords do not match.'; return; }
+      if (!firstName)           { this._signUpErrorEl.textContent = 'Please enter your first name.'; return; }
+      if (!lastName)            { this._signUpErrorEl.textContent = 'Please enter your last name.'; return; }
+      if (!email)               { this._signUpErrorEl.textContent = 'Please enter your email.'; return; }
+      if (password.length < 6)  { this._signUpErrorEl.textContent = 'Password must be at least 6 characters.'; return; }
+      if (password !== confirm)  { this._signUpErrorEl.textContent = 'Passwords do not match.'; return; }
 
       handler({ firstName, lastName, email, password });
+    });
+  }
+
+  _addHandlerForgotPassword(handler) {
+    this._forgotForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this._forgotErrorEl.textContent = '';
+      const email = document.getElementById('forgotEmail')?.value.trim();
+      if (!email) { this._forgotErrorEl.textContent = 'Please enter your email.'; return; }
+      handler(email);
+    });
+  }
+
+  _addHandlerResetPassword(handler) {
+    this._resetForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this._resetErrorEl.textContent = '';
+      const password = document.getElementById('resetPassword')?.value;
+      const confirm  = document.getElementById('resetConfirm')?.value;
+      if (!password || password.length < 6) { this._resetErrorEl.textContent = 'Password must be at least 6 characters.'; return; }
+      if (password !== confirm)              { this._resetErrorEl.textContent = 'Passwords do not match.'; return; }
+      handler(password);
     });
   }
 
@@ -128,22 +222,17 @@ class AuthView {
 
   // ── Slide animation ───────────────────────────────────────────────────────
 
-  _slide(direction) {
+  _slideTo(fromEl, toEl, direction, makeWide) {
     const DURATION = 220;
     const forward  = direction === 'forward';
-    const outEl    = forward ? this._loginForm  : this._signUpForm;
-    const inEl     = forward ? this._signUpForm : this._loginForm;
     const outX     = forward ? '-28px' : '28px';
     const inX      = forward ? '28px'  : '-28px';
     const card     = this._overlay.querySelector('.auth-card');
 
     this.clearErrors();
-
-    // Clip card only during animation (prevents sweep from painting outside rounded corners)
     card.classList.add('auth-card--animating');
     setTimeout(() => card.classList.remove('auth-card--animating'), 700);
 
-    // Green sweep line
     const sweep = document.createElement('div');
     sweep.className = `auth-sweep auth-sweep--${forward ? 'forward' : 'back'}`;
     card.appendChild(sweep);
@@ -154,33 +243,39 @@ class AuthView {
       setTimeout(() => sweep.remove(), 220);
     }, 460);
 
-    // Fade out current form
-    outEl.style.transition = `opacity ${DURATION}ms ease, transform ${DURATION}ms ease`;
-    outEl.style.opacity    = '0';
-    outEl.style.transform  = `translateX(${outX})`;
+    fromEl.style.transition = `opacity ${DURATION}ms ease, transform ${DURATION}ms ease`;
+    fromEl.style.opacity    = '0';
+    fromEl.style.transform  = `translateX(${outX})`;
 
     setTimeout(() => {
-      outEl.classList.add('hidden');
-      outEl.style.cssText = '';
+      fromEl.classList.add('hidden');
+      fromEl.style.cssText = '';
 
-      // Widen/narrow the card
-      if (forward) card.classList.add('auth-card--wide');
-      else card.classList.remove('auth-card--wide');
+      if (makeWide) card.classList.add('auth-card--wide');
+      else          card.classList.remove('auth-card--wide');
 
-      // Fade in next form
-      inEl.style.opacity   = '0';
-      inEl.style.transform = `translateX(${inX})`;
-      inEl.classList.remove('hidden');
+      toEl.style.opacity   = '0';
+      toEl.style.transform = `translateX(${inX})`;
+      toEl.classList.remove('hidden');
 
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        inEl.style.transition = `opacity ${DURATION}ms ease, transform ${DURATION}ms ease`;
-        inEl.style.opacity    = '1';
-        inEl.style.transform  = 'translateX(0)';
-        setTimeout(() => { inEl.style.cssText = ''; }, DURATION + 10);
+        toEl.style.transition = `opacity ${DURATION}ms ease, transform ${DURATION}ms ease`;
+        toEl.style.opacity    = '1';
+        toEl.style.transform  = 'translateX(0)';
+        setTimeout(() => { toEl.style.cssText = ''; }, DURATION + 10);
       }));
-
-      this._onSignUp = forward;
     }, DURATION);
+  }
+
+  _slide(direction) {
+    const forward = direction === 'forward';
+    this._slideTo(
+      forward ? this._loginForm  : this._signUpForm,
+      forward ? this._signUpForm : this._loginForm,
+      direction,
+      forward,
+    );
+    setTimeout(() => { this._onSignUp = forward; }, 230);
   }
 }
 
