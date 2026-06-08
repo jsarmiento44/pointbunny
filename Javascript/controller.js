@@ -1306,7 +1306,16 @@ const controlSignIn = async function (email, password) {
   }
   await AuthView.playSignInSuccess();
   showLoadingScreen();
-  await initApp(data.user);
+  try {
+    await initApp(data.user);
+  } catch (err) {
+    console.error('initApp failed:', err);
+    hideLoadingScreen();
+    await supabase.auth.signOut();
+    AuthView.show();
+    AuthView.showError('Something went wrong loading the app. Please try again.');
+    return;
+  }
   hideLoadingScreen();
   _wireApp();
   _maybeShowPinSetup();
@@ -3385,7 +3394,16 @@ const initAuth = async function () {
   const { data: { session } } = await supabase.auth.getSession();
   if (session) {
     showLoadingScreen();
-    await initApp(session.user);
+    try {
+      await initApp(session.user);
+    } catch (err) {
+      console.error('initApp failed:', err);
+      hideLoadingScreen();
+      await supabase.auth.signOut();
+      AuthView.show();
+      AuthView.showError('Something went wrong. Please sign in again.');
+      return;
+    }
     hideLoadingScreen();
     _wireApp();
     _maybeShowPinSetup();
