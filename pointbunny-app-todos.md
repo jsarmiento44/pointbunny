@@ -23,7 +23,7 @@ _Last updated: 2026-06-07_
 
 ### 🔴 Tier 1 — Ready to Build Now
 - [ ] **Staging environment** — set up a second Netlify site pointing to a `staging` branch for testing fixes before they go live. See setup instructions below.
-- [ ] **First-login onboarding** — after a new user confirms their email and signs in for the first time, show a blocking onboarding screen (before the app loads) to collect: Business name + Phone number. Save both to `businesses.name` and `businesses.phone`. Skip if already set (i.e. not a first login). Hook point: after `initApp()` loads business context, check if `businesses.name` is null/empty and show the onboarding overlay.
+- [x] ~~**First-login onboarding**~~ ✅ shipped — collects business name (required), phone (required), and address (optional). Detected via `businesses.name IS NULL`. Reappears on every login until completed.
 - [ ] **Social auth (Google, Microsoft, etc.)** — add OAuth sign-in buttons to the login form. Supabase supports Google, Microsoft, Apple, and others via `supabase.auth.signInWithOAuth({ provider: 'google' })`. Requires enabling each provider in Supabase → Authentication → Providers and adding redirect URLs (`https://pointbunny.com`). On first OAuth login, the first-login onboarding above should fire to collect business name + phone.
 - [x] ~~**Show admin replies inside a ticket**~~ ✅ shipped
 - [x] ~~**Clear unread badge when business opens ticket**~~ ✅ shipped
@@ -40,6 +40,9 @@ _Last updated: 2026-06-07_
 - [ ] **PostHog: user identification** — `posthog.identify()` on login + key events (see item 2)
 - [ ] **PostHog: registration funnel tracking** — fire events at each signup step (see item 5)
 
+### 🟡 Tier 2 (continued)
+- [ ] **Auto tax rate by province/state** — after onboarding collects the business address, look up the standard VAT/sales tax rate for that province or country and auto-create a tax adjustment in `adjustments`. The owner can still edit or remove it. Implementation: maintain a tax rate lookup table (could be a static JS map or a `tax_rates` Supabase table keyed by country + province code). On first login after onboarding, if no tax adjustment exists yet, create one via `model.addAdjustment`. PH default: 12% VAT. Should also handle the case where the business later changes their address in Settings.
+
 ### 🔵 Tier 3 — Needs Stripe First
 - [ ] **Free vs Paid feature differentiation** — gate certain features behind paid plan, show upgrade prompts for free users. Details TBD — awaiting spec.
 - [ ] **Subscription status via Stripe webhook** — webhook updates `businesses.subscription_status` (see item 3)
@@ -53,7 +56,7 @@ _Last updated: 2026-06-07_
 ### 🟣 Tier 5 — Domain-Dependent (domain is now live: pointbunny.com — these are unblocked)
 - [ ] **Staff invitation emails** — domain is live, now unblocked. When a staff member is invited, send an email with signup instructions. Requires email provider (Resend/Brevo via Supabase Edge Function). See item 19 below.
 - [ ] **Forgot Password (Pointbunny app)** — domain is live, ready to build. Moved to Tier 1. "Forgot password?" link on login screen → Supabase recovery email → password reset page. `redirectTo` = `https://pointbunny.com`. See item 12 for implementation details.
-- [ ] **2FA** — opt-in TOTP for business owner accounts (see item 13)
+- [ ] **2FA (TOTP, not SMS)** — opt-in two-factor authentication for business owner accounts via authenticator app (Google Authenticator, Authy). Use Supabase's built-in MFA: `supabase.auth.mfa.enroll({ factorType: 'totp' })` returns a QR code URI → render it in Settings so the owner scans it once. On login, after password succeeds, call `supabase.auth.mfa.challenge()` + `supabase.auth.mfa.verify()` for the 6-digit code. No SMS/Twilio needed — free and more secure than SMS 2FA (no SIM-swap risk).
 - [ ] **Custom email sender domain** — configure custom SMTP in Supabase for branded auth emails from `@pointbunny.com`
 - [ ] **Time Clock PIN during invite acceptance** — when a staff member accepts their invite email, redirect them to a "Set Your PIN" onboarding page so their PIN is created before they ever touch the time clock. `redirectTo` = `https://pointbunny.com`. See item 19.
 

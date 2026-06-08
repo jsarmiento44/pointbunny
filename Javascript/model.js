@@ -52,6 +52,14 @@ export const state = {
     orderTypeEnabled: localStorage.getItem('pointbunny_order_type_enabled') !== 'false',
   },
   currentReceiptAdjustments: [],
+  needsOnboarding: false,
+  businessType:            null,
+  businessIndustry:        null,
+  businessAddressStreet:   null,
+  businessAddressCity:     null,
+  businessAddressProvince: null,
+  businessAddressZip:      null,
+  businessAddressCountry:  null,
 };
 
 // ── Business context (runs on every login) ────────────────────────────────────
@@ -65,7 +73,7 @@ const _initBusiness = async function (user) {
 
   const { error: bizError } = await supabase
     .from('businesses')
-    .upsert({ id: user.id, name: businessName, email: user.email, phone });
+    .upsert({ id: user.id, name: null, email: user.email, phone: null });
   if (bizError) throw new Error(`businesses upsert failed: ${bizError.message}`);
 
   const { data: existingRole } = await supabase
@@ -180,6 +188,8 @@ export const loadBusinessContext = async function (user) {
     state.businessTimezone = bizData.timezone ?? null;
   }
 
+  if (!state.businessName && state.userId === state.businessId) state.needsOnboarding = true;
+
   // Auto-detect timezone on first login if the owner hasn't set one yet.
   // Only the owner writes this — staff logins leave it untouched.
   if (!state.businessTimezone && state.userId === state.businessId) {
@@ -198,27 +208,72 @@ export const loadBusinessContext = async function (user) {
 export const loadBusinessProfile = async function () {
   const { data } = await supabase
     .from('businesses')
-    .select('name, email, phone, timezone')
+    .select('name, email, phone, timezone, address_street, address_city, address_province, address_zip')
     .eq('id', state.businessId)
     .single();
   if (data) {
-    state.businessName     = data.name     ?? null;
-    state.businessEmail    = data.email    ?? null;
-    state.businessPhone    = data.phone    ?? null;
-    state.businessTimezone = data.timezone ?? null;
+    state.businessName            = data.name             ?? null;
+    state.businessEmail           = data.email            ?? null;
+    state.businessPhone           = data.phone            ?? null;
+    state.businessTimezone        = data.timezone         ?? null;
+    state.businessAddressStreet   = data.address_street   ?? null;
+    state.businessAddressCity     = data.address_city     ?? null;
+    state.businessAddressProvince = data.address_province ?? null;
+    state.businessAddressZip      = data.address_zip      ?? null;
   }
 };
 
-export const saveBusinessInfo = async function ({ name, email, phone, timezone }) {
+export const saveBusinessInfo = async function ({ name, email, phone, timezone, addressStreet, addressCity, addressProvince, addressZip }) {
   const { error } = await supabase
     .from('businesses')
-    .update({ name, email: email || null, phone: phone || null, timezone: timezone || null })
+    .update({
+      name,
+      email:            email            || null,
+      phone:            phone            || null,
+      timezone:         timezone         || null,
+      address_street:   addressStreet    || null,
+      address_city:     addressCity      || null,
+      address_province: addressProvince  || null,
+      address_zip:      addressZip       || null,
+    })
     .eq('id', state.businessId);
   if (error) throw error;
-  state.businessName     = name;
-  state.businessEmail    = email || null;
-  state.businessPhone    = phone || null;
-  state.businessTimezone = timezone || null;
+  state.businessName            = name;
+  state.businessEmail           = email            || null;
+  state.businessPhone           = phone            || null;
+  state.businessTimezone        = timezone         || null;
+  state.businessAddressStreet   = addressStreet    || null;
+  state.businessAddressCity     = addressCity      || null;
+  state.businessAddressProvince = addressProvince  || null;
+  state.businessAddressZip      = addressZip       || null;
+};
+
+export const saveOnboardingInfo = async function ({ businessName, businessType, industry, phone, street, city, province, zip, country }) {
+  const { error } = await supabase
+    .from('businesses')
+    .update({
+      name:              businessName,
+      business_type:     businessType     || null,
+      business_industry: industry         || null,
+      phone:             phone            || null,
+      address_street:    street           || null,
+      address_city:      city             || null,
+      address_province:  province         || null,
+      address_zip:       zip              || null,
+      address_country:   country          || null,
+    })
+    .eq('id', state.businessId);
+  if (error) throw new Error(error.message);
+  state.businessName            = businessName;
+  state.businessType            = businessType     || null;
+  state.businessIndustry        = industry         || null;
+  state.businessPhone           = phone            || null;
+  state.businessAddressStreet   = street           || null;
+  state.businessAddressCity     = city             || null;
+  state.businessAddressProvince = province         || null;
+  state.businessAddressZip      = zip              || null;
+  state.businessAddressCountry  = country          || null;
+  state.needsOnboarding         = false;
 };
 
 // ── DB ↔ app shape mapping ────────────────────────────────────────────────────

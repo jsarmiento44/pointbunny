@@ -63,6 +63,18 @@ const _record = (e) => {
   });
 };
 
+// ── Named event tracking ──────────────────────────────────────────────────────
+
+export const track = (eventName, props = {}) => {
+  if (_buffer.length >= MAX_BUFFER) return;
+  _buffer.push({
+    user_id:    _userId,
+    button_id:  eventName,
+    label:      Object.keys(props).length ? JSON.stringify(props) : eventName,
+    clicked_at: new Date().toISOString(),
+  });
+};
+
 // ── Flush ─────────────────────────────────────────────────────────────────────
 
 export const flush = async () => {

@@ -153,7 +153,7 @@
                   </div>
                   <div class="settings-field">
                     <label for="settingsBusinessPhoneNumber">Phone number</label>
-                    <input type="tel" id="settingsBusinessPhoneNumber" placeholder="912 345 6789" autocomplete="tel" />
+                    <input type="tel" id="settingsBusinessPhoneNumber" placeholder="(555) 123-4567" autocomplete="tel" />
                     <p class="settings-phone-note">SMS verification will be required when updating this — coming soon.</p>
                   </div>
 
@@ -2072,7 +2072,7 @@
                 <input
                   type="text"
                   id="signUpFirstName"
-                  placeholder="Maria"
+                  placeholder="Jane"
                   required
                   autocomplete="given-name"
                 />
@@ -2082,7 +2082,7 @@
                 <input
                   type="text"
                   id="signUpLastName"
-                  placeholder="Santos"
+                  placeholder="Smith"
                   required
                   autocomplete="family-name"
                 />
@@ -2240,6 +2240,157 @@
           </div><!-- end support-main -->
         </div><!-- end support-body -->
       </div><!-- end support-shell -->
+    </div>
+
+    <!-- First-login onboarding wizard -->
+    <div id="onboardingOverlay" class="auth-overlay hidden">
+      <div class="auth-card">
+        <img src="Pointbunny.png" alt="Pointbunny logo" class="auth-logo" />
+
+        <div class="ob-progress">
+          <span class="ob-dot ob-dot--active"></span>
+          <span class="ob-dot"></span>
+          <span class="ob-dot"></span>
+          <span class="ob-dot"></span>
+        </div>
+
+        <div class="ob-steps-wrap">
+
+          <!-- Step 1: Business Name -->
+          <div class="ob-step">
+            <p class="ob-step-label">Step 1 of 4</p>
+            <h2 class="ob-step-title">What's your business called?</h2>
+            <p class="auth-switch" style="text-align:left">Shown on receipts and throughout the app.</p>
+            <div class="auth-field">
+              <input type="text" id="onboardingBizName" placeholder="e.g. The Coffee House" autocomplete="organization" />
+            </div>
+          </div>
+
+          <!-- Step 2: Business Type + Industry -->
+          <div class="ob-step ob-step--hidden">
+            <p class="ob-step-label">Step 2 of 4</p>
+            <h2 class="ob-step-title">What kind of business is it?</h2>
+            <p class="auth-switch" style="text-align:left">We'll use this to tailor your settings.</p>
+            <div class="auth-field">
+              <label for="onboardingBizType" style="font-size:0.82rem;font-weight:600;color:var(--muted)">Business Type</label>
+              <select id="onboardingBizType">
+                <option value="" disabled selected>Select a type</option>
+                <option value="food_beverage">Food &amp; Beverage</option>
+                <option value="service">Services</option>
+                <option value="retail">Retail</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="auth-field">
+              <label for="onboardingBizIndustry" style="font-size:0.82rem;font-weight:600;color:var(--muted)">Industry</label>
+              <select id="onboardingBizIndustry">
+                <option value="" disabled selected>Select an industry</option>
+                <option value="food_beverage">Food &amp; Beverage (Restaurant, Café, Food Stall)</option>
+                <option value="beauty_wellness">Beauty &amp; Wellness (Salon, Spa, Barbershop)</option>
+                <option value="health_medical">Health &amp; Medical (Clinic, Pharmacy)</option>
+                <option value="retail_fashion">Retail — Fashion &amp; Apparel</option>
+                <option value="retail_electronics">Retail — Electronics &amp; Gadgets</option>
+                <option value="retail_grocery">Retail — Grocery &amp; Convenience</option>
+                <option value="retail_home">Retail — Home &amp; Furniture</option>
+                <option value="professional_services">Professional Services (Accounting, Legal)</option>
+                <option value="automotive">Automotive (Repair, Detailing)</option>
+                <option value="education">Education &amp; Training</option>
+                <option value="entertainment">Entertainment &amp; Events</option>
+                <option value="technology">Technology</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Step 3: Phone -->
+          <div class="ob-step ob-step--hidden">
+            <p class="ob-step-label">Step 3 of 4</p>
+            <h2 class="ob-step-title">Best number to reach you?</h2>
+            <p class="auth-switch" style="text-align:left">Used on receipts and for customer contact.</p>
+            <div class="auth-field">
+              <label for="onboardingPhone">Phone Number</label>
+              <input type="tel" id="onboardingPhone" autocomplete="tel" />
+            </div>
+          </div>
+
+          <!-- Step 4: Address -->
+          <div class="ob-step ob-step--hidden">
+            <p class="ob-step-label">Step 4 of 4</p>
+            <h2 class="ob-step-title">What's your business address?</h2>
+            <div class="ob-callout">
+              <span>📌</span>
+              <p>Even fully remote or online businesses must have a registered physical address. This appears on every receipt you issue and is required for tax compliance — it's what makes your receipts official.</p>
+            </div>
+            <div class="auth-field">
+              <label for="onboardingStreet">Street Address</label>
+              <input type="text" id="onboardingStreet" placeholder="e.g. 123 Main St" autocomplete="address-line1" />
+            </div>
+            <div class="auth-col-pair">
+              <div class="auth-field">
+                <label for="onboardingCity">City / Municipality</label>
+                <input type="text" id="onboardingCity" placeholder="e.g. Los Angeles" autocomplete="address-level2" />
+              </div>
+              <div class="auth-field">
+                <label for="onboardingProvince">Province / State</label>
+                <input type="text" id="onboardingProvince" placeholder="e.g. California" autocomplete="address-level1" />
+              </div>
+            </div>
+            <div class="auth-col-pair">
+              <div class="auth-field">
+                <label for="onboardingZip">ZIP / Postal Code</label>
+                <input type="text" id="onboardingZip" placeholder="e.g. 90210" autocomplete="postal-code" />
+              </div>
+              <div class="auth-field">
+                <label for="onboardingCountry">Country</label>
+                <select id="onboardingCountry" autocomplete="country">
+                  <option value="">Select country</option>
+                  <option value="US">United States</option>
+                  <option value="CA">Canada</option>
+                  <option value="GB">United Kingdom</option>
+                  <option value="AU">Australia</option>
+                  <option value="NZ">New Zealand</option>
+                  <option value="PH">Philippines</option>
+                  <option value="SG">Singapore</option>
+                  <option value="MY">Malaysia</option>
+                  <option value="ID">Indonesia</option>
+                  <option value="TH">Thailand</option>
+                  <option value="VN">Vietnam</option>
+                  <option value="IN">India</option>
+                  <option value="JP">Japan</option>
+                  <option value="KR">South Korea</option>
+                  <option value="CN">China</option>
+                  <option value="HK">Hong Kong</option>
+                  <option value="TW">Taiwan</option>
+                  <option value="AE">United Arab Emirates</option>
+                  <option value="SA">Saudi Arabia</option>
+                  <option value="NG">Nigeria</option>
+                  <option value="GH">Ghana</option>
+                  <option value="KE">Kenya</option>
+                  <option value="ZA">South Africa</option>
+                  <option value="MX">Mexico</option>
+                  <option value="BR">Brazil</option>
+                  <option value="AR">Argentina</option>
+                  <option value="CO">Colombia</option>
+                  <option value="DE">Germany</option>
+                  <option value="FR">France</option>
+                  <option value="ES">Spain</option>
+                  <option value="IT">Italy</option>
+                  <option value="NL">Netherlands</option>
+                  <option value="SE">Sweden</option>
+                  <option value="NO">Norway</option>
+                  <option value="DK">Denmark</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <p id="onboardingError" class="auth-error"></p>
+        <button type="button" id="onboardingNextBtn" class="btn primary auth-submit">Next</button>
+        <button type="button" id="onboardingBackBtn" class="ob-back-btn hidden">Back</button>
+      </div>
     </div>
 
     <!-- New Ticket Modal -->

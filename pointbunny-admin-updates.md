@@ -15,6 +15,38 @@ that the admin panel needs to know about. Add new entries at the top as features
 
 ---
 
+## [2026-06-07] Business Address Fields + First-Login Onboarding
+
+New columns on `businesses` for storing a structured business address. Collected on first login via the onboarding modal; editable from Settings afterwards.
+
+### Migration
+
+```sql
+ALTER TABLE public.businesses
+  ADD COLUMN IF NOT EXISTS business_type     TEXT,
+  ADD COLUMN IF NOT EXISTS business_industry TEXT,
+  ADD COLUMN IF NOT EXISTS address_street    TEXT,
+  ADD COLUMN IF NOT EXISTS address_city      TEXT,
+  ADD COLUMN IF NOT EXISTS address_province  TEXT,
+  ADD COLUMN IF NOT EXISTS address_zip       TEXT,
+  ADD COLUMN IF NOT EXISTS address_country   TEXT;
+```
+
+> No new grants needed — new columns on an existing table inherit the table's existing RLS grants.
+
+**`business_type` values:** `food_beverage` | `service` | `retail` | `other`
+
+**`business_industry` values:** `food_beverage` | `beauty_wellness` | `health_medical` | `retail_fashion` | `retail_electronics` | `retail_grocery` | `retail_home` | `professional_services` | `automotive` | `education` | `entertainment` | `technology` | `other`
+
+### What the admin panel needs
+
+- **Display** `business_type` and `business_industry` on each business record — useful for segmentation and support
+- **Display** all four address fields on each business record
+- **Edit** form for businesses should include all six new fields (optional, free-text for address; select for type/industry)
+- Address fields used for official receipt formatting
+
+---
+
 ## [2026-05-27] Shifts, Timesheets & Time Clock
 
 Adds shift tracking for staff via a dedicated `timeclock.html` page. Staff clock in/out on a registered tablet; breaks are tracked separately. Owners/admins can view and edit timesheets from the Staff panel's Payroll tab.

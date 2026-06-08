@@ -18,6 +18,7 @@ import channel, { MSG } from "./channel.js";
 import { init as initAnalytics, destroy as destroyAnalytics } from "./analytics.js";
 import ReportsView from "./Views/reportsView.js";
 import SupportView from "./Views/supportView.js";
+import OnboardingView from "./Views/onboardingView.js";
 import { fetchReportsSalesRaw } from "./model.js";
 
 const modelState = model.state;
@@ -247,7 +248,13 @@ const _buildSale = function () {
     customerPayment: OrderCheckOutView._customerPayment,
     customerChange: OrderCheckOutView._customerChange,
     promoCode: model.state.currentPromoCode ?? null,
-    storeName: model.state.username,
+    storeName:       model.state.businessName ?? model.state.username,
+    businessPhone:   model.state.businessPhone   ?? null,
+    addressStreet:   model.state.businessAddressStreet   ?? null,
+    addressCity:     model.state.businessAddressCity     ?? null,
+    addressProvince: model.state.businessAddressProvince ?? null,
+    addressZip:      model.state.businessAddressZip      ?? null,
+    addressCountry:  model.state.businessAddressCountry  ?? null,
     cashierName,
     loggedInCashier,
     orderType: OrderCheckOutView._orderType ?? 'dine-in',
@@ -1264,6 +1271,27 @@ const _loadServingComparison = async function () {
   }
 };
 
+const controlOnboardingSubmit = async function ({ businessName, businessType, industry, phone, street, city, province, zip, country }) {
+  OnboardingView.setLoading(true);
+  try {
+    await model.saveOnboardingInfo({ businessName, businessType, industry, phone, street, city, province, zip, country });
+    const companyNameEl = document.querySelector('.company-name');
+    if (companyNameEl) companyNameEl.textContent = businessName;
+    localStorage.setItem('pointbunny_store_name', businessName);
+    // Auto-disable Dine In / Takeout for non-food businesses
+    if (businessType !== 'food_beverage') {
+      model.state.settings.orderTypeEnabled = false;
+      localStorage.setItem('pointbunny_order_type_enabled', 'false');
+    }
+    OnboardingView.hide();
+    showToast('Business profile saved!', 'success');
+  } catch (err) {
+    OnboardingView.showError(err.message ?? 'Something went wrong. Please try again.');
+  } finally {
+    OnboardingView.setLoading(false);
+  }
+};
+
 const controlSignIn = async function (email, password) {
   AuthView.setLoading(true);
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -1278,6 +1306,7 @@ const controlSignIn = async function (email, password) {
   hideLoadingScreen();
   _wireApp();
   _maybeShowPinSetup();
+  if (model.state.needsOnboarding) OnboardingView.show();
 };
 
 const controlSignUp = async function ({ firstName, lastName, email, password }) {
@@ -1635,7 +1664,13 @@ const controlReprintSale = async function (sale) {
     customerPayment: sale.customer_payment,
     customerChange: sale.customer_change,
     subtotal: sale.subtotal,
-    storeName: modelState.username,
+    storeName:       modelState.businessName ?? modelState.username,
+    businessPhone:   modelState.businessPhone   ?? null,
+    addressStreet:   modelState.businessAddressStreet   ?? null,
+    addressCity:     modelState.businessAddressCity     ?? null,
+    addressProvince: modelState.businessAddressProvince ?? null,
+    addressZip:      modelState.businessAddressZip      ?? null,
+    addressCountry:  modelState.businessAddressCountry  ?? null,
     cashierName: sale.added_by,
     showRemovedAdjustments: false,
     removedAdjustments: [],
@@ -3309,6 +3344,7 @@ const _wireApp = function () {
 const initAuth = async function () {
   AuthView._addHandlerSignIn(controlSignIn);
   AuthView._addHandlerSignUp(controlSignUp);
+  OnboardingView._addHandlerSubmit(controlOnboardingSubmit);
   document.getElementById('logoutBtn').addEventListener('click', controlSignOut);
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -3318,6 +3354,7 @@ const initAuth = async function () {
     hideLoadingScreen();
     _wireApp();
     _maybeShowPinSetup();
+    if (model.state.needsOnboarding) OnboardingView.show();
   } else {
     AuthView.show();
   }
