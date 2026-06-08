@@ -124,6 +124,9 @@ Supabase provides three services used by Pointbunny:
 - JWT tokens stored in `localStorage`, automatically refreshed
 - `supabase.auth.getSession()` on app load — if a valid session exists, the user goes straight to the app; otherwise the login screen is shown
 - Sign-out invalidates the session and reloads the page
+- **Forgot password:** `supabase.auth.resetPasswordForEmail(email, { redirectTo: origin })` sends a reset link; the app detects `#type=recovery` in the URL hash on return and shows the reset-password form
+- **Password reset:** `supabase.auth.updateUser({ password })` after the user submits a new password on the reset form
+- **Email delivery:** Supabase SMTP configured with Resend (`smtp.resend.com:465`); `pointbunny.com` domain DNS-verified in Porkbun + Resend. Auth emails sent from `noreply@pointbunny.com`
 
 ### 2. Database (PostgreSQL)
 
@@ -280,23 +283,31 @@ Here's what happens when a cashier adds an item to the cart and checks out:
 ```
 App loads
    │
+   ├─ URL hash contains #type=recovery?
+   │      YES → show auth overlay → show Reset Password form
+   │             User sets new password → supabase.auth.updateUser({ password })
+   │             → "Password updated" screen → link to sign in
+   │
    ├─ supabase.auth.getSession()
    │      │
    │      ├─ Session exists → showLoadingScreen()
-   │      │       → load all data (4 parallel-ish DB calls)
-   │      │       → hideLoadingScreen()
-   │      │       → wire all event handlers
-   │      │       → app is ready
+   │      │       → try { load all data → wire handlers → app ready }
+   │      │       → catch: signOut() → show auth overlay → show error
    │      │
    │      └─ No session → show auth overlay
    │              │
    │              ├─ Sign In → signInWithPassword()
-   │              │     → on success: load data → wire app
+   │              │     → on success: try { load data → wire app }
+   │              │     → catch: signOut() → show error
    │              │
-   │              └─ Sign Up → signUp() with user metadata
+   │              ├─ Sign Up → signUp() with user metadata
+   │              │     → "Check your email" screen
+   │              │     → user clicks confirmation link
+   │              │     → redirected back → now has session
+   │              │
+   │              └─ Forgot Password → resetPasswordForEmail()
    │                    → "Check your email" screen
-   │                    → user clicks confirmation link
-   │                    → redirected back → now has session
+   │                    → user clicks reset link → #type=recovery path above
    │
    └─ supabase.auth.onAuthStateChange()
           → SIGNED_OUT: window.location.reload()
@@ -374,7 +385,7 @@ Speed. Writing every cart change to the database would add latency to every tap.
 
 | Feature                                | Status  |
 | -------------------------------------- | ------- |
-| Auth (sign in / sign up / sign out)    | ✅ Live |
+| Auth (sign in / sign up / sign out / forgot+reset password) | ✅ Live |
 | Menu management (CRUD + variants)      | ✅ Live |
 | New order + cart                       | ✅ Live |
 | Checkout + receipt printing            | ✅ Live |
@@ -401,7 +412,7 @@ Speed. Writing every cart change to the database would add latency to every tap.
 | Formal pay period records (Mark as Paid)    | Toast-only in v1; future: `pay_periods` table to track paid-out periods per staff |
 | Refunds                                     | UI button exists, no implementation                          |
 | Phone SMS verification                      | Settings field + "coming soon" note exists; hook point is `controlSaveBusinessInfo` |
-| Custom email (branded confirmation emails)  | Needs custom SMTP at launch                                  |
+| Custom email (branded transactional emails) | ✅ Live — Resend SMTP wired to Supabase Auth; sends from `noreply@pointbunny.com` |
 | Drawer operations                           | UI button exists, no implementation                          |
 | Scan item (barcode)                         | UI button exists, no implementation                          |
 | PostHog in-app analytics                    | Waiting on user's PostHog account setup                      |
