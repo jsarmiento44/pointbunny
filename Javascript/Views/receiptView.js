@@ -94,10 +94,6 @@ class ReceiptView extends View {
 </head>
 <body>
   <div class="center brand">${storeName}</div>
-  ${sale.businessPhone ? `<div class="center" style="font-size:11px;margin-top:2px;">${esc(sale.businessPhone)}</div>` : ''}
-  ${sale.addressStreet ? `<div class="center" style="font-size:10px;margin-top:1px;">${esc(sale.addressStreet)}</div>` : ''}
-  ${(sale.addressCity || sale.addressProvince) ? `<div class="center" style="font-size:10px;">${[sale.addressCity, sale.addressProvince, sale.addressZip].filter(Boolean).map(esc).join(', ')}</div>` : ''}
-  ${sale.addressCountry && sale.addressCountry !== 'US' ? `<div class="center" style="font-size:10px;">${esc(sale.addressCountry)}</div>` : ''}
   <div class="center" style="margin:4px 0 2px;font-size:11px;">${dateStr} &nbsp; ${timeStr}</div>
   ${sale.cashierName ? `<div class="center" style="font-size:10px;color:#555;margin:0 0 2px;">Cashier: ${esc(sale.cashierName)}</div>` : ''}
   ${sale.orderType ? `<div class="center" style="font-size:11px;font-weight:bold;letter-spacing:0.05em;margin:0 0 4px;">${sale.orderType === 'takeout' ? 'TAKEOUT' : 'DINE IN'}</div>` : ''}
@@ -132,6 +128,12 @@ class ReceiptView extends View {
     <p>Thank you for your purchase!</p>
     <p style="margin-top:2px;">Powered by Pointbunny POS</p>
   </div>
+  ${sale.addressStreet ? `
+  <div class="center" style="font-size:9px;color:#888;margin-top:6px;line-height:1.4;">
+    <div>${esc(sale.addressStreet)}</div>
+    ${(sale.addressCity || sale.addressProvince) ? `<div>${[sale.addressCity, sale.addressProvince, sale.addressZip].filter(Boolean).map(esc).join(', ')}</div>` : ''}
+    ${sale.addressCountry && sale.addressCountry !== 'US' ? `<div>${esc(sale.addressCountry)}</div>` : ''}
+  </div>` : ''}
 </body>
 </html>`;
   }
