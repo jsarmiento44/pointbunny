@@ -68,7 +68,10 @@ const _initBusiness = async function (user) {
   const displayName  = user.user_metadata?.display_name ?? '';
   const firstName    = user.user_metadata?.first_name || displayName.split(' ')[0] || '';
   const lastName     = user.user_metadata?.last_name  || displayName.split(' ').slice(1).join(' ') || '';
-  const businessName = (user.user_metadata?.business_name ?? `${firstName} ${lastName}`.trim()) || user.email;
+  const businessName = user.user_metadata?.business_name
+    || `${firstName} ${lastName}`.trim()
+    || user.email
+    || 'My Business';
   const phone        = user.user_metadata?.phone ?? null;
 
   const { error: bizError } = await supabase
