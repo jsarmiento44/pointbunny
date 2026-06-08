@@ -15,6 +15,17 @@ that the admin panel needs to know about. Add new entries at the top as features
 
 ---
 
+## [2026-06-07] Forgot Password + Email Domain (no schema changes)
+
+No new tables or columns. Notes for admin panel awareness:
+
+- **Forgot Password** is now live in the Pointbunny app. Users can reset via email link. Recovery emails go through Resend (`pointbunny.com` domain, DNS verified).
+- **Custom email domain** is live: all Supabase auth emails (confirm signup, reset password, invite) now send from `@pointbunny.com` via Resend SMTP.
+- **`initApp` error handling** added — if `_initBusiness` fails for a new user, the app now shows an error and returns to login instead of hanging on a blank screen. New user registration is currently broken (open bug); the admin panel may see businesses with `name = 'My Business'` if a partial `_initBusiness` run succeeded before the real fix lands.
+- **`timezone` column on `businesses`** — was documented in `[2026-05-25]` but the `ALTER TABLE` migration was NOT run until 2026-06-07. If your admin panel queries businesses and includes `timezone`, it is now safe (column exists). Pre-migration, any SELECT of `timezone` from businesses returned a 42703 error.
+
+---
+
 ## [2026-06-07] Business Address Fields + First-Login Onboarding
 
 New columns on `businesses` for storing a structured business address. Collected on first login via the onboarding modal; editable from Settings afterwards.
