@@ -257,7 +257,7 @@ export const saveBusinessInfo = async function ({ name, email, phone, timezone, 
 };
 
 export const saveOnboardingInfo = async function ({ businessName, businessType, industry, phone, street, city, province, zip, country }) {
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('businesses')
     .update({
       name:              businessName,
@@ -270,8 +270,10 @@ export const saveOnboardingInfo = async function ({ businessName, businessType, 
       address_zip:       zip              || null,
       address_country:   country          || null,
     })
-    .eq('id', state.businessId);
+    .eq('id', state.businessId)
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!updated?.length) throw new Error(`Business record not found (id: ${state.businessId}). Please refresh and try again.`);
   state.businessName            = businessName;
   state.businessType            = businessType     || null;
   state.businessIndustry        = industry         || null;
