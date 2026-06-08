@@ -1,4 +1,5 @@
 import { track, flush } from '../analytics.js';
+import { initPhoneInput } from '../phoneInput.js';
 
 const STEPS = 4;
 
@@ -12,6 +13,7 @@ class OnboardingView {
   _current   = 0;
   _startedAt = null;
   _stepTimes = [];
+  _phoneIti  = null;
 
   _onBeforeUnload = () => {
     track('onboarding_abandoned', { last_step: this._current + 1, steps_total: STEPS });
@@ -21,18 +23,18 @@ class OnboardingView {
   _detectCountry() {
     const tz   = Intl.DateTimeFormat().resolvedOptions().timeZone ?? '';
     const lang = (navigator.language ?? '').toUpperCase();
-    if (lang.endsWith('-US') || (tz.startsWith('America/') && !lang.endsWith('-CA') && !lang.endsWith('-MX') && !lang.endsWith('-BR'))) return 'US';
-    if (lang.endsWith('-PH') || tz === 'Asia/Manila') return 'PH';
-    if (lang.endsWith('-CA') || tz.startsWith('America/Toronto') || tz.startsWith('America/Vancouver') || tz.startsWith('America/Winnipeg')) return 'CA';
-    if (lang.endsWith('-GB') || tz === 'Europe/London') return 'GB';
-    if (lang.endsWith('-AU') || tz.startsWith('Australia/')) return 'AU';
-    if (lang.endsWith('-SG') || tz === 'Asia/Singapore') return 'SG';
-    if (lang.endsWith('-MY') || tz === 'Asia/Kuala_Lumpur') return 'MY';
-    if (lang.endsWith('-IN') || tz.startsWith('Asia/Kolkata')) return 'IN';
-    if (lang.endsWith('-NZ') || tz.startsWith('Pacific/Auckland')) return 'NZ';
-    if (lang.endsWith('-AE') || tz === 'Asia/Dubai') return 'AE';
-    if (lang.endsWith('-JP') || tz === 'Asia/Tokyo') return 'JP';
-    return 'US';
+    if (lang.endsWith('-US') || (tz.startsWith('America/') && !lang.endsWith('-CA') && !lang.endsWith('-MX') && !lang.endsWith('-BR'))) return 'us';
+    if (lang.endsWith('-PH') || tz === 'Asia/Manila') return 'ph';
+    if (lang.endsWith('-CA') || tz.startsWith('America/Toronto') || tz.startsWith('America/Vancouver') || tz.startsWith('America/Winnipeg')) return 'ca';
+    if (lang.endsWith('-GB') || tz === 'Europe/London') return 'gb';
+    if (lang.endsWith('-AU') || tz.startsWith('Australia/')) return 'au';
+    if (lang.endsWith('-SG') || tz === 'Asia/Singapore') return 'sg';
+    if (lang.endsWith('-MY') || tz === 'Asia/Kuala_Lumpur') return 'my';
+    if (lang.endsWith('-IN') || tz.startsWith('Asia/Kolkata')) return 'in';
+    if (lang.endsWith('-NZ') || tz.startsWith('Pacific/Auckland')) return 'nz';
+    if (lang.endsWith('-AE') || tz === 'Asia/Dubai') return 'ae';
+    if (lang.endsWith('-JP') || tz === 'Asia/Tokyo') return 'jp';
+    return 'us';
   }
 
   show() {
@@ -43,23 +45,17 @@ class OnboardingView {
     this._updateUI();
     this._overlay.classList.remove('hidden');
     this._focusCurrent();
-    // Auto-detect country → set phone code + placeholder
-    const detected   = this._detectCountry();
-    const codeSelect = document.getElementById('onboardingPhoneCode');
-    if (codeSelect) {
-      const match = [...codeSelect.options].find(o => o.dataset.cc === detected);
-      if (match) {
-        codeSelect.value = match.value;
-        // Select the right option when multiple share the same value (e.g. US/CA both +1)
-        for (const opt of codeSelect.options) {
-          if (opt.dataset.cc === detected) { codeSelect.selectedIndex = opt.index; break; }
-        }
-        this._updatePhonePlaceholder(codeSelect);
-      }
+
+    const detected = this._detectCountry();
+
+    if (!this._phoneIti) {
+      this._phoneIti = initPhoneInput('onboardingPhone');
     }
-    // Pre-fill address country with same detection
+    if (this._phoneIti) this._phoneIti.setCountry(detected);
+
     const countryEl = document.getElementById('onboardingCountry');
-    if (countryEl && !countryEl.value) countryEl.value = detected;
+    if (countryEl && !countryEl.value) countryEl.value = detected.toUpperCase();
+
     track('onboarding_started');
     track('onboarding_step_viewed', { step: 1 });
     window.addEventListener('beforeunload', this._onBeforeUnload);
@@ -88,18 +84,11 @@ class OnboardingView {
     this._nextBtn.textContent = this._nextLabel();
   }
 
-  _updatePhonePlaceholder(codeSelect) {
-    const ph = codeSelect.options[codeSelect.selectedIndex]?.dataset.ph;
-    const input = document.getElementById('onboardingPhone');
-    if (ph && input) input.placeholder = ph;
-  }
-
   _syncAddressCountry() {
-    const codeSelect = document.getElementById('onboardingPhoneCode');
-    const countryEl  = document.getElementById('onboardingCountry');
-    if (!codeSelect || !countryEl) return;
-    const cc = codeSelect.options[codeSelect.selectedIndex]?.dataset.cc;
-    if (cc && countryEl.querySelector(`option[value="${cc}"]`)) countryEl.value = cc;
+    if (!this._phoneIti) return;
+    const cc = this._phoneIti.getSelectedCountryData()?.iso2?.toUpperCase();
+    const countryEl = document.getElementById('onboardingCountry');
+    if (cc && countryEl?.querySelector(`option[value="${cc}"]`)) countryEl.value = cc;
   }
 
   _focusCurrent() {
@@ -164,10 +153,9 @@ class OnboardingView {
       }
     }
     if (this._current === 2) {
-      const phone  = document.getElementById('onboardingPhone')?.value.trim();
-      const digits = (phone ?? '').replace(/\D/g, '');
-      if (!phone)            { this.showError('Please enter a phone number.'); return false; }
-      if (digits.length < 6) { this.showError('Please enter a valid phone number.'); return false; }
+      const phone = this._phoneIti?.getNumber() ?? '';
+      if (!phone) { this.showError('Please enter a phone number.'); return false; }
+      if (!this._phoneIti?.isValidNumber()) { this.showError('Please enter a valid phone number.'); return false; }
     }
     if (this._current === 3) {
       const street   = document.getElementById('onboardingStreet')?.value.trim();
@@ -197,7 +185,7 @@ class OnboardingView {
           businessName: document.getElementById('onboardingBizName')?.value.trim(),
           businessType: document.getElementById('onboardingBizType')?.value,
           industry:     document.getElementById('onboardingBizIndustry')?.value,
-          phone:        `${document.getElementById('onboardingPhoneCode')?.value ?? ''} ${document.getElementById('onboardingPhone')?.value.trim() ?? ''}`.trim(),
+          phone:        this._phoneIti?.getNumber() ?? '',
           street:       document.getElementById('onboardingStreet')?.value.trim(),
           city:         document.getElementById('onboardingCity')?.value.trim(),
           province:     document.getElementById('onboardingProvince')?.value.trim(),
@@ -209,10 +197,6 @@ class OnboardingView {
 
     this._backBtn.addEventListener('click', () => {
       if (this._current > 0) this._goTo(this._current - 1, 'back');
-    });
-
-    document.getElementById('onboardingPhoneCode')?.addEventListener('change', (e) => {
-      this._updatePhonePlaceholder(e.target);
     });
 
     this._overlay.addEventListener('keydown', (e) => {
