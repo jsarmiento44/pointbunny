@@ -200,6 +200,17 @@ All external display windows use the same channel instance via the shared `chann
 
 ### 5.1 Authentication
 
+#### Auth Form Panels
+
+The `#authFormsWrapper` contains 4 sliding panels. Only one is visible at a time; transitions use `_slideTo(fromEl, toEl, direction, makeWide)`.
+
+| Panel ID | Panel | Triggered by |
+|---|---|---|
+| `#loginForm` | Sign in | Default; back links from Forgot |
+| `#signUpForm` | Sign up | "Create account" link |
+| `#forgotForm` | Forgot password | "Forgot password?" link |
+| `#resetForm` | Set new password | Detected `type=recovery` URL hash on load |
+
 #### Sign In
 
 ```
@@ -208,11 +219,11 @@ User submits login form
   → controlSignIn(email, password)  [controller.js]
     → supabase.auth.signInWithPassword()
     → authView.playSignInSuccess()  [animation]
-    → initApp(user)
+    → try { await initApp(user) }
       → model.loadBusinessContext(user)
-        → supabase.from('staff').select()
-        → sets state.userId, businessId, role, currentStaff
-        → _initBusiness(user)  [if first login — creates business + default roles]
+          → supabase.from('staff').select()
+          → sets state.userId, businessId, role, currentStaff
+          → _initBusiness(user)  [if first owner login — creates business + default roles]
       → model.loadMenuItems()       → state.menuItems
       → model.loadMenuCategories()  → state.menuCategories
       → model.loadAdjustments()     → state.settings.adjustments
@@ -222,6 +233,11 @@ User submits login form
       → localStorage.setItem('pointbunny_business_id', state.businessId)  [used by KDS popup for direct DB load]
       → authView.hide()
       → _wireApp()  [wires all view handlers to controller functions]
+    → catch (err):
+        hideLoadingScreen()
+        supabase.auth.signOut()
+        AuthView.show()
+        AuthView.showError('Something went wrong. Please sign in again.')
 ```
 
 #### Sign Up
@@ -234,6 +250,39 @@ User submits signup form
     → authView.showCheckEmail(email)  [replaces form with confirmation message]
 ```
 
+#### Forgot Password
+
+```
+User clicks "Forgot password?" link
+  → authView slides loginForm → forgotForm
+
+User submits forgot form (email)
+  → authView._addHandlerForgotPassword
+  → controlForgotPassword(email)
+    → model.sendPasswordResetEmail(email)
+        → supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin })
+    → authView.showForgotSent(email)  [shows "Check your email" confirmation]
+
+User clicks reset link in email (redirected back to app with #type=recovery in URL hash)
+  → initAuth() detects window.location.hash.includes('type=recovery')
+  → AuthView.show()
+  → AuthView.showResetPassword()  [slides to #resetForm panel]
+  → returns early — skips session check and initApp
+```
+
+#### Reset Password
+
+```
+User submits new password in #resetForm
+  → authView._addHandlerResetPassword
+  → controlResetPassword(password, confirmPassword)
+    → validates password ≥ 6 chars
+    → validates passwords match
+    → model.updatePassword(password)
+        → supabase.auth.updateUser({ password })
+    → authView.showResetSuccess()  [shows "Password updated" with link to sign in]
+```
+
 #### Sign Out
 
 ```
@@ -244,16 +293,25 @@ User clicks sign out
     → window.location.reload()
 ```
 
+#### `_initBusiness(user)` — First-Login Business Setup
+
+Runs only for brand new owner accounts (no staff row found AND no pending invite found by email). Creates:
+1. `businesses` row (upsert by `id = user.id`) — `name` from `user.user_metadata.business_name || "First Last".trim() || user.email || 'My Business'`
+2. Three default roles: Admin, Manager, Cashier
+3. Owner `staff` row (status: `active`)
+
+Does NOT run for invited staff — they claim their pending row earlier in `loadBusinessContext`.
+
 #### Function Reference
 
 | Function | File | Purpose |
 |---|---|---|
 | `_addHandlerSignIn(handler)` | authView.js | Listens on `#loginForm` submit |
-| `controlSignIn(email, password)` | controller.js | Orchestrates sign-in flow, calls `initApp` |
+| `controlSignIn(email, password)` | controller.js | Orchestrates sign-in; try/catch around `initApp` signs out + shows error on failure |
 | `authView.playSignInSuccess()` | authView.js | Card scale/fade animation before app loads |
 | `initApp(user)` | controller.js | Loads all initial state, calls `_wireApp` |
 | `model.loadBusinessContext(user)` | model.js | Sets `state.userId`, `businessId`, `role`, `currentStaff` |
-| `model._initBusiness(user)` | model.js | Creates business + default roles on very first login |
+| `model._initBusiness(user)` | model.js | Creates business + default roles on very first owner login |
 | `model.loadMenuItems()` | model.js | Fetches items from DB → `state.menuItems` |
 | `model.loadMenuCategories()` | model.js | Fetches categories → `state.menuCategories` |
 | `model.loadAdjustments()` | model.js | Fetches auto-adjustments → `state.settings.adjustments` |
@@ -266,6 +324,16 @@ User clicks sign out
 | `controlSignUp(data)` | controller.js | Calls `supabase.auth.signUp` |
 | `authView.showCheckEmail(email)` | authView.js | Replaces form with check-email confirmation |
 | `controlSignOut()` | controller.js | Signs out, reloads page |
+| `_addHandlerForgotPassword(handler)` | authView.js | Listens on `#forgotForm` submit |
+| `controlForgotPassword(email)` | controller.js | Calls `model.sendPasswordResetEmail`; shows sent confirmation |
+| `model.sendPasswordResetEmail(email)` | model.js | `supabase.auth.resetPasswordForEmail(email, { redirectTo: origin })` |
+| `authView.showForgotSent(email)` | authView.js | Replaces forgot form with "check your email" message |
+| `authView.showResetPassword()` | authView.js | Slides to `#resetForm` panel (called from `initAuth` on `type=recovery` URL) |
+| `_addHandlerResetPassword(handler)` | authView.js | Listens on `#resetForm` submit |
+| `controlResetPassword(password)` | controller.js | Validates, calls `model.updatePassword`, shows success |
+| `model.updatePassword(newPassword)` | model.js | `supabase.auth.updateUser({ password: newPassword })` |
+| `authView.showResetSuccess()` | authView.js | Shows "Password updated" confirmation with link back to login |
+| `authView._slideTo(from, to, dir, wide)` | authView.js | General-purpose panel slide animation; `_slide(dir)` delegates to this |
 
 ---
 
@@ -2219,4 +2287,4 @@ Steps:
 
 ---
 
-*Last updated: 2026-06-07. Production deployment live at https://pointbunny.com (Netlify + Porkbun domain). Home page layout updated: unified `home-dash-card` (Today's Sales + Transactions + Avg. Serving) replaces old four-card grid; Cashier moved to action row; each stat card links to matching Reports section. §5.17 updated from Planned → Live (timesheets/timeclock). Update this file when a new feature is added or a workflow changes.*
+*Last updated: 2026-06-07. §5.1 updated: 4-panel auth form (login / signup / forgot / reset); forgot password flow (Resend email via `resetPasswordForEmail`); reset password flow (`type=recovery` URL hash detection in `initAuth`); try/catch error boundary around `initApp` in `controlSignIn` and `initAuth`; `_initBusiness` businessName fallback chain documented. §5.17 updated from Planned → Live (timesheets/timeclock). Update this file when a new feature is added or a workflow changes.*
