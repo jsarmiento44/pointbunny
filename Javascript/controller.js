@@ -1117,8 +1117,8 @@ const refreshTodaySalesDisplay = async function () {
   } catch (_) {}
 };
 
-const initApp = async function (user) {
-  await model.loadBusinessContext(user);
+const initApp = async function (user, { isInviteAcceptance = false } = {}) {
+  await model.loadBusinessContext(user, { isInviteAcceptance });
   const s = model.state.currentStaff;
   model.state.username =
     (s ? `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim() : null) ||
@@ -1293,6 +1293,40 @@ const controlOnboardingSubmit = async function ({ businessName, businessType, in
     OnboardingView.showError(err.message ?? 'Something went wrong. Please try again.');
   } finally {
     OnboardingView.setLoading(false);
+  }
+};
+
+const controlAcceptInvite = async function ({ password, pin }) {
+  try {
+    AuthView.setInviteLoading(true);
+    await model.updatePassword(password);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    showLoadingScreen();
+    AuthView.hide();
+
+    await initApp(user, { isInviteAcceptance: true });
+    hideLoadingScreen();
+
+    if (model.state.currentStaff) {
+      try {
+        await model.setStaffPin(model.state.currentStaff.id, pin);
+        model.state.currentStaff.hasPin = true;
+        if (model.state.currentCashier?.id === model.state.currentStaff.id) {
+          model.state.currentCashier.hasPin = true;
+        }
+      } catch {
+        showToast('Account set up! PIN could not be saved — set it in the Staff panel.', 'error');
+      }
+    }
+
+    _wireApp();
+  } catch (err) {
+    console.error('invite accept failed:', err);
+    hideLoadingScreen();
+    AuthView.show();
+    AuthView.showInviteError(err.message ?? 'Something went wrong. Please contact your manager.');
+    AuthView.setInviteLoading(false);
   }
 };
 
@@ -1979,10 +2013,14 @@ const controlInviteStaff = async function (data) {
   }
 
   try {
-    await model.inviteStaff(data);
+    const { emailSent, emailError } = await model.inviteStaff(data);
     StaffView.closeForm();
     StaffView.render(model.state.staff, _staffCanManage());
-    showToast('Staff member added.', 'success');
+    if (emailSent) {
+      showToast('Invite sent!', 'success');
+    } else {
+      showToast(`Staff added, but invite email failed: ${emailError}. Share the app link manually.`, 'error');
+    }
   } catch (err) {
     showToast(err.message ?? err);
   }
@@ -3381,6 +3419,7 @@ const initAuth = async function () {
   AuthView._addHandlerSignUp(controlSignUp);
   AuthView._addHandlerForgotPassword(controlForgotPassword);
   AuthView._addHandlerResetPassword(controlResetPassword);
+  AuthView._addHandlerAcceptInvite(controlAcceptInvite);
   OnboardingView._addHandlerSubmit(controlOnboardingSubmit);
   document.getElementById('logoutBtn').addEventListener('click', controlSignOut);
 
@@ -3389,6 +3428,16 @@ const initAuth = async function () {
     AuthView.show();
     AuthView.showResetPassword();
     return;
+  }
+
+  // Invite acceptance: staff clicking their invite email link
+  if (window.location.hash.includes('type=invite')) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      AuthView.show();
+      AuthView.showInviteForm(session.user.user_metadata?.first_name);
+      return;
+    }
   }
 
   const { data: { session } } = await supabase.auth.getSession();

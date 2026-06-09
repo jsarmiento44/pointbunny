@@ -2086,6 +2086,26 @@
             </p>
           </form>
 
+          <!-- Invite acceptance form (shown on type=invite) -->
+          <form id="inviteForm" class="auth-form hidden" novalidate>
+            <p id="inviteGreeting" style="font-size:0.95rem;font-weight:600;margin-bottom:4px;"></p>
+            <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px;line-height:1.45;">Create a password to activate your account. You can also set a PIN for the register.</p>
+            <div class="auth-field">
+              <label for="invitePassword">Create password</label>
+              <input type="password" id="invitePassword" placeholder="Min. 6 characters" required autocomplete="new-password" />
+            </div>
+            <div class="auth-field">
+              <label for="inviteConfirm">Confirm password</label>
+              <input type="password" id="inviteConfirm" placeholder="••••••••" required autocomplete="new-password" />
+            </div>
+            <div class="auth-field">
+              <label for="invitePin">PIN <span style="font-size:0.75rem;color:var(--muted);font-weight:400">(6 digits)</span></label>
+              <input type="text" id="invitePin" inputmode="numeric" maxlength="6" placeholder="e.g. 123456" autocomplete="off" required />
+            </div>
+            <p id="inviteError" class="auth-error"></p>
+            <button type="submit" id="inviteBtn" class="btn primary auth-submit">Set Up Account</button>
+          </form>
+
           <!-- Reset password form (shown on type=recovery) -->
           <form id="resetForm" class="auth-form hidden" novalidate>
             <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;line-height:1.45;">Enter a new password for your account.</p>
@@ -2115,6 +2135,7 @@
 
           <!-- Sign-up form -->
           <form id="signUpForm" class="auth-form hidden" novalidate>
+            <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;line-height:1.45;">For business owners setting up a new account. Staff join via their invitation link.</p>
             <div class="auth-col-pair">
               <div class="auth-field">
                 <label for="signUpFirstName">First name</label>

@@ -285,22 +285,31 @@ Reports/Analytics is **implemented** (multi-metric overview chart with KPI toggl
 
 ## Auth Flow
 
-The auth overlay (`#authOverlay`) contains a card with four sliding panels inside `#authFormsWrapper`:
+The auth overlay (`#authOverlay`) contains a card with five panels inside `#authFormsWrapper`:
 
 | Panel ID | Shown when |
 |---|---|
 | `loginForm` | Default (visible on load) |
-| `signUpForm` | User clicks "Create one" |
+| `signUpForm` | User clicks "Create one" (business owners only) |
 | `forgotForm` | User clicks "Forgot password?" |
+| `inviteForm` | URL hash contains `type=invite` (staff accepted invite email) |
 | `resetForm` | URL hash contains `type=recovery` (user clicked reset email link) |
 
-`authView.js` manages all four panels. `_slideTo(fromEl, toEl, direction, makeWide)` handles the animated transition between any two panels. The wide card style (`auth-card--wide`) is only applied when sliding to the signup form.
+`authView.js` manages all five panels. `_slideTo(fromEl, toEl, direction, makeWide)` handles the animated transition between any two panels. The wide card style (`auth-card--wide`) is only applied when sliding to the signup form.
+
+**Two registration paths — strictly separated:**
+- **Owner path:** Uses `signUpForm` → `supabase.auth.signUp()` → email confirmation → `_initBusiness` creates businesses row + 3 default roles + owner staff row on first `initApp`.
+- **Staff path:** Owner invites via Staff panel → `inviteStaff` creates a pending staff row in DB (no `user_id`) + calls `invite-staff` Edge Function which sends invite email via `admin.inviteUserByEmail()`. Staff clicks link → `type=invite` hash → `inviteForm` shown (set password + optional PIN) → on submit: `updatePassword()` then `initApp` → `loadBusinessContext` finds pending row by email, claims it by writing `user_id`.
 
 **Recovery flow:** `initAuth()` checks `window.location.hash.includes('type=recovery')` before calling `getSession()`. If true, it shows the auth overlay + reset form immediately and returns early (skips `initApp`).
 
-**Error handling:** Both `controlSignIn` and `initAuth` wrap `initApp` in try/catch. On failure, the loading screen is hidden, the session is cleared, and the user is returned to the login form with an error message. This prevents the loading screen from hanging forever if `_initBusiness` throws.
+**Invite flow:** `initAuth()` checks `window.location.hash.includes('type=invite')` next. If true and a session exists (Supabase sets one automatically from the invite token), shows `inviteForm`. `controlAcceptInvite` handles password + PIN submission.
 
-**`_initBusiness` (model.js):** Runs on first login for a brand new business owner (no existing staff row). Creates: businesses row, 3 default roles (Admin/Manager/Cashier), owner staff row. Does NOT run for invited staff — they are matched by email to a pending staff row instead. **Known bug (2026-06-07):** new owner registration fails — `initApp` still throws after the `null businessName` fix; needs fresh console error to diagnose.
+**Error handling:** Both `controlSignIn` and `initAuth` wrap `initApp` in try/catch. On failure, the loading screen is hidden, the session is cleared, and the user is returned to the login form with an error message.
+
+**`_initBusiness` (model.js):** Runs only for brand new business owners (no staff row found, no pending invite by email). Creates: businesses row (with computed name), 3 default roles (Admin/Manager/Cashier), owner staff row. Invited staff always skip this — `loadBusinessContext` finds their pending row by email first.
+
+**Edge Function:** `supabase/functions/invite-staff/index.ts` — Deno/TypeScript. Uses service role key to call `admin.inviteUserByEmail`. Must be deployed via Supabase CLI (`supabase functions deploy invite-staff`). Set `SITE_URL` env var in Supabase Dashboard → Edge Functions → invite-staff → Secrets.
 
 ## Email (Resend)
 
@@ -312,9 +321,6 @@ Custom SMTP configured in Supabase Auth: `smtp.resend.com:465`, username `resend
 Redirect URLs allowlisted in Supabase → Authentication → URL Configuration: `https://pointbunny.com`, `https://www.pointbunny.com`, `https://pointybunny-staging.netlify.app`, `http://localhost:1234`.
 
 ## Queued Work (not started, do when user asks)
-
-### Open Bug — New User Registration
-New business owner sign-up fails on first login with "Something went wrong." `initApp` throws inside `_initBusiness`. The `null businessName` crash was patched (commit 245ae27) but an error still persists. **To diagnose:** open DevTools Console after the error, copy the `initApp failed:` line, and fix whichever DB operation is throwing. Also audit the staff-invite flow vs owner flow in `loadBusinessContext` to ensure invited staff correctly skip `_initBusiness`.
 
 ### CSS Technical Debt Cleanup
 `pointbunny.css` has accumulated significant debt:
