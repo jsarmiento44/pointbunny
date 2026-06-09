@@ -40,13 +40,14 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Use service role to verify caller is the owner or an Admin/Manager of this business
+  // Use service role for admin operations
   const supabaseAdmin = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
+  // Verify caller is the owner or an Admin/Manager of this business
   const isOwner = user.id === businessId
   if (!isOwner) {
     const { data: callerStaff } = await supabaseAdmin
@@ -62,6 +63,34 @@ Deno.serve(async (req) => {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
+    }
+  }
+
+  // Check if an auth account already exists for this email.
+  // Supabase silently skips inviteUserByEmail when the email is already registered,
+  // so we need to handle both cases before calling it.
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+  const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  const lookupRes   = await fetch(
+    `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}&page=1&per_page=1`,
+    { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+  )
+  const lookupJson = await lookupRes.json()
+  const existingUser = lookupJson?.users?.[0]
+
+  if (existingUser) {
+    if (existingUser.email_confirmed_at) {
+      // Confirmed account — they already have a password and can log in normally.
+      // The pending staff row is already in the DB; they'll claim it on next login
+      // via the invite link if resent, or the owner can share the app URL directly.
+      return new Response(
+        JSON.stringify({ error: 'This email already has a confirmed Pointbunny account. Ask them to log in — they will be added to your team automatically.' }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    } else {
+      // Unconfirmed / abandoned signup — delete the stale record so the invite
+      // goes out clean with a fresh magic link.
+      await supabaseAdmin.auth.admin.deleteUser(existingUser.id)
     }
   }
 
