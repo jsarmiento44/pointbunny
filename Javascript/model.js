@@ -76,7 +76,7 @@ const _initBusiness = async function (user) {
 
   const { error: bizError } = await supabase
     .from('businesses')
-    .upsert({ id: user.id, name: null, email: user.email, phone: null }, { ignoreDuplicates: true });
+    .upsert({ id: user.id, name: businessName, email: user.email, phone: null }, { ignoreDuplicates: true });
   if (bizError) throw new Error(`businesses upsert failed: ${bizError.message}`);
 
   const { data: existingRole } = await supabase
@@ -134,7 +134,7 @@ const _initBusiness = async function (user) {
   };
 };
 
-export const loadBusinessContext = async function (user) {
+export const loadBusinessContext = async function (user, { isInviteAcceptance = false } = {}) {
   state.userId = user.id;
 
   let { data: staffRow } = await supabase
@@ -143,8 +143,10 @@ export const loadBusinessContext = async function (user) {
     .eq('user_id', user.id)
     .maybeSingle();
 
-  // Check for a pending invite by email
-  if (!staffRow) {
+  // Only claim a pending invite row when the user explicitly came through the invite link.
+  // Skipping this for normal sign-in/sign-up prevents a person who owns their own business
+  // from being silently enrolled as staff at another business that invited their email.
+  if (!staffRow && isInviteAcceptance) {
     const { data: pendingRow } = await supabase
       .from('staff')
       .select('id, business_id, first_name, last_name, email, pin, roles(name)')
@@ -1143,19 +1145,26 @@ export const loadRoles = async function () {
 };
 
 export const inviteStaff = async function ({ firstName, lastName, email, roleId }) {
+  const normalizedEmail = email.toLowerCase().trim();
   const { data, error } = await supabase
     .from('staff')
     .insert({
       business_id: state.businessId,
       first_name:  firstName,
       last_name:   lastName,
-      email:       email.toLowerCase().trim(),
+      email:       normalizedEmail,
       role_id:     roleId,
+      invited_at:  new Date().toISOString(),
     })
     .select('id, first_name, last_name, email, is_active, joined_at, user_id, pin, roles(id, name)')
     .single();
   if (error) throw error;
   state.staff.push(dbToStaff(data));
+
+  const { error: fnError } = await supabase.functions.invoke('invite-staff', {
+    body: { email: normalizedEmail, firstName, lastName, businessId: state.businessId },
+  });
+  return { emailSent: !fnError, emailError: fnError?.message ?? null };
 };
 
 export const updateStaffRole = async function (staffId, roleId) {

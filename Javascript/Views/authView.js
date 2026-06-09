@@ -5,16 +5,19 @@ class AuthView {
   _signUpForm    = document.getElementById('signUpForm');
   _forgotForm    = document.getElementById('forgotForm');
   _resetForm     = document.getElementById('resetForm');
+  _inviteForm    = document.getElementById('inviteForm');
   _emailInput    = document.getElementById('loginEmail');
   _passwordInput = document.getElementById('loginPassword');
   _errorEl       = document.getElementById('loginError');
   _signUpErrorEl = document.getElementById('signUpError');
   _forgotErrorEl = document.getElementById('forgotError');
   _resetErrorEl  = document.getElementById('resetError');
+  _inviteErrorEl = document.getElementById('inviteError');
   _signInBtn     = document.getElementById('signInBtn');
   _signUpBtn     = document.getElementById('signUpBtn');
   _forgotBtn     = document.getElementById('forgotBtn');
   _resetBtn      = document.getElementById('resetBtn');
+  _inviteBtn     = document.getElementById('inviteBtn');
   _onSignUp      = false;
 
   constructor() {
@@ -51,6 +54,7 @@ class AuthView {
     this._signUpErrorEl.textContent = '';
     this._forgotErrorEl.textContent = '';
     this._resetErrorEl.textContent  = '';
+    this._inviteErrorEl.textContent = '';
   }
 
   setLoading(bool) {
@@ -123,6 +127,23 @@ class AuthView {
     this._resetForm.classList.remove('hidden');
   }
 
+  showInviteForm(firstName) {
+    this._loginForm.classList.add('hidden');
+    this._signUpForm.classList.add('hidden');
+    this._forgotForm.classList.add('hidden');
+    this._resetForm.classList.add('hidden');
+    const greetEl = document.getElementById('inviteGreeting');
+    if (greetEl) greetEl.textContent = firstName ? `Welcome, ${firstName}!` : 'Welcome!';
+    this._inviteForm.classList.remove('hidden');
+  }
+
+  showInviteError(msg) { this._inviteErrorEl.textContent = msg; }
+
+  setInviteLoading(bool) {
+    this._inviteBtn.disabled = bool;
+    this._inviteBtn.textContent = bool ? 'Setting up…' : 'Set Up Account';
+  }
+
   showResetSuccess() {
     this._resetForm.innerHTML = `
       <p style="text-align:center; font-size:1.05rem; font-weight:600; margin:8px 0;">Password updated</p>
@@ -179,6 +200,22 @@ class AuthView {
       const email = document.getElementById('forgotEmail')?.value.trim();
       if (!email) { this._forgotErrorEl.textContent = 'Please enter your email.'; return; }
       handler(email);
+    });
+  }
+
+  _addHandlerAcceptInvite(handler) {
+    this._inviteForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this._inviteErrorEl.textContent = '';
+      const password = document.getElementById('invitePassword')?.value;
+      const confirm  = document.getElementById('inviteConfirm')?.value;
+      const pin      = document.getElementById('invitePin')?.value.trim();
+
+      if (!password || password.length < 6) { this._inviteErrorEl.textContent = 'Password must be at least 6 characters.'; return; }
+      if (password !== confirm)              { this._inviteErrorEl.textContent = 'Passwords do not match.'; return; }
+      if (!pin || !/^\d{6}$/.test(pin))      { this._inviteErrorEl.textContent = 'PIN must be exactly 6 digits.'; return; }
+
+      handler({ password, pin });
     });
   }
 
