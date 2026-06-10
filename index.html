@@ -117,25 +117,27 @@
               <!-- Profile tab -->
               <div class="settings-tab hidden" id="settingsTabProfile">
                 <h3 class="settings-tab-title">My Profile</h3>
-                <div class="settings-section">
+                <div class="settings-section" id="profileSection">
                   <div class="settings-section-header">
                     <div>
                       <h3 class="settings-section-title">Personal Info</h3>
                       <p class="settings-section-hint">Your name as it appears on receipts and reports.</p>
                     </div>
+                    <button class="btn settings-edit-btn" id="profileEditBtn" type="button">Edit</button>
                   </div>
                   <div class="settings-field-row">
                     <div class="settings-field">
                       <label for="settingsProfileFirstName">First name</label>
-                      <input type="text" id="settingsProfileFirstName" placeholder="First name" autocomplete="given-name" />
+                      <input type="text" id="settingsProfileFirstName" placeholder="—" autocomplete="given-name" readonly />
                     </div>
                     <div class="settings-field">
                       <label for="settingsProfileLastName">Last name</label>
-                      <input type="text" id="settingsProfileLastName" placeholder="Last name" autocomplete="family-name" />
+                      <input type="text" id="settingsProfileLastName" placeholder="—" autocomplete="family-name" readonly />
                     </div>
                   </div>
-                  <div class="settings-save-row">
+                  <div class="settings-save-row hidden" id="profileSaveRow">
                     <span class="settings-save-status" id="profileSaveStatus"></span>
+                    <button class="btn" id="cancelProfileBtn" type="button">Cancel</button>
                     <button class="btn primary" id="saveProfileBtn" type="button">Save Changes</button>
                   </div>
                 </div>
@@ -145,53 +147,55 @@
               <div class="settings-tab hidden" id="settingsTabBusiness" data-min-role="admin">
                 <h3 class="settings-tab-title">Business</h3>
 
-                <div class="settings-section">
+                <div class="settings-section" id="businessSection">
                   <div class="settings-section-header">
                     <div>
                       <h3 class="settings-section-title">Business Details</h3>
                       <p class="settings-section-hint">Your business name, contact info, and address.</p>
                     </div>
+                    <button class="btn settings-edit-btn" id="businessEditBtn" type="button">Edit</button>
                   </div>
 
                   <div class="settings-field">
                     <label for="settingsBusinessName">Business name</label>
-                    <input type="text" id="settingsBusinessName" placeholder="My Business" autocomplete="organization" />
+                    <input type="text" id="settingsBusinessName" placeholder="—" autocomplete="organization" readonly />
                   </div>
                   <div class="settings-field">
                     <label for="settingsBusinessAddress">Street address</label>
-                    <input type="text" id="settingsBusinessAddress" placeholder="123 Main St" autocomplete="street-address" />
+                    <input type="text" id="settingsBusinessAddress" placeholder="—" autocomplete="street-address" readonly />
                   </div>
                   <div class="settings-field-row">
                     <div class="settings-field">
                       <label for="settingsBusinessCity">City</label>
-                      <input type="text" id="settingsBusinessCity" placeholder="City" autocomplete="address-level2" />
+                      <input type="text" id="settingsBusinessCity" placeholder="—" autocomplete="address-level2" readonly />
                     </div>
                     <div class="settings-field settings-field--narrow">
                       <label for="settingsBusinessState">State</label>
-                      <input type="text" id="settingsBusinessState" placeholder="State" autocomplete="address-level1" maxlength="30" />
+                      <input type="text" id="settingsBusinessState" placeholder="—" autocomplete="address-level1" maxlength="30" readonly />
                     </div>
                     <div class="settings-field settings-field--narrow">
                       <label for="settingsBusinessZip">ZIP</label>
-                      <input type="text" id="settingsBusinessZip" placeholder="00000" autocomplete="postal-code" maxlength="10" />
+                      <input type="text" id="settingsBusinessZip" placeholder="—" autocomplete="postal-code" maxlength="10" readonly />
                     </div>
                   </div>
                   <div class="settings-field">
                     <label for="settingsBusinessEmail">Contact email</label>
-                    <input type="email" id="settingsBusinessEmail" placeholder="contact@example.com" autocomplete="email" />
+                    <input type="email" id="settingsBusinessEmail" placeholder="—" autocomplete="email" readonly />
                   </div>
                   <div class="settings-field">
                     <label for="settingsBusinessPhoneNumber">Phone number</label>
-                    <input type="tel" id="settingsBusinessPhoneNumber" placeholder="(555) 123-4567" autocomplete="tel" />
+                    <input type="tel" id="settingsBusinessPhoneNumber" placeholder="—" autocomplete="tel" readonly />
                   </div>
 
                   <div class="settings-field hidden" id="settingsTimezoneField">
                     <label for="settingsTimezone">Timezone</label>
-                    <select id="settingsTimezone" class="settings-select"></select>
+                    <select id="settingsTimezone" class="settings-select" disabled></select>
                     <p class="settings-section-hint" style="margin-top:6px">Used for all date &amp; time calculations — reports, cashflow, and daily totals.</p>
                   </div>
 
-                  <div class="settings-save-row">
+                  <div class="settings-save-row hidden" id="businessSaveRow">
                     <span class="settings-save-status" id="businessSaveStatus"></span>
+                    <button class="btn" id="cancelBusinessBtn" type="button">Cancel</button>
                     <button class="btn primary" id="saveBusinessInfoBtn" type="button">Save Changes</button>
                   </div>
                 </div>

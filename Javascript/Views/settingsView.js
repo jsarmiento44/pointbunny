@@ -74,8 +74,10 @@ function _buildTzOptions(selectedTz) {
 }
 
 class SettingsView {
-  _modal    = document.getElementById("settingsModal");
-  _phoneIti = null;
+  _modal           = document.getElementById("settingsModal");
+  _phoneIti        = null;
+  _profileOriginal = null;
+  _businessOriginal = null;
   _openBtn = document.getElementById("settingsBtn");
   _closeBtn = document.getElementById("settingsCloseBtn");
   _addBtn = document.getElementById("addAdjustmentBtn");
@@ -126,13 +128,21 @@ class SettingsView {
     const c  = document.getElementById('settingsBusinessCity');
     const st = document.getElementById('settingsBusinessState');
     const z  = document.getElementById('settingsBusinessZip');
-    if (n)  n.value  = name    ?? '';
-    if (e)  e.value  = email   ?? '';
-    if (a)  a.value  = address ?? '';
-    if (c)  c.value  = city    ?? '';
-    if (st) st.value = state   ?? '';
-    if (z)  z.value  = zip     ?? '';
-    if (this._phoneIti) this._phoneIti.setNumber(phone ?? '');
+    if (n)  { n.value  = name    ?? ''; n.setAttribute('readonly',  ''); }
+    if (e)  { e.value  = email   ?? ''; e.setAttribute('readonly',  ''); }
+    if (a)  { a.value  = address ?? ''; a.setAttribute('readonly',  ''); }
+    if (c)  { c.value  = city    ?? ''; c.setAttribute('readonly',  ''); }
+    if (st) { st.value = state   ?? ''; st.setAttribute('readonly', ''); }
+    if (z)  { z.value  = zip     ?? ''; z.setAttribute('readonly',  ''); }
+    if (this._phoneIti) {
+      this._phoneIti.setNumber(phone ?? '');
+      document.getElementById('settingsBusinessPhoneNumber')?.setAttribute('readonly', '');
+      document.getElementById('settingsBusinessPhoneNumber')?.closest('.iti')?.classList.add('iti--view');
+    }
+    document.getElementById('businessSaveRow')?.classList.add('hidden');
+    document.getElementById('businessEditBtn')?.classList.remove('hidden');
+    document.getElementById('settingsTimezone') && (document.getElementById('settingsTimezone').disabled = true);
+    this._businessOriginal = null;
 
     // Timezone field — only shown to the business owner
     const tzField = document.getElementById('settingsTimezoneField');
@@ -155,6 +165,45 @@ class SettingsView {
         }
       }
     }
+  }
+
+  enterBusinessEditMode() {
+    const ids = ['settingsBusinessName','settingsBusinessAddress','settingsBusinessCity',
+                 'settingsBusinessState','settingsBusinessZip','settingsBusinessEmail'];
+    this._businessOriginal = this._getBusinessFormData();
+    ids.forEach(id => document.getElementById(id)?.removeAttribute('readonly'));
+    document.getElementById('settingsBusinessPhoneNumber')?.removeAttribute('readonly');
+    document.getElementById('settingsBusinessPhoneNumber')?.closest('.iti')?.classList.remove('iti--view');
+    const tzSel = document.getElementById('settingsTimezone');
+    if (tzSel) tzSel.disabled = false;
+    document.getElementById('businessSaveRow').classList.remove('hidden');
+    document.getElementById('businessEditBtn').classList.add('hidden');
+    this.showBusinessSaveStatus(false, '');
+    document.getElementById('settingsBusinessName')?.focus();
+  }
+
+  exitBusinessEditMode(restore = false) {
+    const ids = ['settingsBusinessName','settingsBusinessAddress','settingsBusinessCity',
+                 'settingsBusinessState','settingsBusinessZip','settingsBusinessEmail'];
+    if (restore && this._businessOriginal) {
+      const d = this._businessOriginal;
+      document.getElementById('settingsBusinessName').value    = d.name    ?? '';
+      document.getElementById('settingsBusinessAddress').value = d.address ?? '';
+      document.getElementById('settingsBusinessCity').value    = d.city    ?? '';
+      document.getElementById('settingsBusinessState').value   = d.state   ?? '';
+      document.getElementById('settingsBusinessZip').value     = d.zip     ?? '';
+      document.getElementById('settingsBusinessEmail').value   = d.email   ?? '';
+      if (this._phoneIti) this._phoneIti.setNumber(d.phone ?? '');
+    }
+    ids.forEach(id => document.getElementById(id)?.setAttribute('readonly', ''));
+    document.getElementById('settingsBusinessPhoneNumber')?.setAttribute('readonly', '');
+    document.getElementById('settingsBusinessPhoneNumber')?.closest('.iti')?.classList.add('iti--view');
+    const tzSel = document.getElementById('settingsTimezone');
+    if (tzSel) tzSel.disabled = true;
+    document.getElementById('businessSaveRow').classList.add('hidden');
+    document.getElementById('businessEditBtn').classList.remove('hidden');
+    this.showBusinessSaveStatus(false, '');
+    this._businessOriginal = null;
   }
 
   _getBusinessFormData() {
@@ -209,8 +258,38 @@ class SettingsView {
   syncProfileInfo({ firstName, lastName }) {
     const f = document.getElementById('settingsProfileFirstName');
     const l = document.getElementById('settingsProfileLastName');
-    if (f) f.value = firstName ?? '';
-    if (l) l.value = lastName  ?? '';
+    if (f) { f.value = firstName ?? ''; f.setAttribute('readonly', ''); }
+    if (l) { l.value = lastName  ?? ''; l.setAttribute('readonly', ''); }
+    document.getElementById('profileSaveRow')?.classList.add('hidden');
+    document.getElementById('profileEditBtn')?.classList.remove('hidden');
+    this._profileOriginal = null;
+  }
+
+  enterProfileEditMode() {
+    const f = document.getElementById('settingsProfileFirstName');
+    const l = document.getElementById('settingsProfileLastName');
+    this._profileOriginal = { firstName: f?.value ?? '', lastName: l?.value ?? '' };
+    f?.removeAttribute('readonly');
+    l?.removeAttribute('readonly');
+    document.getElementById('profileSaveRow').classList.remove('hidden');
+    document.getElementById('profileEditBtn').classList.add('hidden');
+    this.showProfileSaveStatus(false, '');
+    f?.focus();
+  }
+
+  exitProfileEditMode(restore = false) {
+    const f = document.getElementById('settingsProfileFirstName');
+    const l = document.getElementById('settingsProfileLastName');
+    if (restore && this._profileOriginal) {
+      if (f) f.value = this._profileOriginal.firstName;
+      if (l) l.value = this._profileOriginal.lastName;
+    }
+    f?.setAttribute('readonly', '');
+    l?.setAttribute('readonly', '');
+    document.getElementById('profileSaveRow').classList.add('hidden');
+    document.getElementById('profileEditBtn').classList.remove('hidden');
+    this.showProfileSaveStatus(false, '');
+    this._profileOriginal = null;
   }
 
   showProfileSaveStatus(success, msg) {
@@ -242,6 +321,22 @@ class SettingsView {
     document.getElementById('settingsOTPError').textContent = msg;
     const btn = document.getElementById('settingsOTPVerifyBtn');
     if (btn) { btn.disabled = false; btn.textContent = 'Verify & Save'; }
+  }
+
+  _addHandlerEditProfile(handler) {
+    document.getElementById('profileEditBtn')?.addEventListener('click', () => handler());
+  }
+
+  _addHandlerCancelProfile(handler) {
+    document.getElementById('cancelProfileBtn')?.addEventListener('click', () => handler());
+  }
+
+  _addHandlerEditBusiness(handler) {
+    document.getElementById('businessEditBtn')?.addEventListener('click', () => handler());
+  }
+
+  _addHandlerCancelBusiness(handler) {
+    document.getElementById('cancelBusinessBtn')?.addEventListener('click', () => handler());
   }
 
   _addHandlerSaveProfile(handler) {
@@ -289,6 +384,8 @@ class SettingsView {
 
   _close() {
     this.hideOTPModal();
+    this.exitProfileEditMode(true);
+    this.exitBusinessEditMode(true);
     const inner = this._modal.querySelector(".modal-container");
     if (inner) inner.classList.add("modal-exiting");
     setTimeout(() => {

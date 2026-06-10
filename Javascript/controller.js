@@ -696,6 +696,11 @@ const controlSaveProfile = async function ({ firstName, lastName }) {
   }
 };
 
+const controlEditProfile   = () => SettingsView.enterProfileEditMode();
+const controlCancelProfile = () => SettingsView.exitProfileEditMode(true);
+const controlEditBusiness   = () => SettingsView.enterBusinessEditMode();
+const controlCancelBusiness = () => SettingsView.exitBusinessEditMode(true);
+
 const controlVerifySettingsOTP = async function (token) {
   try {
     await model.confirmSettingsVerification(_settingsOTPEmail, token);
@@ -703,12 +708,14 @@ const controlVerifySettingsOTP = async function (token) {
       const { name, email, phone, timezone, address, city, state: stateVal, zip } = _settingsOTPData;
       await model.saveBusinessInfo({ name, email, phone, timezone, addressStreet: address, addressCity: city, addressProvince: stateVal, addressZip: zip });
       SettingsView.hideOTPModal();
-      SettingsView.showBusinessSaveStatus(true, 'Changes saved');
+      SettingsView.exitBusinessEditMode(false);
+      showToast('Business info saved', 'success');
     } else {
       await model.saveProfileInfo(_settingsOTPData);
       _updateCashierDisplay();
       SettingsView.hideOTPModal();
-      SettingsView.showProfileSaveStatus(true, 'Profile updated');
+      SettingsView.exitProfileEditMode(false);
+      showToast('Profile updated', 'success');
     }
     _settingsOTPEmail   = null;
     _settingsOTPSection = null;
@@ -3323,7 +3330,11 @@ const _wireApp = function () {
   SettingsView._addHandlerOpen(controlOpenSettings);
   SettingsView._addHandlerClose();
   SettingsView._addHandlerNavTabs();
+  SettingsView._addHandlerEditProfile(controlEditProfile);
+  SettingsView._addHandlerCancelProfile(controlCancelProfile);
   SettingsView._addHandlerSaveProfile(controlSaveProfile);
+  SettingsView._addHandlerEditBusiness(controlEditBusiness);
+  SettingsView._addHandlerCancelBusiness(controlCancelBusiness);
   SettingsView._addHandlerSaveBusinessInfo(controlSaveBusinessInfo);
   SettingsView._addHandlerVerifyOTP(controlVerifySettingsOTP);
   SettingsView._addHandlerCancelOTP(controlCancelSettingsOTP);

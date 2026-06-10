@@ -5814,6 +5814,43 @@ kbd {
 .settings-save-status--ok  { color: var(--brand-1); font-weight: 600; }
 .settings-save-status--err { color: #e55; }
 
+.settings-edit-btn {
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+/* View mode — fields look like plain text */
+#profileSection .settings-field input[readonly],
+#businessSection .settings-field input[readonly] {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  pointer-events: none;
+  cursor: default;
+  padding-left: 2px;
+}
+#profileSection .settings-field input[readonly]:focus,
+#businessSection .settings-field input[readonly]:focus {
+  outline: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+#businessSection .settings-field select[disabled] {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  pointer-events: none;
+  cursor: default;
+  opacity: 1;
+  color: var(--text);
+  -webkit-appearance: none;
+  appearance: none;
+  padding-left: 2px;
+}
+#businessSection .iti--view { pointer-events: none; }
+
 .otp-modal-card {
   background: var(--panel-strong);
   border-radius: var(--radius-lg);
