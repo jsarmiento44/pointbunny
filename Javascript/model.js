@@ -1178,7 +1178,14 @@ export const inviteStaff = async function ({ firstName, lastName, email, roleId 
 
   if (fnError) {
     await supabase.from('staff').delete().eq('id', data.id);
-    throw new Error(`Invite email failed: ${fnError.message}. No staff member was added.`);
+    let detail = fnError.message;
+    try {
+      if (fnError.context instanceof Response) {
+        const body = await fnError.context.json();
+        if (body?.error) detail = body.error;
+      }
+    } catch {}
+    throw new Error(`Invite failed: ${detail}`);
   }
 
   state.staff.push(dbToStaff(data));
