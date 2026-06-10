@@ -66,34 +66,6 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Check if an auth account already exists for this email.
-  // Supabase silently skips inviteUserByEmail when the email is already registered,
-  // so we need to handle both cases before calling it.
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-  const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  const lookupRes   = await fetch(
-    `${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}&page=1&per_page=1`,
-    { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
-  )
-  const lookupJson = await lookupRes.json()
-  const existingUser = lookupJson?.users?.[0]
-
-  if (existingUser) {
-    if (existingUser.email_confirmed_at) {
-      // Confirmed account — they already have a password and can log in normally.
-      // The pending staff row is already in the DB; they'll claim it on next login
-      // via the invite link if resent, or the owner can share the app URL directly.
-      return new Response(
-        JSON.stringify({ error: 'This email already has a confirmed Pointbunny account. Ask them to log in — they will be added to your team automatically.' }),
-        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    } else {
-      // Unconfirmed / abandoned signup — delete the stale record so the invite
-      // goes out clean with a fresh magic link.
-      await supabaseAdmin.auth.admin.deleteUser(existingUser.id)
-    }
-  }
-
   const siteUrl = Deno.env.get('SITE_URL') ?? 'https://pointbunny.com'
 
   const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
@@ -105,6 +77,13 @@ Deno.serve(async (req) => {
   })
 
   if (inviteError) {
+    const alreadyExists = /already registered|already been invited/i.test(inviteError.message)
+    if (alreadyExists) {
+      return new Response(
+        JSON.stringify({ error: 'This email already has a Pointbunny account. Ask them to log in and they will appear on your team.' }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
     return new Response(JSON.stringify({ error: inviteError.message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
