@@ -325,12 +325,14 @@ User fills in: new password + mandatory 6-digit PIN
 
 #### `_initBusiness(user)` — First-Login Business Setup
 
-Runs only for brand new owner accounts (`role !== 'staff'` AND no staff row found by `user_id`). Creates:
+Runs only for brand new owner accounts (`role !== 'staff'` AND no staff row found by `user_id` AND email not in `admins`). Creates:
 1. `businesses` row (upsert by `id = user.id`) — `name` from `user.user_metadata.business_name || "First Last".trim() || user.email || 'My Business'`
 2. Three default roles: Admin, Manager, Cashier
 3. Owner `staff` row
 
 Does NOT run for invited staff — blocked by `role === 'staff'` metadata guard in `loadBusinessContext`.
+
+Does NOT run for admin panel accounts — `loadBusinessContext` checks the `admins` table by email before falling through to `_initBusiness`; if found, it throws an `ADMIN_ACCOUNT` error and the login screen shows "This is an admin account. Please sign in at the admin panel instead." (Without this, signing an admin account into the POS spawned a ghost business named after the email.)
 
 #### Function Reference
 
@@ -377,6 +379,8 @@ User clicks "New Order"
   → controlNewOrder()
     → newOrderView.render({ menuItems: state.menuItems, cart: state.cart, menuCategories })
 ```
+
+**Category tabs:** the sidebar shows "All Items" (default) + one tab per category with active items + "Uncategorized" when applicable. "All Items" renders a single flat grid with no category headers (`data-section="__all"`); selecting a category tab hides the flat grid and reveals that category's section. Each item card is rendered twice in the DOM (flat grid + its category section); only one is visible at a time.
 
 #### Select an Item
 

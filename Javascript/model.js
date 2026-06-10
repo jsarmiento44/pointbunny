@@ -187,6 +187,17 @@ export const loadBusinessContext = async function (user, { isInviteAcceptance = 
     if (user.user_metadata?.role === 'staff') {
       throw new Error('Staff account setup incomplete. Please contact your manager or try accepting your invite link again.');
     }
+    // Admin panel accounts must never spawn a POS business via _initBusiness
+    const { data: adminRow } = await supabase
+      .from('admins')
+      .select('email')
+      .eq('email', user.email)
+      .maybeSingle();
+    if (adminRow) {
+      const err = new Error('This is an admin account. Please sign in at the admin panel instead.');
+      err.code = 'ADMIN_ACCOUNT';
+      throw err;
+    }
     state.businessId   = user.id;
     state.role         = 'Admin';
     state.currentStaff = null;

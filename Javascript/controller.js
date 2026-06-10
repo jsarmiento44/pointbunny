@@ -1437,7 +1437,7 @@ const controlSignIn = async function (email, password) {
     hideLoadingScreen();
     await supabase.auth.signOut();
     AuthView.show();
-    AuthView.showError(err.code === 'STAFF_DEACTIVATED' ? err.message : 'Something went wrong loading the app. Please try again.');
+    AuthView.showError(['STAFF_DEACTIVATED', 'ADMIN_ACCOUNT'].includes(err.code) ? err.message : 'Something went wrong loading the app. Please try again.');
     return;
   }
   hideLoadingScreen();
@@ -3586,7 +3586,7 @@ const initAuth = async function () {
       hideLoadingScreen();
       await supabase.auth.signOut();
       AuthView.show();
-      AuthView.showError(err.code === 'STAFF_DEACTIVATED' ? err.message : 'Something went wrong. Please sign in again.');
+      AuthView.showError(['STAFF_DEACTIVATED', 'ADMIN_ACCOUNT'].includes(err.code) ? err.message : 'Something went wrong. Please sign in again.');
       return;
     }
     hideLoadingScreen();

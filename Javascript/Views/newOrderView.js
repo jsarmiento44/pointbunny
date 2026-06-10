@@ -50,6 +50,14 @@ class NewOrderView extends View {
         : "",
     ].join("");
 
+    // "All Items" is a single flat grid (no category headers); category sections
+    // start hidden and are revealed by their tab.
+    const allActiveItems = menuItems.filter((i) => i.status !== "inactive");
+    const allItemsGroup = `
+      <div class="pos-cat-section" data-section="__all">
+        <div class="pos-items-grid">${allActiveItems.map(renderCard).join("")}</div>
+      </div>`;
+
     const categoryGroups = activeCategories
       .map((cat) => {
         const items = menuItems.filter(
@@ -57,7 +65,7 @@ class NewOrderView extends View {
         );
         if (!items.length) return "";
         return `
-          <div class="pos-cat-section" data-section="${cat}">
+          <div class="pos-cat-section hidden" data-section="${cat}">
             <p class="pos-cat-label">${cap(cat)}</p>
             <div class="pos-items-grid">${items.map(renderCard).join("")}</div>
           </div>`;
@@ -66,7 +74,7 @@ class NewOrderView extends View {
 
     const uncatGroup = uncategorizedItems.length
       ? `
-        <div class="pos-cat-section" data-section="uncategorized">
+        <div class="pos-cat-section hidden" data-section="uncategorized">
           <p class="pos-cat-label pos-cat-label--muted">Uncategorized</p>
           <div class="pos-items-grid">${uncategorizedItems.map(renderCard).join("")}</div>
         </div>`
@@ -105,7 +113,7 @@ class NewOrderView extends View {
               menuItems.length === 0
                 ? `<p class="pos-empty">No items yet. Go to Catalogue to add items.</p>`
                 : `<div class="pos-items-area" id="posItemsArea">
-                  ${categoryGroups}${uncatGroup}
+                  ${allItemsGroup}${categoryGroups}${uncatGroup}
                 </div>`
             }
           </div>
@@ -138,11 +146,8 @@ class NewOrderView extends View {
 
       const cat = tab.dataset.cat;
       this._parentElement.querySelectorAll(".pos-cat-section").forEach((s) => {
-        if (cat === "all" || s.dataset.section === cat) {
-          s.classList.remove("hidden");
-        } else {
-          s.classList.add("hidden");
-        }
+        const show = cat === "all" ? s.dataset.section === "__all" : s.dataset.section === cat;
+        s.classList.toggle("hidden", !show);
       });
 
       const itemsArea = this._parentElement.querySelector(".pos-items-area");

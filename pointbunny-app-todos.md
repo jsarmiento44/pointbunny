@@ -46,6 +46,7 @@ _Last updated: 2026-06-10_
 
 ### 🟠 Bugs To Investigate (logged 2026-06-10, not started)
 - [ ] **Onboarding shown before PIN / flashed to staff** — two symptoms from accidentally signing into an admin-side account in the POS: (1) the mandatory PIN setup overlay appeared BEFORE onboarding; correct order is onboarding first, then PIN. Likely cause: `controlSignIn` calls `_maybeShowPinSetup()` before `if (model.state.needsOnboarding) OnboardingView.show()` - reorder so onboarding completes first. (2) After signing out of that account and signing in as staff, the staff user was briefly shown onboarding; gone after a refresh + re-login. Possibly stale `needsOnboarding` or business state surviving a sign-out path that doesn't reload the page. Investigate both together.
+  - ✅ Root cause of the ghost business fixed (2026-06-10): `loadBusinessContext` now checks the `admins` table by email before `_initBusiness`; admin accounts get "This is an admin account. Please sign in at the admin panel instead." The ghost business row (`53c02320...`, named `entrepkelly@gmail.com`) still needs manual cleanup in Supabase.
 - [ ] **Receipt printing compatibility** — printing currently only works on desktop and iOS devices. Audit the print flow (window.print / popup approach) on Android Chrome and other mobile browsers and make it work or degrade gracefully.
 
 ### 🟡 Tier 2 — Next After Tier 1
