@@ -1352,13 +1352,13 @@ const controlSignIn = async function (email, password) {
   }
   hideLoadingScreen();
   _wireApp();
+  _maybeShowPinSetup();
   if (model.state.needsOnboarding) OnboardingView.show();
-  else _maybeShowPinSetup();
 };
 
 const controlSignUp = async function ({ firstName, lastName, email, password }) {
   AuthView.setSignUpLoading(true);
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -1372,6 +1372,12 @@ const controlSignUp = async function ({ firstName, lastName, email, password }) 
   AuthView.setSignUpLoading(false);
   if (error) {
     AuthView.showSignUpError(error.message);
+    return;
+  }
+  // Supabase returns identities: [] (empty) when the email is already registered.
+  // No error is thrown and no confirmation email is sent, leaving the user confused.
+  if (data.user?.identities?.length === 0) {
+    AuthView.showSignUpError('An account with this email already exists. Please sign in instead.');
     return;
   }
   AuthView.showCheckEmail(email);
@@ -3457,8 +3463,8 @@ const initAuth = async function () {
     }
     hideLoadingScreen();
     _wireApp();
+    _maybeShowPinSetup();
     if (model.state.needsOnboarding) OnboardingView.show();
-    else _maybeShowPinSetup();
   } else {
     AuthView.show();
   }
