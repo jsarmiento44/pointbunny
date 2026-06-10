@@ -126,7 +126,8 @@ Supabase provides three services used by Pointbunny:
 - Sign-out invalidates the session and reloads the page
 - **Forgot password:** `supabase.auth.resetPasswordForEmail(email, { redirectTo: origin })` sends a reset link; the app detects `#type=recovery` in the URL hash on return and shows the reset-password form
 - **Password reset:** `supabase.auth.updateUser({ password })` after the user submits a new password on the reset form
-- **Email delivery:** Supabase SMTP configured with Resend (`smtp.resend.com:465`); `pointbunny.com` domain DNS-verified in Porkbun + Resend. Auth emails sent from `noreply@pointbunny.com`
+- **Staff invite:** Owner invites a staff member from the Staff panel → `model.inviteStaff()` creates a pending staff row in the DB + calls the `invite-staff` Supabase Edge Function which sends an invite email via `supabase.auth.admin.inviteUserByEmail()`. Staff clicks the link → `#type=invite` detected → inviteForm shown (set password + mandatory 6-digit PIN) → on submit: `updatePassword()` then `initApp()` claims the pending row by email.
+- **Email delivery:** Supabase SMTP configured with Resend (`smtp.resend.com:465`); `pointbunny.com` domain DNS-verified in Porkbun + Resend. Auth emails sent from `noreply@pointbunny.com`. Branded HTML templates live for Confirm Signup, Reset Password, and Invite User.
 
 ### 2. Database (PostgreSQL)
 
@@ -288,6 +289,12 @@ App loads
    │             User sets new password → supabase.auth.updateUser({ password })
    │             → "Password updated" screen → link to sign in
    │
+   ├─ URL hash contains #type=invite? (staff clicked invite email link)
+   │      YES → session already set by Supabase invite token
+   │             → show auth overlay → show Invite Accept form
+   │             User sets password + mandatory 6-digit PIN
+   │             → updatePassword() → initApp() claims pending staff row by email
+   │
    ├─ supabase.auth.getSession()
    │      │
    │      ├─ Session exists → showLoadingScreen()
@@ -300,10 +307,11 @@ App loads
    │              │     → on success: try { load data → wire app }
    │              │     → catch: signOut() → show error
    │              │
-   │              ├─ Sign Up → signUp() with user metadata
+   │              ├─ Sign Up (owners only) → signUp() with user metadata
    │              │     → "Check your email" screen
    │              │     → user clicks confirmation link
    │              │     → redirected back → now has session
+   │              │     → initApp → _initBusiness creates business + default roles
    │              │
    │              └─ Forgot Password → resetPasswordForEmail()
    │                    → "Check your email" screen
@@ -400,7 +408,7 @@ Speed. Writing every cart change to the database would add latency to every tap.
 | Active order queue (home page)         | ✅ Live |
 | Order types (Dine In / Takeout)        | ✅ Live |
 | Help & Support (ticket system)         | ✅ Live |
-| Settings (adjustments, display, KDS)   | ✅ Live |
+| Settings (Profile tab, Business details, POS, KDS, Displays — with email OTP verification on saves) | ✅ Live |
 | Staff time clock & timesheets          | ✅ Live |
 
 ---
@@ -411,7 +419,7 @@ Speed. Writing every cart change to the database would add latency to every tap.
 | ------------------------------------------- | ------------------------------------------------------------ |
 | Formal pay period records (Mark as Paid)    | Toast-only in v1; future: `pay_periods` table to track paid-out periods per staff |
 | Refunds                                     | UI button exists, no implementation                          |
-| Phone SMS verification                      | Settings field + "coming soon" note exists; hook point is `controlSaveBusinessInfo` |
+| Phone SMS verification (OTP)                | Hook point is `controlSaveBusinessInfo`; email OTP is already live for profile + business saves |
 | Custom email (branded transactional emails) | ✅ Live — Resend SMTP wired to Supabase Auth; sends from `noreply@pointbunny.com` |
 | Drawer operations                           | UI button exists, no implementation                          |
 | Scan item (barcode)                         | UI button exists, no implementation                          |

@@ -202,13 +202,14 @@ All external display windows use the same channel instance via the shared `chann
 
 #### Auth Form Panels
 
-The `#authFormsWrapper` contains 4 sliding panels. Only one is visible at a time; transitions use `_slideTo(fromEl, toEl, direction, makeWide)`.
+The `#authFormsWrapper` contains 5 sliding panels. Only one is visible at a time; transitions use `_slideTo(fromEl, toEl, direction, makeWide)`.
 
 | Panel ID | Panel | Triggered by |
 |---|---|---|
 | `#loginForm` | Sign in | Default; back links from Forgot |
-| `#signUpForm` | Sign up | "Create account" link |
+| `#signUpForm` | Sign up (owners only) | "Create account" link — wide card style |
 | `#forgotForm` | Forgot password | "Forgot password?" link |
+| `#inviteForm` | Accept staff invite | Detected `type=invite` URL hash on load + active session |
 | `#resetForm` | Set new password | Detected `type=recovery` URL hash on load |
 
 #### Sign In
@@ -292,6 +293,28 @@ User clicks sign out
     → supabase.auth.signOut()
     → window.location.reload()
 ```
+
+#### Accept Invite (Staff Path)
+
+```
+initAuth() detects window.location.hash.includes('type=invite')
+  + session already set by Supabase invite token
+  → AuthView.show() + AuthView.showInviteForm()
+
+User fills in: new password + mandatory 6-digit PIN
+  → authView._addHandlerAcceptInvite
+  → controlAcceptInvite({ password, pin })
+    → model.updatePassword(password)  [sets their permanent password]
+    → initApp(user)
+        → model.loadBusinessContext(user)
+            → finds pending staff row by email (status = 'pending')
+            → claims it: UPDATE staff SET user_id = auth.uid(), status = 'active'
+            → skips _initBusiness (invited staff never create a business)
+        → model.setStaffPin(staffId, pin)
+    → app launches normally
+```
+
+**Key rule:** Invited staff ALWAYS skip `_initBusiness`. `loadBusinessContext` finds their pending row by email first; if found, it claims it and returns. `_initBusiness` only runs for brand-new owners with no staff row AND no pending invite.
 
 #### `_initBusiness(user)` — First-Login Business Setup
 
@@ -823,24 +846,102 @@ User clicks × on a category chip (Menu List)
 
 ### 5.7 Settings
 
+#### Settings Tabs
+
+| Tab | ID | Visible to |
+|---|---|---|
+| My Profile | `profile` | All roles |
+| Business | `business` | Admin only |
+| POS | `pos` | All roles |
+| Order Queue Timers | `kds` | All roles |
+| Displays | `displays` | All roles |
+
+Non-admins default to Profile on open; admins default to Business.
+
 #### Open Settings
 
 ```
 User clicks settings gear icon
   → settingsView._addHandlerOpen
   → controlOpenSettings()
+    → SettingsView.openWithRole(role)  [initialises phone ITI before syncing — must come first]
+    → SettingsView.syncProfileInfo(currentStaff)  [populates Profile tab]
+    → SettingsView.syncBusinessInfo(business)     [populates Business tab; admin only]
     → settingsView renders / syncs:
         - adjustment list (state.settings.adjustments)
-        - printing toggle (state.settings.printingEnabled)
-        - confirmPrint toggle (state.settings.confirmPrint)
-        - printTwoCopies toggle (state.settings.printTwoCopies)
-        - showRemovedAdjustments toggle
+        - printing + confirmPrint + printTwoCopies + showRemovedAdjustments toggles
         - KDS thresholds (yellow, red, auto)
         - KDS & CFD window size selectors
         - CFD ad image section
 ```
 
 Note: Category management was moved out of Settings and into the Menu List modal (§5.6).
+
+#### Profile Tab — Edit Name
+
+All fields start **read-only** (view mode). Clicking Edit unlocks them; Cancel restores originals; Save triggers OTP verification (see below).
+
+```
+User clicks Edit (Profile section)
+  → controlEditProfile()
+    → SettingsView.enterProfileEditMode()
+        → removes readonly attr from first/last name inputs
+        → hides Edit button, shows save row
+
+User clicks Save Changes
+  → controlSaveProfile()
+    → model.sendSettingsVerification()
+        → supabase.auth.signInWithOtp({ email, shouldCreateUser: false })
+    → SettingsView.showOTPModal(email)
+
+Verify OTP → see "Email OTP Verification" below
+
+On verified:
+  → model.saveProfileInfo({ firstName, lastName })
+      → supabase.from('staff').update({ first_name, last_name }).eq('id', staffId)
+      → mutates state.currentStaff + state.currentCashier (if same person)
+  → SettingsView.exitProfileEditMode(restore: false)  [fields revert to readonly with new values]
+  → _updateCashierDisplay()  [refreshes cashier name on home page]
+  → showToast('Profile updated', 'success')
+
+User clicks Cancel (save row)
+  → controlCancelProfile()
+    → SettingsView.exitProfileEditMode(restore: true)  [restores original values, locks fields]
+```
+
+#### Business Details Tab — Edit Fields
+
+Same edit/cancel/save pattern. All inputs + timezone select start read-only (phone uses `iti--view` class to disable the flag picker). OTP required before the DB write.
+
+```
+On verified:
+  → model.saveBusinessInfo({ name, email, phone, timezone,
+      addressStreet, addressCity, addressProvince, addressZip })
+      → supabase.from('businesses').update(...).eq('id', businessId)
+  → SettingsView.exitBusinessEditMode(restore: false)
+  → showToast('Business info updated', 'success')
+```
+
+#### Email OTP Verification (shared by Profile + Business saves)
+
+A single OTP modal (`#settingsOTPModal`) serves both tabs. The pending section is tracked in `_settingsOTPSection` (`'profile'` | `'business'`).
+
+```
+SettingsView.showOTPModal(email)
+  → removes .hidden from #settingsOTPModal
+  → sets #settingsOTPHint text
+
+User enters 6-digit code → clicks "Verify & Save"
+  → controlVerifySettingsOTP(token)
+    → model.confirmSettingsVerification(email, token)
+        → supabase.auth.verifyOtp({ email, token, type: 'email' })
+    → SettingsView.hideOTPModal()
+    → runs the save (profile or business depending on _settingsOTPSection)
+
+User clicks Cancel (OTP modal)
+  → controlCancelSettingsOTP()
+    → SettingsView.hideOTPModal()  [edit mode stays open — user can retry]
+```
 
 #### Toggle: Dine In / Takeout
 

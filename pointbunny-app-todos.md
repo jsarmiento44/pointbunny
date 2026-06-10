@@ -3,7 +3,7 @@
 This file tracks features and integrations that need to be added to the main Pointbunny app
 to support the admin panel. Add to this list as we build more admin features.
 
-_Last updated: 2026-06-07_
+_Last updated: 2026-06-09_
 
 ---
 
@@ -21,8 +21,8 @@ _Last updated: 2026-06-07_
 
 ## Priority Checklist
 
-### 🚨 Open Bug — New User Registration Broken
-New business owner sign-up fails with "Something went wrong loading the app." on first login (after email confirmation). `initApp` throws inside `_initBusiness`. The `null businessName` error was fixed (commit 245ae27) but the error persists — grab a fresh DevTools console screenshot to see the current error. Also verify the **staff invite flow vs owner registration flow** in `loadBusinessContext`: owner path calls `_initBusiness`; staff path claims a pending row by email and must NOT call `_initBusiness`. Confirm the pending-invite lookup works correctly when staff clicks their invite email link.
+### ✅ Bug Fixed — New User Registration (commit 245ae27)
+`_initBusiness` was passing `name: null` (hardcoded literal) instead of the `businessName` variable when upserting the `businesses` row. Fixed. New owner sign-up now completes successfully on first login.
 
 ### 🔴 Tier 1 — Ready to Build Now
 - [x] ~~**Staging environment**~~ ✅ shipped — `pointybunny-staging.netlify.app` live on `staging` branch. Branch protection on `main` (no force push, no deletion). Staging auto-deploys on push.
@@ -58,11 +58,11 @@ New business owner sign-up fails with "Something went wrong loading the app." on
 - [ ] **Feature adoption tracking** — first-use events per feature (see item 4)
 
 ### 🟣 Tier 5 — Domain-Dependent (domain is now live: pointbunny.com — these are unblocked)
-- [ ] **Staff invitation emails** — domain is live, now unblocked. When a staff member is invited, send an email with signup instructions. Requires email provider (Resend/Brevo via Supabase Edge Function). See item 19 below.
+- [x] ~~**Staff invitation emails**~~ ✅ shipped — owner invites staff via Staff panel → `inviteStaff()` creates a pending `staff` row (no `user_id`) + calls `invite-staff` Edge Function which sends invite email via Supabase Admin `inviteUserByEmail`. Staff clicks link → `#type=invite` hash detected → `inviteForm` shown (set password + 6-digit PIN). On submit: `updatePassword()` then `initApp` → `loadBusinessContext` finds pending row by email, claims it by writing `user_id`. See item 19.
 - [x] ~~**Forgot Password (Pointbunny app)**~~ ✅ shipped — see Tier 1 entry above.
 - [ ] **2FA (TOTP, not SMS)** — opt-in two-factor authentication for business owner accounts via authenticator app (Google Authenticator, Authy). Use Supabase's built-in MFA: `supabase.auth.mfa.enroll({ factorType: 'totp' })` returns a QR code URI → render it in Settings so the owner scans it once. On login, after password succeeds, call `supabase.auth.mfa.challenge()` + `supabase.auth.mfa.verify()` for the 6-digit code. No SMS/Twilio needed — free and more secure than SMS 2FA (no SIM-swap risk).
 - [x] ~~**Custom email sender domain**~~ ✅ shipped — Resend configured with `pointbunny.com` domain (DNS verified in Porkbun). Supabase SMTP set to `smtp.resend.com:465`. Branded HTML templates live for: Confirm Signup, Reset Password, Invite User (generic).
-- [ ] **Time Clock PIN during invite acceptance** — when a staff member accepts their invite email, redirect them to a "Set Your PIN" onboarding page so their PIN is created before they ever touch the time clock. `redirectTo` = `https://pointbunny.com`. See item 19.
+- [x] ~~**Time Clock PIN during invite acceptance**~~ ✅ shipped — PIN collection is built into the `inviteForm` panel (mandatory 6-digit field). Staff sets their PIN during invite acceptance before ever reaching the app. See item 19.
 
 ---
 
@@ -461,20 +461,18 @@ Allow businesses to generate and send invoices to customers directly from the PO
 
 ---
 
-## 19. Staff Invitation Emails
+## 19. Staff Invitation Emails ✅ SHIPPED
 
-When a business owner adds a staff member in the Pointbunny app, the invited person currently has to be told verbally to sign up at the POS using their email. There's no automated onboarding email.
+When a business owner invites a staff member via the Staff panel:
+1. `inviteStaff()` creates a pending `staff` row in DB (no `user_id` yet, `status = 'pending'`)
+2. Calls the `invite-staff` Supabase Edge Function (Deno/TypeScript, deployed via Supabase CLI)
+3. Edge Function calls Supabase Admin `admin.inviteUserByEmail()` → Supabase sends the invite email via the custom Resend SMTP domain (`pointbunny.com`)
+4. Staff clicks the invite link → lands on `#type=invite` hash → `inviteForm` panel shown
+5. Staff sets a new password + mandatory 6-digit PIN → submits → `updatePassword()` then `initApp()`
+6. `loadBusinessContext` finds the pending staff row by email, claims it by writing `user_id` + sets `status = 'active'`
+7. App launches normally
 
-**What to build once domain is live:**
-1. After `inviteStaff()` succeeds, call a Supabase Edge Function that sends an email to the invited address
-2. Email content: their name, business name, and instructions — "Sign up at your store's POS with this email address and set your 6-digit PIN to start working"
-3. Optional: include a web-based signup link if a hosted version of the app exists
-
-**Why it matters:**
-- Without it, owners must manually tell every new staff member how to get started
-- Staff must already know their email matches the invited address before signing up
-
-**Blocked by:** Company domain not yet purchased. The `from` address needs a real domain, and `redirectTo` on any links requires a hosted URL.
+PIN is collected during invite acceptance — staff have their PIN set before ever reaching the time clock.
 
 ---
 

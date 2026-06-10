@@ -597,7 +597,7 @@ class StaffView {
       <button class="modal-close-btn" id="inviteFormCloseBtn" type="button">&times;</button>
       <h2 class="edit-form-title">Invite Staff Member</h2>
 
-      <div class="auth-col-pair">
+      <div class="edit-fields-row">
         <div class="edit-field">
           <label for="inviteFirstName">First name</label>
           <input type="text" id="inviteFirstName" placeholder="Jane" autocomplete="off" />
@@ -621,7 +621,7 @@ class StaffView {
       </div>
 
       <p class="settings-section-hint" style="margin-top:8px;">
-        They'll need to sign up at your POS using this email address to activate their account.
+        An invite email will be sent to this address. They'll set their password and PIN when they click the link.
       </p>
 
       <div class="adj-form-actions">
