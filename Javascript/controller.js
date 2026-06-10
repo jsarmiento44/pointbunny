@@ -1352,8 +1352,8 @@ const controlSignIn = async function (email, password) {
   }
   hideLoadingScreen();
   _wireApp();
-  _maybeShowPinSetup();
   if (model.state.needsOnboarding) OnboardingView.show();
+  else _maybeShowPinSetup();
 };
 
 const controlSignUp = async function ({ firstName, lastName, email, password }) {
@@ -3457,8 +3457,8 @@ const initAuth = async function () {
     }
     hideLoadingScreen();
     _wireApp();
-    _maybeShowPinSetup();
     if (model.state.needsOnboarding) OnboardingView.show();
+    else _maybeShowPinSetup();
   } else {
     AuthView.show();
   }

@@ -201,7 +201,7 @@ export const loadBusinessContext = async function (user, { isInviteAcceptance = 
     state.businessIndustry        = bizData.business_industry ?? null;
   }
 
-  if (!state.businessName && state.userId === state.businessId) state.needsOnboarding = true;
+  if (state.userId === state.businessId && (!state.businessName || !state.businessType || !state.businessIndustry)) state.needsOnboarding = true;
 
   // Auto-detect timezone on first login if the owner hasn't set one yet.
   // Only the owner writes this — staff logins leave it untouched.
