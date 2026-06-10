@@ -2,6 +2,19 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Living Documentation — Always Read and Update
+
+These files are the source of truth for the project. **Always consult them before starting any task, and always update them when a feature ships or the system changes.**
+
+| File | Purpose |
+|---|---|
+| `SYSTEM.md` | **Most important.** Full feature workflows: every user action traced through view → controller → model → DB. Update whenever a workflow changes or a new feature is added. |
+| `ARCHITECTURE.md` | Tech stack, module map, DB schema, auth flow, file structure. Update when tables, files, or major patterns change. |
+| `pointbunny-app-todos.md` | Roadmap and feature checklist. Mark items done when shipped; add new items as they come up. |
+| `pointbunny-admin-updates.md` | Backend migration log for the admin panel team. **Add an entry for every schema change** (new table, new column, new RLS policy). |
+
+**Rule:** If you implement something and it's not reflected in these files, the docs are wrong — fix them before finishing the task.
+
 ## Commands
 
 ```bash

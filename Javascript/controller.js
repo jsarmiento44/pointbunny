@@ -1393,6 +1393,19 @@ const controlAcceptInvite = async function ({ password, pin }) {
   }
 };
 
+const controlGoogleSignIn = async function () {
+  AuthView.setGoogleLoading(true);
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname },
+  });
+  if (error) {
+    AuthView.setGoogleLoading(false);
+    AuthView.showError(error.message);
+  }
+  // On success, Supabase redirects the browser — no further code runs here.
+};
+
 const controlSignIn = async function (email, password) {
   AuthView.setLoading(true);
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -3498,8 +3511,24 @@ const initAuth = async function () {
   AuthView._addHandlerForgotPassword(controlForgotPassword);
   AuthView._addHandlerResetPassword(controlResetPassword);
   AuthView._addHandlerAcceptInvite(controlAcceptInvite);
+  AuthView._addHandlerGoogleSignIn(controlGoogleSignIn);
   OnboardingView._addHandlerSubmit(controlOnboardingSubmit);
   document.getElementById('logoutBtn').addEventListener('click', controlSignOut);
+
+  // OAuth error callback: Supabase redirects back with #error=... on failure
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+  if (hashParams.get('error')) {
+    const desc = decodeURIComponent((hashParams.get('error_description') || '').replace(/\+/g, ' '));
+    history.replaceState(null, '', window.location.pathname);
+    AuthView.show();
+    const isEmailConflict = /already registered|already exists/i.test(desc);
+    AuthView.showError(
+      isEmailConflict
+        ? 'An account with this email already exists. Please sign in with your email and password.'
+        : (desc || 'Sign-in failed. Please try again.')
+    );
+    return;
+  }
 
   // Recovery flow: user clicked a password-reset link in email
   if (window.location.hash.includes('type=recovery')) {

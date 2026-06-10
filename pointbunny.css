@@ -6541,6 +6541,47 @@ body[data-theme="dark"] .receipt-manual-overlay {
 }
 .auth-switch a:hover { text-decoration: underline; }
 
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 6px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.auth-google-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 9px 16px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color var(--tr-fast), background var(--tr-fast);
+}
+.auth-google-btn:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-soft);
+}
+.auth-google-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Green sweep that runs across the bottom during form transition */
 .auth-sweep {
   position: absolute;
