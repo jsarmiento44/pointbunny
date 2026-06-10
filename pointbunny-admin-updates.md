@@ -19,13 +19,13 @@ that the admin panel needs to know about. Add new entries at the top as features
 
 The Pointbunny app now subscribes to Supabase Realtime (postgres_changes) on the logged-in user's `staff` row. The moment `is_active` flips to false, the app signs the user out and returns them to the login screen with a "deactivated" message - no page refresh needed. This closes the last gap from item 14: previously an already-open session kept access until the next page load.
 
-### SQL that must be run (Supabase SQL editor)
+### SQL
 
 ```sql
 alter publication supabase_realtime add table public.staff;
 ```
 
-Without this, no realtime events are emitted for the `staff` table and the live kick-out silently does nothing (login-time enforcement still works).
+**Already applied** - running it on 2026-06-10 returned `42710: relation "staff" is already member of publication "supabase_realtime"`, so the table was added at some earlier point. No action needed; listed here only so the requirement is documented.
 
 ### Notes
 
