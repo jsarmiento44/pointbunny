@@ -175,7 +175,7 @@ export const loadBusinessContext = async function (user, { isInviteAcceptance = 
       hasPin:    !!staffRow.pin,
     };
   } else {
-    if (user.user_metadata?.is_staff) {
+    if (user.user_metadata?.role === 'staff') {
       throw new Error('Staff account setup incomplete. Please contact your manager or try accepting your invite link again.');
     }
     state.businessId   = user.id;
@@ -204,7 +204,7 @@ export const loadBusinessContext = async function (user, { isInviteAcceptance = 
     state.businessIndustry        = bizData.business_industry ?? null;
   }
 
-  if (state.userId === state.businessId) {
+  if (user.user_metadata?.role === 'owner' || (!user.user_metadata?.role && state.userId === state.businessId)) {
     const onboardingComplete =
       state.businessName         &&
       state.businessType         &&

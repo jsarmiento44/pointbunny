@@ -1454,6 +1454,7 @@ const controlSignUp = async function ({ firstName, lastName, email, password }) 
         first_name: firstName,
         last_name: lastName,
         display_name: `${firstName} ${lastName}`,
+        role: 'owner',
       },
     },
   });
