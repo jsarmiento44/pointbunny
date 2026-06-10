@@ -50,7 +50,7 @@ class AuthView {
   showResetError(msg)  { this._resetErrorEl.textContent = msg; }
 
   clearErrors() {
-    this._errorEl.textContent       = '';
+    this._errorEl.innerHTML         = '';
     this._signUpErrorEl.textContent = '';
     this._forgotErrorEl.textContent = '';
     this._resetErrorEl.textContent  = '';
@@ -163,6 +163,10 @@ class AuthView {
   }
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+
+  showGoogleInAppError(url) {
+    this._errorEl.innerHTML = `Google sign-in requires Safari or Chrome. <a href="${url}" target="_blank" rel="noopener" style="color:var(--brand-1);font-weight:600;text-decoration:underline;">Open in browser</a>`;
+  }
 
   setGoogleLoading(bool) {
     const btn = document.getElementById('googleSignInBtn');

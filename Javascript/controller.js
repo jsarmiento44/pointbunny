@@ -1393,7 +1393,19 @@ const controlAcceptInvite = async function ({ password, pin }) {
   }
 };
 
+const _isInAppBrowser = () => {
+  const ua = navigator.userAgent || '';
+  if (/FBAN|FBAV|Instagram|Twitter|Line|MicroMessenger|Snapchat|TikTok/.test(ua)) return true;
+  if (/iphone|ipad|ipod/i.test(ua) && !/safari/i.test(ua)) return true;
+  if (/android/i.test(ua) && /wv/.test(ua)) return true;
+  return false;
+};
+
 const controlGoogleSignIn = async function () {
+  if (_isInAppBrowser()) {
+    AuthView.showGoogleInAppError(window.location.href);
+    return;
+  }
   AuthView.setGoogleLoading(true);
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
