@@ -15,6 +15,49 @@ that the admin panel needs to know about. Add new entries at the top as features
 
 ---
 
+## [2026-06-10] Staff Data Access — RLS Policies for All Staff-Facing Tables (SQL required)
+
+Follow-up to the staff sales fix below. A full `pg_policies` review showed most app tables were owner-only: staff saw zero `menu_categories` (every menu item rendered as "Uncategorized"), could not read their `businesses` row (blank receipt header), could not redeem discount codes (usage-count UPDATE), and managers could not write menu items, categories, adjustments, discounts, or expenses.
+
+### SQL that was run (Supabase SQL editor, 2026-06-10)
+
+One migration, two parts:
+
+1. **`get_my_business_id()` redefined** as `security definer`, returning the caller's `business_id` from `staff` only where `is_active = true`. This also tightens the pre-existing `staff read staff` and `staff read roles` policies (deactivated staff now get nothing from them).
+2. **Scoped staff policies added** on: `menu_categories` (select/insert/delete), `menu_items` (select/insert/update/delete), `adjustments` (select/insert/update/delete), `discount_codes` (select/insert/update/delete), `expenses` (select/insert/update/delete), `businesses` (select own row). All use `user_id = get_my_business_id()` (`id = ...` for businesses), so they only apply to active staff of that business.
+
+```sql
+create or replace function public.get_my_business_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select business_id
+  from public.staff
+  where user_id = auth.uid()
+    and is_active
+  limit 1;
+$$;
+
+-- Pattern repeated per table (see app repo SYSTEM.md for the full list):
+create policy "staff read menu_categories" on public.menu_categories
+  for select to authenticated using (user_id = get_my_business_id());
+-- ... insert/update/delete variants with the same predicate
+```
+
+### Design notes
+
+- Writes are **membership-scoped, not role-scoped**: any active staff member of a business passes, and the app UI enforces role gating. DB-level per-role enforcement arrives with the custom roles/permissions feature (`roles.permissions` JSONB).
+- The new scoped SELECT policies make the legacy `authenticated can read all <table>` policies (qual `true` on `menu_items`, `adjustments`, `discount_codes`, `employees`, `staff`) redundant. Dropping them is queued in the app todos - currently any authenticated user can read any business's menu, codes, and staff (incl. PINs).
+
+### Admin panel impact
+
+None - service role bypasses RLS. Listed for migration history.
+
+---
+
 ## [2026-06-10] Staff Sales Access — New RLS Policies on `sales` (SQL required)
 
 Discovered while testing staff deactivation: the `sales` table only had owner-scoped INSERT/SELECT policies (`auth.uid() = user_id`), so staff accounts (cashiers, managers) could never record a sale - they got a row-level security violation on checkout - and saw an empty order queue and $0 daily totals. This had gone unnoticed because all prior testing was done as the owner.

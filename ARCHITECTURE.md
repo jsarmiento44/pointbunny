@@ -246,7 +246,7 @@ Every table has RLS enabled. The base pattern on every table:
 using (business_id = auth.uid())
 ```
 
-Tables that staff (non-owner) accounts touch carry additional membership policies that check the `staff` table, e.g. on `sales`:
+Tables that staff (non-owner) accounts touch carry additional membership policies. `sales` uses an inline subquery:
 
 ```sql
 -- Active staff can insert/read their business's sales
@@ -258,7 +258,13 @@ exists (
 )
 ```
 
-The `is_active` condition means deactivated staff lose data access at the DB level, not just in the UI.
+All other staff-facing tables (`menu_categories`, `menu_items`, `adjustments`, `discount_codes`, `expenses`, `businesses` read-only, plus the pre-existing `staff`/`roles` read policies) use the `get_my_business_id()` helper - a `security definer` function returning the caller's `business_id` from `staff` where `is_active = true`:
+
+```sql
+using (user_id = get_my_business_id())
+```
+
+The `is_active` condition in both forms means deactivated staff lose data access at the DB level, not just in the UI. Staff write policies are membership-scoped, not role-scoped - the UI enforces role gating until the custom roles feature pushes `roles.permissions` checks into policies.
 
 This means even if someone obtained another user's `business_id`, they could not read or modify that user's data — the database enforces it, not the application code. There is no way to bypass this from the client.
 
