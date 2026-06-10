@@ -1378,12 +1378,13 @@ const controlAcceptInvite = async function ({ password, pin }) {
         if (model.state.currentCashier?.id === model.state.currentStaff.id) {
           model.state.currentCashier.hasPin = true;
         }
-      } catch {
-        showToast('Account set up! PIN could not be saved. Set it in the Staff panel.', 'error');
+      } catch (pinErr) {
+        console.error('PIN save failed during invite acceptance:', pinErr);
       }
     }
 
     _wireApp();
+    _maybeShowPinSetup();
   } catch (err) {
     console.error('invite accept failed:', err);
     hideLoadingScreen();
