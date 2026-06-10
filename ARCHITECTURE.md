@@ -144,8 +144,10 @@ id, name, email, phone, timezone, timeclock_token, created_at
 
 ```
 id, business_id, first_name, last_name, email, role_id (→ roles),
-pin, status ('active'|'pending'), hourly_rate, created_at
+pin, status ('active'|'pending'), is_active, hourly_rate, created_at
 ```
+
+`is_active = false` is a soft delete: set by in-app "Remove" (joined staff only - pending invites are hard-deleted) and by the admin panel's deactivate action. `loadStaff` filters them out, `loadBusinessContext` blocks their login with a "deactivated" error, and re-inviting the same email reactivates the row instead of inserting a new one. Active sessions are kicked out live via a realtime subscription on the user's own staff row (`watchStaffDeactivation`); the `staff` table is in the `supabase_realtime` publication for this.
 
 **`roles`**
 

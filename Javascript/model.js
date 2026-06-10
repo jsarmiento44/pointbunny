@@ -139,9 +139,17 @@ export const loadBusinessContext = async function (user, { isInviteAcceptance = 
 
   let { data: staffRow } = await supabase
     .from('staff')
-    .select('id, business_id, first_name, last_name, email, pin, roles(name)')
+    .select('id, business_id, first_name, last_name, email, pin, is_active, roles(name)')
     .eq('user_id', user.id)
     .maybeSingle();
+
+  // Honors removal from the Staff panel (soft delete) and deactivation from the
+  // admin panel - both set is_active = false. Checked on login and session restore.
+  if (staffRow && staffRow.is_active === false) {
+    const err = new Error('Your account has been deactivated. Please contact your business owner.');
+    err.code = 'STAFF_DEACTIVATED';
+    throw err;
+  }
 
   // Only claim a pending invite row when the user explicitly came through the invite link.
   // Skipping this for normal sign-in/sign-up prevents a person who owns their own business
@@ -152,6 +160,7 @@ export const loadBusinessContext = async function (user, { isInviteAcceptance = 
       .select('id, business_id, first_name, last_name, email, pin, roles(name)')
       .eq('email', user.email)
       .is('user_id', null)
+      .eq('is_active', true)
       .maybeSingle();
 
     if (pendingRow) {
@@ -795,6 +804,7 @@ export const verifyOverrideCredentials = async function (email, password) {
     .select('first_name, last_name, roles(permissions)')
     .eq('user_id', authData.user.id)
     .eq('business_id', state.businessId)
+    .eq('is_active', true)
     .maybeSingle();
 
   await tempClient.auth.signOut({ scope: 'local' });
@@ -1123,6 +1133,26 @@ function parseVariants(raw) {
 
 // ── Staff management ──────────────────────────────────────────────────────────
 
+// Live deactivation kick-out: fires the callback the moment this user's staff row
+// gets is_active = false (in-app removal or admin panel deactivation). Requires the
+// staff table to be in the supabase_realtime publication.
+let _staffWatchChannel = null;
+
+export const watchStaffDeactivation = function (onDeactivated) {
+  if (!state.currentStaff?.id || _staffWatchChannel) return;
+  _staffWatchChannel = supabase
+    .channel(`staff-active-${state.currentStaff.id}`)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'staff',
+      filter: `id=eq.${state.currentStaff.id}`,
+    }, (payload) => {
+      if (payload.new?.is_active === false) onDeactivated();
+    })
+    .subscribe();
+};
+
 const dbToStaff = (row) => ({
   id:         row.id,
   firstName:  row.first_name,
@@ -1144,6 +1174,7 @@ export const loadStaff = async function () {
     .from('staff')
     .select('id, first_name, last_name, email, is_active, joined_at, user_id, pin, hourly_rate, roles(id, name)')
     .eq('business_id', state.businessId)
+    .eq('is_active', true)
     .order('invited_at', { ascending: true });
   if (error) throw error;
   state.staff = data.map(dbToStaff);
@@ -1161,6 +1192,29 @@ export const loadRoles = async function () {
 
 export const inviteStaff = async function ({ firstName, lastName, email, roleId }) {
   const normalizedEmail = email.toLowerCase().trim();
+
+  // A previously removed (soft-deleted) staff member is reactivated instead of
+  // inserted again - their auth account and history still exist.
+  const { data: inactiveRow } = await supabase
+    .from('staff')
+    .select('id, user_id')
+    .eq('business_id', state.businessId)
+    .eq('email', normalizedEmail)
+    .eq('is_active', false)
+    .maybeSingle();
+
+  if (inactiveRow) {
+    const { data: reactivated, error: reError } = await supabase
+      .from('staff')
+      .update({ is_active: true, first_name: firstName, last_name: lastName, role_id: roleId })
+      .eq('id', inactiveRow.id)
+      .select('id, first_name, last_name, email, is_active, joined_at, user_id, pin, hourly_rate, roles(id, name)')
+      .single();
+    if (reError) throw reError;
+    state.staff.push(dbToStaff(reactivated));
+    return { reactivated: true };
+  }
+
   const { data, error } = await supabase
     .from('staff')
     .insert({
@@ -1192,6 +1246,7 @@ export const inviteStaff = async function ({ firstName, lastName, email, roleId 
   }
 
   state.staff.push(dbToStaff(data));
+  return { reactivated: false };
 };
 
 export const updateStaffRole = async function (staffId, roleId) {
@@ -1220,13 +1275,28 @@ export const setStaffPin = async function (staffId, pin) {
 };
 
 export const removeStaff = async function (id) {
-  const { error, count } = await supabase
-    .from('staff')
-    .delete({ count: 'exact' })
-    .eq('id', id)
-    .eq('business_id', state.businessId);
-  if (error) throw error;
-  if (count === 0) throw new Error('Could not delete staff member. Please try again.');
+  const member = state.staff.find((s) => s.id === id);
+
+  if (member?.isPending) {
+    // Pending invites have no history - hard delete so the email can be re-invited cleanly.
+    const { error, count } = await supabase
+      .from('staff')
+      .delete({ count: 'exact' })
+      .eq('id', id)
+      .eq('business_id', state.businessId);
+    if (error) throw error;
+    if (count === 0) throw new Error('Could not delete staff member. Please try again.');
+  } else {
+    // Joined staff are soft-deleted so shifts, sales attribution, and payroll history survive.
+    const { error, count } = await supabase
+      .from('staff')
+      .update({ is_active: false }, { count: 'exact' })
+      .eq('id', id)
+      .eq('business_id', state.businessId);
+    if (error) throw error;
+    if (count === 0) throw new Error('Could not remove staff member. Please try again.');
+  }
+
   const idx = state.staff.findIndex((s) => s.id === id);
   if (idx !== -1) state.staff.splice(idx, 1);
 };

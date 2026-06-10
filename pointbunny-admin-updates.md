@@ -15,6 +15,51 @@ that the admin panel needs to know about. Add new entries at the top as features
 
 ---
 
+## [2026-06-10] Live Staff Deactivation Kick-Out — Realtime Publication Change (SQL required)
+
+The Pointbunny app now subscribes to Supabase Realtime (postgres_changes) on the logged-in user's `staff` row. The moment `is_active` flips to false, the app signs the user out and returns them to the login screen with a "deactivated" message - no page refresh needed. This closes the last gap from item 14: previously an already-open session kept access until the next page load.
+
+### SQL that must be run (Supabase SQL editor)
+
+```sql
+alter publication supabase_realtime add table public.staff;
+```
+
+Without this, no realtime events are emitted for the `staff` table and the live kick-out silently does nothing (login-time enforcement still works).
+
+### Notes
+
+- Realtime postgres_changes respects RLS: each subscriber only receives events for rows their SELECT policy allows. Staff can read their own row, so they receive their own deactivation event. No staff member can spy on other rows through this publication as long as the staff SELECT policy stays business-scoped.
+- This means admin panel deactivations now take effect on live sessions within a second or two.
+
+### Admin panel impact
+
+None in code. Just run the SQL above once.
+
+---
+
+## [2026-06-10] Staff Removal Is Now a Soft Delete + `is_active` Login Enforcement (no schema changes)
+
+No new tables, columns, or policies. Behavior changes in the Pointbunny app that affect what the admin panel sees in the `staff` table:
+
+### What changed
+
+1. **In-app staff removal no longer hard-deletes joined staff.** When an owner removes a staff member who has already accepted their invite (`user_id` set), the app now runs `UPDATE staff SET is_active = false` instead of `DELETE`. Pending invites (`user_id IS NULL`) are still hard-deleted.
+2. **`is_active` is now enforced at login.** On every login and session restore, the app checks the staff row's `is_active`; if false, the user is signed out with "Your account has been deactivated. Please contact your business owner." This applies to rows deactivated by the admin panel too - item 14 from the todos is now live. The same check covers the staff time clock page and manager override authorization.
+3. **Re-inviting a removed email reactivates the row.** If an owner invites an email that matches a soft-deleted row in their business, the app sets `is_active = true` (and updates name + role) on the existing row instead of inserting a duplicate. No invite email is sent in this case - the staff member signs in with their existing account.
+
+### Admin panel impact
+
+- Staff removed in-app now remain visible in the `staff` table with `is_active = false`, same as staff deactivated from the admin panel. If the panel lists staff for a business, filter or badge on `is_active` as appropriate.
+- Deactivation from the admin panel now actually locks the user out of the Pointbunny app (on their next login or page load - existing in-app sessions persist until refresh).
+- Reactivation can now happen from the app side (owner re-invites the email), so don't assume `is_active = false` is permanent.
+
+### Note on RLS
+
+No new policy was needed: the existing owner-scoped UPDATE policy on `staff` (already used for role and PIN changes) covers the `is_active` writes.
+
+---
+
 ## [2026-06-10] Staff Invite Claim — New RLS UPDATE Policy (no schema changes)
 
 No new tables or columns. One new RLS policy on the existing `staff` table.

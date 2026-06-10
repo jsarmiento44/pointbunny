@@ -3,7 +3,7 @@
 This file tracks features and integrations that need to be added to the main Pointbunny app
 to support the admin panel. Add to this list as we build more admin features.
 
-_Last updated: 2026-06-09_
+_Last updated: 2026-06-10_
 
 ---
 
@@ -38,7 +38,7 @@ _Last updated: 2026-06-09_
 - [x] ~~**Clear unread badge when business opens ticket**~~ ✅ shipped
 - [x] ~~**Business can reply to tickets** (insert policy confirmed working)~~ ✅ shipped
 - [x] ~~**Show ticket ID in the Pointbunny app**~~ ✅ shipped
-- [ ] **Enforce staff `is_active` on login** — admin panel can now deactivate staff members. The Pointbunny app must check `is_active = false` for the logged-in staff user and block access (show "Your account has been deactivated" or redirect to login). Without this, removed staff can still use the app. (see item 14)
+- [x] ~~**Enforce staff `is_active` on login**~~ ✅ shipped — `loadBusinessContext` now selects `is_active` and throws a `STAFF_DEACTIVATED` error when false; both login and session restore sign the user out with "Your account has been deactivated. Please contact your business owner." Bonus: in-app "Remove staff" is now a soft delete (`is_active = false`) for joined staff so it matches admin panel behavior and preserves shift/sales history; pending invites are still hard-deleted; re-inviting a removed email reactivates the existing row. Live kick-out also shipped: a realtime subscription on the user's staff row signs out already-open sessions the moment `is_active` flips to false (requires `staff` in the `supabase_realtime` publication - SQL in admin updates). (see item 14)
 - [x] ~~**Forgot Password**~~ ✅ shipped — "Forgot password?" link on login form → slides to email input → Supabase recovery email via Resend → user lands on `#type=recovery` → reset form shown → `supabase.auth.updateUser({ password })`. Redirect URLs added to Supabase allowlist.
 
 ### 🟡 Tier 2 — Next After Tier 1
@@ -372,7 +372,11 @@ For business owners, 2FA can be opt-in rather than required. Add a toggle in the
 
 ---
 
-## 14. Staff Deactivation Enforcement
+## 14. Staff Deactivation Enforcement ✅ SHIPPED
+
+Implemented in the Pointbunny app: `loadBusinessContext` checks `is_active` on every login and session restore and signs out deactivated staff with a clear message. In-app staff removal is now a soft delete (`is_active = false`) for joined staff, consistent with the admin panel. Original spec below for reference.
+
+---
 
 When an admin removes a staff member from the admin panel, that staff member's `is_active` flag is set to `false` in the `staff` table. The Pointbunny app needs to enforce this on every session restore or login.
 

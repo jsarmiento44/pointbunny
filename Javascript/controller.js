@@ -1219,6 +1219,7 @@ const initApp = async function (user, { isInviteAcceptance = false } = {}) {
     },
   });
   initAnalytics(user.id);
+  model.watchStaffDeactivation(_handleStaffDeactivated);
   _loadYesterdayComparison();
   _loadTransactionCounts();
   _loadServingComparison();
@@ -1436,7 +1437,7 @@ const controlSignIn = async function (email, password) {
     hideLoadingScreen();
     await supabase.auth.signOut();
     AuthView.show();
-    AuthView.showError('Something went wrong loading the app. Please try again.');
+    AuthView.showError(err.code === 'STAFF_DEACTIVATED' ? err.message : 'Something went wrong loading the app. Please try again.');
     return;
   }
   hideLoadingScreen();
@@ -1474,6 +1475,13 @@ const controlSignUp = async function ({ firstName, lastName, email, password }) 
     return;
   }
   AuthView.showCheckEmail(email);
+};
+
+const _handleStaffDeactivated = async function () {
+  // Flag survives the reload so the login screen can explain why they were kicked out
+  sessionStorage.setItem('pointbunny_deactivated', '1');
+  await supabase.auth.signOut();
+  window.location.reload();
 };
 
 const controlSignOut = async function () {
@@ -2112,10 +2120,15 @@ const controlInviteStaff = async function (data) {
   }
 
   try {
-    await model.inviteStaff(data);
+    const { reactivated } = await model.inviteStaff(data);
     StaffView.closeForm();
     StaffView.render(model.state.staff, _staffCanManage());
-    showToast('Invite sent!', 'success');
+    showToast(
+      reactivated
+        ? 'Staff member reactivated. They can sign in with their existing account.'
+        : 'Invite sent!',
+      'success'
+    );
   } catch (err) {
     showToast(err.message ?? err);
   }
@@ -3573,7 +3586,7 @@ const initAuth = async function () {
       hideLoadingScreen();
       await supabase.auth.signOut();
       AuthView.show();
-      AuthView.showError('Something went wrong. Please sign in again.');
+      AuthView.showError(err.code === 'STAFF_DEACTIVATED' ? err.message : 'Something went wrong. Please sign in again.');
       return;
     }
     hideLoadingScreen();
@@ -3582,6 +3595,10 @@ const initAuth = async function () {
     if (model.state.needsOnboarding) OnboardingView.show();
   } else {
     AuthView.show();
+    if (sessionStorage.getItem('pointbunny_deactivated')) {
+      sessionStorage.removeItem('pointbunny_deactivated');
+      AuthView.showError('Your account has been deactivated. Please contact your business owner.');
+    }
   }
 };
 

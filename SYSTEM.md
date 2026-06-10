@@ -1487,13 +1487,19 @@ User fills form and saves
   → controlInviteStaff({ firstName, lastName, email, roleId })
     → checks for duplicate email in state.staff
     → model.inviteStaff(data)
-        → supabase.from('staff').insert({ ..., status: 'pending' })
+        → checks for a soft-deleted row (same email, is_active = false):
+            found → UPDATE is_active = true + name + role_id  [reactivation - no invite email,
+                    they sign in with their existing account] → returns { reactivated: true }
+            none  → supabase.from('staff').insert({ ..., status: 'pending' })
+                    → invokes invite-staff Edge Function (sends email)
+                    → returns { reactivated: false }
         → pushes to state.staff
     → staffView.render(state.staff)
     → staffView.closeForm()
+    → toast: "Invite sent!" or "Staff member reactivated..."
 ```
 
-#### Remove Staff
+#### Remove Staff (soft delete)
 
 ```
 User clicks "Remove" (hidden for own record via isSelf)
@@ -1501,10 +1507,48 @@ User clicks "Remove" (hidden for own record via isSelf)
   → controlRemoveStaff(id)
     → shows confirm dialog
     → model.removeStaff(id)
-        → supabase.from('staff').delete()
-        → splices from state.staff
+        → pending invite (no user_id)? → hard DELETE  [no history to keep]
+        → joined staff? → UPDATE is_active = false  [soft delete - shifts, sales
+          attribution, and payroll history survive; matches admin panel behavior]
+        → splices from state.staff either way
     → staffView.render(state.staff)
 ```
+
+`model.loadStaff` filters on `is_active = true`, so soft-deleted staff disappear from the staff list and cashier picker. Timesheets still show their names because shifts store `staffName` denormalized.
+
+#### Deactivated Staff Login Block
+
+Both in-app removal and admin panel deactivation set `staff.is_active = false`. The check runs on every login and session restore:
+
+```
+initApp → model.loadBusinessContext(user)
+  → staff row found with is_active = false?
+    → throws Error with code 'STAFF_DEACTIVATED'
+  → controller catch (controlSignIn / initAuth session restore):
+    → supabase.auth.signOut()
+    → AuthView.showError('Your account has been deactivated. Please contact your business owner.')
+```
+
+The pending-invite claim query also filters `is_active = true`, so a deactivated pending row cannot be claimed via an old invite link. Deactivated staff are also blocked from the time clock page (`timeclock.js` login + session restore) and from authorizing manager overrides (`verifyOverrideCredentials`).
+
+#### Live Kick-Out (active sessions)
+
+Deactivation also ends sessions that are already open:
+
+```
+initApp → model.watchStaffDeactivation(_handleStaffDeactivated)
+  → supabase.channel('staff-active-{staffId}')
+      .on('postgres_changes', UPDATE on staff filtered id=eq.{staffId})
+  → payload.new.is_active === false?
+    → _handleStaffDeactivated (controller.js)
+      → sessionStorage.setItem('pointbunny_deactivated', '1')
+      → supabase.auth.signOut()
+      → window.location.reload()
+  → after reload, initAuth (no session branch) sees the flag
+    → AuthView.showError('Your account has been deactivated...')
+```
+
+Requires the `staff` table in the `supabase_realtime` publication (`alter publication supabase_realtime add table public.staff`). Realtime respects RLS, so each user only receives events for their own row. The time clock page does not have a live watcher - deactivated staff are caught there on their next sign-in or page load.
 
 #### Set / Change Staff PIN (owner-side)
 
@@ -1563,12 +1607,12 @@ Step 2 — Confirm PIN:
 | `staffView.showInviteForm(roles)` | staffView.js | Renders invite form with populated role selector (no PIN field — staff set their own) |
 | `_addHandlerSaveInvite(handler)` | staffView.js | Listens on `#inviteSaveBtn`, validates email format |
 | `staffView._getInviteData()` | staffView.js | Returns `{ firstName, lastName, email, roleId }` from form |
-| `controlInviteStaff(data)` | controller.js | Checks duplicate email, calls model, re-renders |
-| `model.inviteStaff(data)` | model.js | Inserts staff with `status: 'pending'` to DB (no PIN — staff set their own on first login) |
+| `controlInviteStaff(data)` | controller.js | Checks duplicate email, calls model, re-renders; toast differs for reactivation vs fresh invite |
+| `model.inviteStaff(data)` | model.js | Reactivates a soft-deleted row for the same email if one exists; otherwise inserts staff with `status: 'pending'` + sends invite email. Returns `{ reactivated }` |
 | `staffView.closeForm()` | staffView.js | Hides invite form modal |
 | `_addHandlerRemove(handler)` | staffView.js | Listens on `.staff-remove-btn` click |
 | `controlRemoveStaff(id)` | controller.js | Shows confirm dialog, calls model, re-renders |
-| `model.removeStaff(id)` | model.js | Deletes from DB, splices `state.staff` |
+| `model.removeStaff(id)` | model.js | Pending invite: hard delete. Joined staff: soft delete (`is_active = false`). Splices `state.staff` |
 | `_addHandlerSetPin(handler)` | staffView.js | Listens on `.staff-pin-btn`; shows inline 6-digit PIN modal, validates `^\d{6}$`, calls handler |
 | `controlSetStaffPin(staffId, pin)` | controller.js | Calls `model.setStaffPin`, re-renders staff list, shows success toast |
 | `model.setStaffPin(staffId, pin)` | model.js | Updates `staff.pin` in DB; updates `hasPin` on the matching `state.staff` entry |

@@ -131,10 +131,19 @@ const handleLogin = async () => {
 
   const { data: staffRow, error: staffError } = await supabase
     .from('staff')
-    .select('id, first_name, last_name, business_id, pin')
+    .select('id, first_name, last_name, business_id, pin, is_active')
     .eq('user_id', authData.user.id)
     .eq('business_id', biz.id)
     .maybeSingle();
+
+  if (staffRow && staffRow.is_active === false) {
+    $('tcLoginError').textContent = 'Your account has been deactivated. Please contact your business owner.';
+    show('tcLoginError');
+    await supabase.auth.signOut();
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+    return;
+  }
 
   if (staffError || !staffRow) {
     $('tcLoginError').textContent = 'Staff record not found for this business.';
@@ -631,6 +640,7 @@ const init = async () => {
         .select('id, first_name, last_name, business_id, pin')
         .eq('user_id', session.user.id)
         .eq('business_id', biz.id)
+        .eq('is_active', true)
         .maybeSingle();
 
       if (staffRow) {
