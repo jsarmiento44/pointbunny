@@ -666,20 +666,80 @@ const controlGenerateTimeclockToken = async function () {
   }
 };
 
-const controlSaveBusinessInfo = async function ({ name, email, phone, timezone }) {
+const controlSaveBusinessInfo = async function (data) {
+  _settingsOTPData    = data;
+  _settingsOTPSection = 'business';
   const btn = document.getElementById('saveBusinessInfoBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending code…'; }
   try {
-    await model.saveBusinessInfo({ name, email, phone, timezone });
-    SettingsView.showBusinessSaveStatus(true, 'Changes saved');
+    _settingsOTPEmail = await model.sendSettingsVerification();
+    SettingsView.showBusinessOTPStep(_settingsOTPEmail);
   } catch (err) {
-    SettingsView.showBusinessSaveStatus(false, err.message ?? 'Failed to save');
+    SettingsView.showBusinessSaveStatus(false, err.message ?? 'Failed to send verification code');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
   }
 };
 
+const controlSaveProfile = async function ({ firstName, lastName }) {
+  _settingsOTPData    = { firstName, lastName };
+  _settingsOTPSection = 'profile';
+  const btn = document.getElementById('saveProfileBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending code…'; }
+  try {
+    _settingsOTPEmail = await model.sendSettingsVerification();
+    SettingsView.showProfileOTPStep(_settingsOTPEmail);
+  } catch (err) {
+    SettingsView.showProfileSaveStatus(false, err.message ?? 'Failed to send verification code');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+  }
+};
+
+const controlVerifySettingsOTP = async function (token) {
+  const verifyBtnId = _settingsOTPSection === 'business' ? 'businessOtpVerifyBtn' : 'profileOtpVerifyBtn';
+  const verifyBtn = document.getElementById(verifyBtnId);
+  if (verifyBtn) { verifyBtn.disabled = true; verifyBtn.textContent = 'Verifying…'; }
+  try {
+    await model.confirmSettingsVerification(_settingsOTPEmail, token);
+    if (_settingsOTPSection === 'business') {
+      const { name, email, phone, timezone, address, city, state: stateVal, zip } = _settingsOTPData;
+      await model.saveBusinessInfo({ name, email, phone, timezone, addressStreet: address, addressCity: city, addressProvince: stateVal, addressZip: zip });
+      SettingsView.hideBusinessOTPStep();
+      SettingsView.showBusinessSaveStatus(true, 'Changes saved');
+    } else {
+      await model.saveProfileInfo(_settingsOTPData);
+      _updateCashierDisplay();
+      SettingsView.hideProfileOTPStep();
+      SettingsView.showProfileSaveStatus(true, 'Profile updated');
+    }
+    _settingsOTPEmail   = null;
+    _settingsOTPSection = null;
+    _settingsOTPData    = null;
+  } catch (err) {
+    const msg = err.message ?? 'Verification failed. Try again.';
+    if (_settingsOTPSection === 'business') SettingsView.showBusinessOTPError(msg);
+    else SettingsView.showProfileOTPError(msg);
+  }
+};
+
+const controlCancelSettingsOTP = function () {
+  if (_settingsOTPSection === 'business') SettingsView.hideBusinessOTPStep();
+  else if (_settingsOTPSection === 'profile') SettingsView.hideProfileOTPStep();
+  _settingsOTPEmail   = null;
+  _settingsOTPSection = null;
+  _settingsOTPData    = null;
+};
+
 const controlOpenSettings = function () {
+  _settingsOTPEmail   = null;
+  _settingsOTPSection = null;
+  _settingsOTPData    = null;
+  SettingsView.openWithRole(model.state.role);
+  SettingsView.syncProfileInfo({
+    firstName: model.state.currentStaff?.firstName ?? '',
+    lastName:  model.state.currentStaff?.lastName  ?? '',
+  });
   if (model.state.role === 'Admin') {
     const isOwner = model.state.userId === model.state.businessId;
     SettingsView.syncBusinessInfo({
@@ -709,7 +769,6 @@ const controlOpenSettings = function () {
     model.state.settings.kdsWindowSize,
     model.state.settings.cfdWindowSize,
   );
-  SettingsView.openWithRole(model.state.role);
 };
 
 const controlTogglePrinting = function (value) {
@@ -1168,6 +1227,9 @@ const initApp = async function (user, { isInviteAcceptance = false } = {}) {
 let _yesterdayTotal = null;
 let _todayTransactionCount = null;
 let _yesterdayTransactionCount = null;
+let _settingsOTPEmail   = null;
+let _settingsOTPSection = null;
+let _settingsOTPData    = null;
 
 const _updateYesterdayBadge = function (todayTotal) {
   const el = document.getElementById('salesVsYesterday');
@@ -3267,7 +3329,12 @@ const _wireApp = function () {
   SettingsView._addHandlerOpen(controlOpenSettings);
   SettingsView._addHandlerClose();
   SettingsView._addHandlerNavTabs();
+  SettingsView._addHandlerSaveProfile(controlSaveProfile);
   SettingsView._addHandlerSaveBusinessInfo(controlSaveBusinessInfo);
+  SettingsView._addHandlerVerifyBusinessOTP(controlVerifySettingsOTP);
+  SettingsView._addHandlerCancelBusinessOTP(controlCancelSettingsOTP);
+  SettingsView._addHandlerVerifyProfileOTP(controlVerifySettingsOTP);
+  SettingsView._addHandlerCancelProfileOTP(controlCancelSettingsOTP);
   SettingsView._addHandlerGenerateTimeclockToken(controlGenerateTimeclockToken);
   MenuListView._addHandlerAddCategory(controlAddCategoryFromSettings);
   MenuListView._addHandlerDeleteCategory(controlDeleteCategory);
