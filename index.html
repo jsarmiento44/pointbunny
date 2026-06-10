@@ -2134,7 +2134,7 @@
             <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px;line-height:1.45;">Create a password to activate your account. You can also set a PIN for the register.</p>
             <div class="auth-field">
               <label for="invitePassword">Create password</label>
-              <input type="password" id="invitePassword" placeholder="Min. 6 characters" required autocomplete="new-password" />
+              <input type="password" id="invitePassword" placeholder="8+ chars, uppercase + symbol" required autocomplete="new-password" />
             </div>
             <div class="auth-field">
               <label for="inviteConfirm">Confirm password</label>
@@ -2156,7 +2156,7 @@
               <input
                 type="password"
                 id="resetPassword"
-                placeholder="Min. 6 characters"
+                placeholder="8+ chars, uppercase + symbol"
                 required
                 autocomplete="new-password"
               />
@@ -2218,7 +2218,7 @@
                 <input
                   type="password"
                   id="signUpPassword"
-                  placeholder="Min. 6 characters"
+                  placeholder="8+ chars, uppercase + symbol"
                   required
                   autocomplete="new-password"
                 />
@@ -2502,6 +2502,9 @@
         <p id="onboardingError" class="auth-error"></p>
         <button type="button" id="onboardingNextBtn" class="btn primary auth-submit">Next</button>
         <button type="button" id="onboardingBackBtn" class="ob-back-btn hidden">Back</button>
+        <p class="auth-switch" style="text-align:center;margin-top:12px;font-size:0.8rem;">
+          <a href="#" id="onboardingExitLink">Sign out instead</a>
+        </p>
       </div>
     </div>
 

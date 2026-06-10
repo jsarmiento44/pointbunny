@@ -1459,7 +1459,10 @@ const controlSignUp = async function ({ firstName, lastName, email, password }) 
   });
   AuthView.setSignUpLoading(false);
   if (error) {
-    AuthView.showSignUpError(error.message);
+    const msg = /character of each|abcdefghijk/i.test(error.message)
+      ? 'Password must include uppercase, lowercase, a number, and a special character.'
+      : error.message;
+    AuthView.showSignUpError(msg);
     return;
   }
   // Supabase returns identities: [] (empty) when the email is already registered.
@@ -3519,6 +3522,11 @@ const initAuth = async function () {
   AuthView._addHandlerAcceptInvite(controlAcceptInvite);
   AuthView._addHandlerGoogleSignIn(controlGoogleSignIn);
   OnboardingView._addHandlerSubmit(controlOnboardingSubmit);
+  OnboardingView._addHandlerExit(async () => {
+    await supabase.auth.signOut();
+    OnboardingView.hide();
+    AuthView.show();
+  });
   document.getElementById('logoutBtn').addEventListener('click', controlSignOut);
 
   // OAuth error callback: Supabase redirects back with #error=... on failure

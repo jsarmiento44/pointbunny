@@ -172,6 +172,13 @@ class OnboardingView {
     return true;
   }
 
+  _addHandlerExit(handler) {
+    document.getElementById('onboardingExitLink')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      handler();
+    });
+  }
+
   _addHandlerSubmit(handler) {
     this._nextBtn.addEventListener('click', () => {
       this.clearError();

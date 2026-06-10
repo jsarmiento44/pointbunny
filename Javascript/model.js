@@ -175,6 +175,9 @@ export const loadBusinessContext = async function (user, { isInviteAcceptance = 
       hasPin:    !!staffRow.pin,
     };
   } else {
+    if (user.user_metadata?.is_staff) {
+      throw new Error('Staff account setup incomplete. Please contact your manager or try accepting your invite link again.');
+    }
     state.businessId   = user.id;
     state.role         = 'Admin';
     state.currentStaff = null;

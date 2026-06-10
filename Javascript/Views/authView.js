@@ -162,6 +162,17 @@ class AuthView {
     });
   }
 
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  _validatePassword(password) {
+    if (!password || password.length < 8) return 'Password must be at least 8 characters.';
+    if (!/[a-z]/.test(password)) return 'Password must include at least one lowercase letter.';
+    if (!/[A-Z]/.test(password)) return 'Password must include at least one uppercase letter.';
+    if (!/[0-9]/.test(password)) return 'Password must include at least one number.';
+    if (!/[^a-zA-Z0-9]/.test(password)) return 'Password must include at least one special character (e.g. !@#$%).';
+    return null;
+  }
+
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   showGoogleInAppError(url) {
@@ -203,7 +214,8 @@ class AuthView {
       if (!firstName)           { this._signUpErrorEl.textContent = 'Please enter your first name.'; return; }
       if (!lastName)            { this._signUpErrorEl.textContent = 'Please enter your last name.'; return; }
       if (!email)               { this._signUpErrorEl.textContent = 'Please enter your email.'; return; }
-      if (password.length < 6)  { this._signUpErrorEl.textContent = 'Password must be at least 6 characters.'; return; }
+      const pwErr = this._validatePassword(password);
+      if (pwErr)                 { this._signUpErrorEl.textContent = pwErr; return; }
       if (password !== confirm)  { this._signUpErrorEl.textContent = 'Passwords do not match.'; return; }
 
       handler({ firstName, lastName, email, password });
@@ -228,7 +240,8 @@ class AuthView {
       const confirm  = document.getElementById('inviteConfirm')?.value;
       const pin      = document.getElementById('invitePin')?.value.trim();
 
-      if (!password || password.length < 6) { this._inviteErrorEl.textContent = 'Password must be at least 6 characters.'; return; }
+      const pwErr = this._validatePassword(password);
+      if (pwErr)                             { this._inviteErrorEl.textContent = pwErr; return; }
       if (password !== confirm)              { this._inviteErrorEl.textContent = 'Passwords do not match.'; return; }
       if (!pin || !/^\d{6}$/.test(pin))      { this._inviteErrorEl.textContent = 'PIN must be exactly 6 digits.'; return; }
 
@@ -242,7 +255,8 @@ class AuthView {
       this._resetErrorEl.textContent = '';
       const password = document.getElementById('resetPassword')?.value;
       const confirm  = document.getElementById('resetConfirm')?.value;
-      if (!password || password.length < 6) { this._resetErrorEl.textContent = 'Password must be at least 6 characters.'; return; }
+      const pwErr = this._validatePassword(password);
+      if (pwErr)                             { this._resetErrorEl.textContent = pwErr; return; }
       if (password !== confirm)              { this._resetErrorEl.textContent = 'Passwords do not match.'; return; }
       handler(password);
     });

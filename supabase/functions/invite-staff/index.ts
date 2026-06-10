@@ -68,10 +68,11 @@ Deno.serve(async (req) => {
 
   const siteUrl = Deno.env.get('SITE_URL') ?? 'https://pointbunny.com'
 
-  const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+  const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
     data: {
       first_name: firstName ?? '',
       last_name:  lastName ?? '',
+      is_staff:   true,
     },
     redirectTo: siteUrl,
   })
@@ -88,6 +89,18 @@ Deno.serve(async (req) => {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
+  }
+
+  // Claim the pending staff row now using service role so the invited user can find it
+  // by user_id on first login. Without this, RLS blocks them from reading a row where
+  // user_id IS NULL, causing loadBusinessContext to fall through to _initBusiness.
+  if (inviteData?.user?.id) {
+    await supabaseAdmin
+      .from('staff')
+      .update({ user_id: inviteData.user.id })
+      .eq('email', email)
+      .eq('business_id', businessId)
+      .is('user_id', null)
   }
 
   return new Response(JSON.stringify({ success: true }), {

@@ -27,7 +27,13 @@ _Last updated: 2026-06-09_
 ### 🔴 Tier 1 — Ready to Build Now
 - [x] ~~**Staging environment**~~ ✅ shipped — `pointybunny-staging.netlify.app` live on `staging` branch. Branch protection on `main` (no force push, no deletion). Staging auto-deploys on push.
 - [x] ~~**First-login onboarding**~~ ✅ shipped — collects business name (required), phone (required), and address (optional). Detected via `businesses.name IS NULL`. Reappears on every login until completed.
-- [ ] **Social auth (Google, Microsoft, etc.)** — add OAuth sign-in buttons to the login form. Supabase supports Google, Microsoft, Apple, and others via `supabase.auth.signInWithOAuth({ provider: 'google' })`. Requires enabling each provider in Supabase → Authentication → Providers and adding redirect URLs (`https://pointbunny.com`). On first OAuth login, the first-login onboarding above should fire to collect business name + phone.
+- [x] ~~**Social auth (Google)**~~ ✅ shipped — "Continue with Google" button on login form. In-app browser detection shows "Open in browser" fallback. First-time Google users hit onboarding automatically.
+- [ ] **Publish Google OAuth app (removes Supabase URL from account picker)** — Right now Google's account picker shows `xrbuqwwgqwuelnqapdvj.supabase.co` instead of `pointbunny.com`. Fix by publishing the OAuth consent screen in Google Cloud Console:
+  1. Go to [Google Cloud Console](https://console.cloud.google.com) → **APIs & Services → OAuth consent screen**
+  2. The app is currently in **Testing** mode — click **Publish App**
+  3. Google will ask if your app needs verification. For a standard sign-in (no sensitive scopes beyond email/profile), you can publish without full verification — click **Confirm**
+  4. Once published, Google's account picker will show **pointbunny.com** instead of the Supabase URL
+  > Note: If you request sensitive scopes in the future (e.g. Google Drive, Calendar), Google will require a full verification review. Basic sign-in (email + profile) does not require it.
 - [x] ~~**Show admin replies inside a ticket**~~ ✅ shipped
 - [x] ~~**Clear unread badge when business opens ticket**~~ ✅ shipped
 - [x] ~~**Business can reply to tickets** (insert policy confirmed working)~~ ✅ shipped
