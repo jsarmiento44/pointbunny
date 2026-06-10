@@ -15,6 +15,32 @@ that the admin panel needs to know about. Add new entries at the top as features
 
 ---
 
+## [2026-06-10] Staff SELECT Policy Tightened — Cross-Business Read Closed (SQL required)
+
+The `authenticated can read all staff` SELECT policy on `staff` had `qual = true`, letting any logged-in user from any business read every staff row (emails, PINs, hourly rates). It existed so the invite-claim flow could find a pending staff row by email before `user_id` is set. Replaced with an email-scoped policy.
+
+### SQL that was run (Supabase SQL editor, 2026-06-10)
+
+```sql
+drop policy "authenticated can read all staff" on public.staff;
+
+create policy "read own staff row by email"
+on public.staff
+for select
+to authenticated
+using (lower(email) = lower(auth.email()));
+```
+
+`lower()` on both sides guards against any older staff row stored with mixed-case email. All other staff access paths are covered by the policies that remain: `owner manage staff` (owner), `staff read staff` (active staff of the same business via `get_my_business_id()`), and `self read own row` (`user_id = auth.uid()` - also what lets a deactivated staff member read their own row for the deactivation message and the realtime kick-out event).
+
+This closes follow-up #1 from the staff sales policy review entry below. Follow-up #2 (add `is_active` to the serve-time UPDATE policy on `sales`) is still open.
+
+### Admin panel impact
+
+None - the panel uses the service role key, which bypasses RLS. Listed for migration history.
+
+---
+
 ## [2026-06-10] Staff Data Access — RLS Policies for All Staff-Facing Tables (SQL required)
 
 Follow-up to the staff sales fix below. A full `pg_policies` review showed most app tables were owner-only: staff saw zero `menu_categories` (every menu item rendered as "Uncategorized"), could not read their `businesses` row (blank receipt header), could not redeem discount codes (usage-count UPDATE), and managers could not write menu items, categories, adjustments, discounts, or expenses.
@@ -100,7 +126,7 @@ None - the panel reads sales via the service role key (and the `admins` SELECT p
 
 ### Known follow-ups spotted in the same policy review (not yet fixed)
 
-1. **`staff` SELECT policy "authenticated can read all staff" has `qual = true`** - any authenticated user from ANY business can read every staff row, including emails and PINs. It likely exists so the invite-claim flow can find the pending row by email before `user_id` is set. Recommended replacement (test invite acceptance + timeclock + staff list after applying):
+1. ✅ **Fixed 2026-06-10** (see "Staff SELECT Policy Tightened" entry above) - **`staff` SELECT policy "authenticated can read all staff" has `qual = true`** - any authenticated user from ANY business can read every staff row, including emails and PINs. It likely exists so the invite-claim flow can find the pending row by email before `user_id` is set. Recommended replacement (test invite acceptance + timeclock + staff list after applying):
    ```sql
    drop policy "authenticated can read all staff" on public.staff;
    create policy "read own staff row by email"
