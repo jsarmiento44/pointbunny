@@ -207,6 +207,31 @@ Card-based kitchen display. Timer shows elapsed time; emojis added at thresholds
 
 ## Settings
 
+### Settings Tabs
+
+| Tab | ID | Visible to |
+|---|---|---|
+| My Profile | `profile` | All roles |
+| Business | `business` | Admin only |
+| POS | `pos` | All roles |
+| Order Queue Timers | `kds` | All roles |
+| Displays | `displays` | All roles |
+
+Non-admins default to the **Profile** tab on open. Admins default to **Business**.
+
+**Profile tab** — lets any user update their first and last name (writes to `staff.first_name` / `staff.last_name`). After save the cashier stat card re-renders via `_updateCashierDisplay()`.
+
+**Email OTP verification** — both Profile saves and Business Details saves require email verification before the write goes through:
+1. User fills form, clicks "Save Changes"
+2. `model.sendSettingsVerification()` calls `supabase.auth.signInWithOtp({ email, shouldCreateUser: false })` — sends a 6-digit code
+3. Save row hides; `.settings-otp-step` reveals (inline, not a modal)
+4. User enters code → `model.confirmSettingsVerification(email, token)` calls `supabase.auth.verifyOtp({ email, token, type: 'email' })`
+5. On success: actual DB write runs; save row restores
+
+**Phone pre-fill fix** — `controlOpenSettings` calls `SettingsView.openWithRole()` first (which initialises `_phoneIti`) before `syncBusinessInfo()` so the phone field is populated on first open.
+
+**Address fields bug fix** — `controlSaveBusinessInfo` now maps `address/city/state/zip` → `addressStreet/addressCity/addressProvince/addressZip` when calling `model.saveBusinessInfo`.
+
 Settings are persisted to `localStorage` and loaded into `model.state.settings` at startup.
 
 | Key | Default | Description |

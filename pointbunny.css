@@ -5814,6 +5814,40 @@ kbd {
 .settings-save-status--ok  { color: var(--brand-1); font-weight: 600; }
 .settings-save-status--err { color: #e55; }
 
+.settings-otp-step {
+  margin-top: 10px;
+  padding: 14px 16px;
+  background: var(--panel-soft);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.settings-otp-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.settings-otp-row input {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+  letter-spacing: 0.2em;
+  width: 150px;
+  flex-shrink: 0;
+}
+
+.settings-otp-row input:focus {
+  outline: none;
+  border-color: var(--brand-1);
+  box-shadow: 0 0 0 3px rgba(34,197,94,0.12);
+}
+
 @media (max-width: 640px) {
   .settings-modal-container {
     max-height: calc(100vh - 32px);

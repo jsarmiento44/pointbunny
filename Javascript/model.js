@@ -1403,3 +1403,33 @@ export const updatePassword = async function (newPassword) {
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw error;
 };
+
+export const sendSettingsVerification = async function () {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { error } = await supabase.auth.signInWithOtp({
+    email: user.email,
+    options: { shouldCreateUser: false },
+  });
+  if (error) throw error;
+  return user.email;
+};
+
+export const confirmSettingsVerification = async function (email, token) {
+  const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+  if (error) throw error;
+};
+
+export const saveProfileInfo = async function ({ firstName, lastName }) {
+  const { error } = await supabase
+    .from('staff')
+    .update({ first_name: firstName, last_name: lastName })
+    .eq('id', state.currentStaff.id);
+  if (error) throw error;
+  state.currentStaff.firstName = firstName;
+  state.currentStaff.lastName  = lastName;
+  if (state.currentCashier?.id === state.currentStaff.id) {
+    state.currentCashier.firstName = firstName;
+    state.currentCashier.lastName  = lastName;
+  }
+  state.username = `${firstName} ${lastName}`.trim() || state.username;
+};
