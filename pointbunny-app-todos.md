@@ -25,6 +25,8 @@ _Last updated: 2026-06-10_
 `_initBusiness` was passing `name: null` (hardcoded literal) instead of the `businessName` variable when upserting the `businesses` row. Fixed. New owner sign-up now completes successfully on first login.
 
 ### 🔴 Tier 1 — Ready to Build Now
+- [ ] **Security: tighten `staff` SELECT policy** — the `authenticated can read all staff` policy has `qual = true`, meaning any logged-in user from any business can read every staff row (emails, PINs, hourly rates). Replace with an `email = auth.email()` scoped policy (SQL drafted in `pointbunny-admin-updates.md`, 2026-06-10 entry). Must re-test invite acceptance, timeclock sign-in, and the staff list after applying.
+- [ ] **Security: add `is_active` to the serve-time UPDATE policy on `sales`** — deactivated staff sessions can still mark orders done / void sales until the realtime kick-out fires. SQL note in the same admin-updates entry.
 - [x] ~~**Staging environment**~~ ✅ shipped — `pointybunny-staging.netlify.app` live on `staging` branch. Branch protection on `main` (no force push, no deletion). Staging auto-deploys on push.
 - [x] ~~**First-login onboarding**~~ ✅ shipped — collects business name (required), phone (required), and address (optional). Detected via `businesses.name IS NULL`. Reappears on every login until completed.
 - [x] ~~**Social auth (Google)**~~ ✅ shipped — "Continue with Google" button on login form. In-app browser detection shows "Open in browser" fallback. First-time Google users hit onboarding automatically.

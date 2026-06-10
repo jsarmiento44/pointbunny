@@ -15,6 +15,60 @@ that the admin panel needs to know about. Add new entries at the top as features
 
 ---
 
+## [2026-06-10] Staff Sales Access — New RLS Policies on `sales` (SQL required)
+
+Discovered while testing staff deactivation: the `sales` table only had owner-scoped INSERT/SELECT policies (`auth.uid() = user_id`), so staff accounts (cashiers, managers) could never record a sale - they got a row-level security violation on checkout - and saw an empty order queue and $0 daily totals. This had gone unnoticed because all prior testing was done as the owner.
+
+### SQL that was run (Supabase SQL editor, 2026-06-10)
+
+```sql
+create policy "active staff can insert sales"
+on public.sales
+for insert
+to authenticated
+with check (
+  exists (
+    select 1 from public.staff
+    where staff.business_id = sales.user_id
+      and staff.user_id = auth.uid()
+      and staff.is_active
+  )
+);
+
+create policy "active staff can read sales"
+on public.sales
+for select
+to authenticated
+using (
+  exists (
+    select 1 from public.staff
+    where staff.business_id = sales.user_id
+      and staff.user_id = auth.uid()
+      and staff.is_active
+  )
+);
+```
+
+Both policies require `staff.is_active = true`, so deactivated staff lose sales access at the DB level, consistent with the deactivation enforcement shipped today.
+
+### Admin panel impact
+
+None - the panel reads sales via the service role key (and the `admins` SELECT policy), which is unaffected. Listed for migration history completeness.
+
+### Known follow-ups spotted in the same policy review (not yet fixed)
+
+1. **`staff` SELECT policy "authenticated can read all staff" has `qual = true`** - any authenticated user from ANY business can read every staff row, including emails and PINs. It likely exists so the invite-claim flow can find the pending row by email before `user_id` is set. Recommended replacement (test invite acceptance + timeclock + staff list after applying):
+   ```sql
+   drop policy "authenticated can read all staff" on public.staff;
+   create policy "read own staff row by email"
+   on public.staff for select to authenticated
+   using (email = auth.email());
+   ```
+   Legitimate access is still covered by the other policies: `owner manage staff` (owner), `staff read staff` (same business via `get_my_business_id()`), `self read own row`.
+2. **"App can record serve time on sales" UPDATE policy has no `is_active` check** - a deactivated staff session could still mark orders done or void sales until kicked. Low severity now that live kick-out exists; tighten by adding `AND staff.is_active` to its subquery when convenient.
+
+---
+
 ## [2026-06-10] Live Staff Deactivation Kick-Out — Realtime Publication Change (SQL required)
 
 The Pointbunny app now subscribes to Supabase Realtime (postgres_changes) on the logged-in user's `staff` row. The moment `is_active` flips to false, the app signs the user out and returns them to the login screen with a "deactivated" message - no page refresh needed. This closes the last gap from item 14: previously an already-open session kept access until the next page load.

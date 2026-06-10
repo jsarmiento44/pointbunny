@@ -239,12 +239,26 @@ message, created_at
 
 ## Security — Row Level Security (RLS)
 
-Every table has RLS enabled. The policy on every table follows the same pattern:
+Every table has RLS enabled. The base pattern on every table:
 
 ```sql
 -- Users can only select/insert/update/delete rows belonging to their business
 using (business_id = auth.uid())
 ```
+
+Tables that staff (non-owner) accounts touch carry additional membership policies that check the `staff` table, e.g. on `sales`:
+
+```sql
+-- Active staff can insert/read their business's sales
+exists (
+  select 1 from public.staff
+  where staff.business_id = sales.user_id
+    and staff.user_id = auth.uid()
+    and staff.is_active
+)
+```
+
+The `is_active` condition means deactivated staff lose data access at the DB level, not just in the UI.
 
 This means even if someone obtained another user's `business_id`, they could not read or modify that user's data — the database enforces it, not the application code. There is no way to bypass this from the client.
 
