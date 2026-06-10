@@ -305,25 +305,32 @@ User fills in: new password + mandatory 6-digit PIN
   → authView._addHandlerAcceptInvite
   → controlAcceptInvite({ password, pin })
     → model.updatePassword(password)  [sets their permanent password]
-    → initApp(user)
-        → model.loadBusinessContext(user)
-            → finds pending staff row by email (status = 'pending')
-            → claims it: UPDATE staff SET user_id = auth.uid(), status = 'active'
-            → skips _initBusiness (invited staff never create a business)
-        → model.setStaffPin(staffId, pin)
-    → app launches normally
+    → try { model.setStaffPin(pin) } catch { silent — _maybeShowPinSetup() handles it }
+    → initApp(user, { isInviteAcceptance: true })
+        → model.loadBusinessContext(user, { isInviteAcceptance: true })
+            → staff row lookup by user_id returns null (not yet claimed)
+            → email-based fallback: finds pending staff row where email = user.email AND user_id IS NULL
+            → claims it: UPDATE staff SET user_id = auth.uid(), joined_at = now()
+              (RLS policy "Staff can claim their own pending invite" permits this)
+            → skips _initBusiness — user.user_metadata.role === 'staff' guard prevents it
+    → app launches
+    → _maybeShowPinSetup() fires if PIN was not saved during invite form step
 ```
 
-**Key rule:** Invited staff ALWAYS skip `_initBusiness`. `loadBusinessContext` finds their pending row by email first; if found, it claims it and returns. `_initBusiness` only runs for brand-new owners with no staff row AND no pending invite.
+**Role metadata:** `inviteUserByEmail` sets `role: "staff"` in user metadata. `controlSignUp` sets `role: "owner"`. This metadata is the authoritative guard — staff with no staff row throw an error instead of accidentally creating a ghost business.
+
+**Key rule:** Invited staff ALWAYS skip `_initBusiness`. `loadBusinessContext` finds their pending row by email (when `isInviteAcceptance: true`); if found, it claims it. The `role === 'staff'` metadata guard is a safety net: if the email lookup also fails, `_initBusiness` is blocked and an error is thrown instead.
+
+**Edge Function role:** `invite-staff` only sends the invite email via `inviteUserByEmail`. It no longer claims `user_id` — the claim happens entirely in `loadBusinessContext` on the client using the RLS UPDATE policy.
 
 #### `_initBusiness(user)` — First-Login Business Setup
 
-Runs only for brand new owner accounts (no staff row found AND no pending invite found by email). Creates:
+Runs only for brand new owner accounts (`role !== 'staff'` AND no staff row found by `user_id`). Creates:
 1. `businesses` row (upsert by `id = user.id`) — `name` from `user.user_metadata.business_name || "First Last".trim() || user.email || 'My Business'`
 2. Three default roles: Admin, Manager, Cashier
-3. Owner `staff` row (status: `active`)
+3. Owner `staff` row
 
-Does NOT run for invited staff — they claim their pending row earlier in `loadBusinessContext`.
+Does NOT run for invited staff — blocked by `role === 'staff'` metadata guard in `loadBusinessContext`.
 
 #### Function Reference
 

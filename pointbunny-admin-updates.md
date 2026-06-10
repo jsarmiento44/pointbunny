@@ -15,6 +15,32 @@ that the admin panel needs to know about. Add new entries at the top as features
 
 ---
 
+## [2026-06-10] Staff Invite Claim — New RLS UPDATE Policy (no schema changes)
+
+No new tables or columns. One new RLS policy on the existing `staff` table.
+
+### SQL that was run
+
+```sql
+create policy "Staff can claim their own pending invite"
+on public.staff
+for update
+using (email = auth.email() and user_id is null)
+with check (user_id = auth.uid());
+```
+
+### What this does
+
+When an invited staff member accepts their invite link, `loadBusinessContext` (client-side) now claims the pending `staff` row itself. Previously the Edge Function tried to claim it server-side using the returned user ID, which was unreliable. The new policy allows a logged-in user to UPDATE a staff row where the email matches their auth email and `user_id` is still null — and they can only set `user_id` to their own UUID.
+
+The `invite-staff` Edge Function was simplified: it now only calls `inviteUserByEmail`. All claim logic was removed.
+
+### Admin panel impact
+
+None — admin panel uses the service role key and bypasses RLS. No queries change.
+
+---
+
 ## [2026-06-07] Forgot Password + Email Domain (no schema changes)
 
 No new tables or columns. Notes for admin panel awareness:

@@ -57,6 +57,10 @@ _Last updated: 2026-06-09_
 - [ ] **Free vs Paid feature differentiation** — gate certain features behind paid plan, show upgrade prompts for free users. Details TBD — awaiting spec.
 - [ ] **Subscription status via Stripe webhook** — webhook updates `businesses.subscription_status` (see item 3)
 - [ ] **Show subscription/billing info** in the Pointbunny app settings page
+- [ ] **Staff seat cap by tier** — limit the number of active staff members a business can have based on their subscription tier (e.g. free = 2 active staff, paid = unlimited). `staff.is_active = true` rows count against the cap. Block the invite flow if the limit is reached and show an upgrade prompt. Requires: `businesses.subscription_status` to be live (Stripe), a tier-to-seat-cap lookup, and the cap check in `controlInviteStaff` before the DB insert.
+
+### 🟡 Tier 2 (continued) — Roles & Permissions
+- [ ] **Custom roles and granular permissions** — owner can view, edit, and create roles from the Settings panel. Each role has a checklist of permissions (e.g. can void sales, can manage menu, can view reports, can invite staff). Currently roles are fixed (Admin/Manager/Cashier) with hardcoded permission checks. Implementation: add a `permissions` JSONB column to the `roles` table (may already exist — check schema), build a permissions editor UI in Settings, and replace hardcoded role-name checks throughout the app with `hasPermission(key)` helper reads. Schema change needed if `permissions` column doesn't exist.
 
 ### ⬛ Tier 4 — Needs PostHog Wired Up First
 - [ ] **Feature usage tracking** — capture button clicks for key features (see item 4)
@@ -64,7 +68,7 @@ _Last updated: 2026-06-09_
 - [ ] **Feature adoption tracking** — first-use events per feature (see item 4)
 
 ### 🟣 Tier 5 — Domain-Dependent (domain is now live: pointbunny.com — these are unblocked)
-- [x] ~~**Staff invitation emails**~~ ✅ shipped — owner invites staff via Staff panel → `inviteStaff()` creates a pending `staff` row (no `user_id`) + calls `invite-staff` Edge Function which sends invite email via Supabase Admin `inviteUserByEmail`. Staff clicks link → `#type=invite` hash detected → `inviteForm` shown (set password + 6-digit PIN). On submit: `updatePassword()` then `initApp` → `loadBusinessContext` finds pending row by email, claims it by writing `user_id`. See item 19.
+- [x] ~~**Staff invitation emails**~~ ✅ shipped — owner invites staff via Staff panel → `inviteStaff()` creates a pending `staff` row (no `user_id`) + calls `invite-staff` Edge Function which sends invite email via Supabase Admin `inviteUserByEmail` (sets `role: "staff"` metadata). Staff clicks link → `#type=invite` hash detected → `inviteForm` shown (set password + 6-digit PIN). On submit: `updatePassword()` then `initApp({ isInviteAcceptance: true })` → `loadBusinessContext` finds pending row by email and claims it via RLS UPDATE policy. Edge Function only sends email — claim is fully client-side.
 - [x] ~~**Forgot Password (Pointbunny app)**~~ ✅ shipped — see Tier 1 entry above.
 - [ ] **2FA (TOTP, not SMS)** — opt-in two-factor authentication for business owner accounts via authenticator app (Google Authenticator, Authy). Use Supabase's built-in MFA: `supabase.auth.mfa.enroll({ factorType: 'totp' })` returns a QR code URI → render it in Settings so the owner scans it once. On login, after password succeeds, call `supabase.auth.mfa.challenge()` + `supabase.auth.mfa.verify()` for the 6-digit code. No SMS/Twilio needed — free and more secure than SMS 2FA (no SIM-swap risk).
 - [x] ~~**Custom email sender domain**~~ ✅ shipped — Resend configured with `pointbunny.com` domain (DNS verified in Porkbun). Supabase SMTP set to `smtp.resend.com:465`. Branded HTML templates live for: Confirm Signup, Reset Password, Invite User (generic).
