@@ -673,7 +673,7 @@ const controlSaveBusinessInfo = async function (data) {
   if (btn) { btn.disabled = true; btn.textContent = 'Sending code…'; }
   try {
     _settingsOTPEmail = await model.sendSettingsVerification();
-    SettingsView.showBusinessOTPStep(_settingsOTPEmail);
+    SettingsView.showOTPModal(_settingsOTPEmail);
   } catch (err) {
     SettingsView.showBusinessSaveStatus(false, err.message ?? 'Failed to send verification code');
   } finally {
@@ -688,7 +688,7 @@ const controlSaveProfile = async function ({ firstName, lastName }) {
   if (btn) { btn.disabled = true; btn.textContent = 'Sending code…'; }
   try {
     _settingsOTPEmail = await model.sendSettingsVerification();
-    SettingsView.showProfileOTPStep(_settingsOTPEmail);
+    SettingsView.showOTPModal(_settingsOTPEmail);
   } catch (err) {
     SettingsView.showProfileSaveStatus(false, err.message ?? 'Failed to send verification code');
   } finally {
@@ -697,35 +697,29 @@ const controlSaveProfile = async function ({ firstName, lastName }) {
 };
 
 const controlVerifySettingsOTP = async function (token) {
-  const verifyBtnId = _settingsOTPSection === 'business' ? 'businessOtpVerifyBtn' : 'profileOtpVerifyBtn';
-  const verifyBtn = document.getElementById(verifyBtnId);
-  if (verifyBtn) { verifyBtn.disabled = true; verifyBtn.textContent = 'Verifying…'; }
   try {
     await model.confirmSettingsVerification(_settingsOTPEmail, token);
     if (_settingsOTPSection === 'business') {
       const { name, email, phone, timezone, address, city, state: stateVal, zip } = _settingsOTPData;
       await model.saveBusinessInfo({ name, email, phone, timezone, addressStreet: address, addressCity: city, addressProvince: stateVal, addressZip: zip });
-      SettingsView.hideBusinessOTPStep();
+      SettingsView.hideOTPModal();
       SettingsView.showBusinessSaveStatus(true, 'Changes saved');
     } else {
       await model.saveProfileInfo(_settingsOTPData);
       _updateCashierDisplay();
-      SettingsView.hideProfileOTPStep();
+      SettingsView.hideOTPModal();
       SettingsView.showProfileSaveStatus(true, 'Profile updated');
     }
     _settingsOTPEmail   = null;
     _settingsOTPSection = null;
     _settingsOTPData    = null;
   } catch (err) {
-    const msg = err.message ?? 'Verification failed. Try again.';
-    if (_settingsOTPSection === 'business') SettingsView.showBusinessOTPError(msg);
-    else SettingsView.showProfileOTPError(msg);
+    SettingsView.showOTPModalError(err.message ?? 'Verification failed. Try again.');
   }
 };
 
 const controlCancelSettingsOTP = function () {
-  if (_settingsOTPSection === 'business') SettingsView.hideBusinessOTPStep();
-  else if (_settingsOTPSection === 'profile') SettingsView.hideProfileOTPStep();
+  SettingsView.hideOTPModal();
   _settingsOTPEmail   = null;
   _settingsOTPSection = null;
   _settingsOTPData    = null;
@@ -3331,10 +3325,8 @@ const _wireApp = function () {
   SettingsView._addHandlerNavTabs();
   SettingsView._addHandlerSaveProfile(controlSaveProfile);
   SettingsView._addHandlerSaveBusinessInfo(controlSaveBusinessInfo);
-  SettingsView._addHandlerVerifyBusinessOTP(controlVerifySettingsOTP);
-  SettingsView._addHandlerCancelBusinessOTP(controlCancelSettingsOTP);
-  SettingsView._addHandlerVerifyProfileOTP(controlVerifySettingsOTP);
-  SettingsView._addHandlerCancelProfileOTP(controlCancelSettingsOTP);
+  SettingsView._addHandlerVerifyOTP(controlVerifySettingsOTP);
+  SettingsView._addHandlerCancelOTP(controlCancelSettingsOTP);
   SettingsView._addHandlerGenerateTimeclockToken(controlGenerateTimeclockToken);
   MenuListView._addHandlerAddCategory(controlAddCategoryFromSettings);
   MenuListView._addHandlerDeleteCategory(controlDeleteCategory);

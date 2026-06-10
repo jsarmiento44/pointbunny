@@ -134,18 +134,9 @@
                       <input type="text" id="settingsProfileLastName" placeholder="Last name" autocomplete="family-name" />
                     </div>
                   </div>
-                  <div class="settings-save-row" id="profileSaveRow">
+                  <div class="settings-save-row">
                     <span class="settings-save-status" id="profileSaveStatus"></span>
                     <button class="btn primary" id="saveProfileBtn" type="button">Save Changes</button>
-                  </div>
-                  <div class="settings-otp-step hidden" id="profileOtpStep">
-                    <p class="settings-section-hint" id="profileOtpHint">A 6-digit code was sent to your email.</p>
-                    <div class="settings-otp-row">
-                      <input type="text" id="profileOtpInput" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
-                      <button class="btn primary" id="profileOtpVerifyBtn" type="button">Verify &amp; Save</button>
-                      <button class="btn" id="profileOtpCancelBtn" type="button">Cancel</button>
-                    </div>
-                    <span class="settings-save-status settings-save-status--err" id="profileOtpError"></span>
                   </div>
                 </div>
               </div>
@@ -199,18 +190,9 @@
                     <p class="settings-section-hint" style="margin-top:6px">Used for all date &amp; time calculations — reports, cashflow, and daily totals.</p>
                   </div>
 
-                  <div class="settings-save-row" id="businessSaveRow">
+                  <div class="settings-save-row">
                     <span class="settings-save-status" id="businessSaveStatus"></span>
                     <button class="btn primary" id="saveBusinessInfoBtn" type="button">Save Changes</button>
-                  </div>
-                  <div class="settings-otp-step hidden" id="businessOtpStep">
-                    <p class="settings-section-hint" id="businessOtpHint">A 6-digit code was sent to your email.</p>
-                    <div class="settings-otp-row">
-                      <input type="text" id="businessOtpInput" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
-                      <button class="btn primary" id="businessOtpVerifyBtn" type="button">Verify &amp; Save</button>
-                      <button class="btn" id="businessOtpCancelBtn" type="button">Cancel</button>
-                    </div>
-                    <span class="settings-save-status settings-save-status--err" id="businessOtpError"></span>
                   </div>
                 </div>
 
@@ -2547,6 +2529,20 @@
             <p class="ticket-status-msg hidden" id="ticketStatusMsg"></p>
             <button type="button" class="btn primary" id="ticketSubmitBtn">Send Message</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings OTP verification modal -->
+    <div class="modal-backdrop hidden" id="settingsOTPModal" style="z-index:99999">
+      <div class="otp-modal-card">
+        <h3 class="otp-modal-title">Verify your identity</h3>
+        <p class="settings-section-hint" id="settingsOTPHint">A 6-digit code was sent to your email.</p>
+        <input class="otp-modal-input" type="text" id="settingsOTPInput" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
+        <span class="settings-save-status settings-save-status--err" id="settingsOTPError"></span>
+        <div class="otp-modal-actions">
+          <button class="btn" id="settingsOTPCancelBtn" type="button">Cancel</button>
+          <button class="btn primary" id="settingsOTPVerifyBtn" type="button">Verify &amp; Save</button>
         </div>
       </div>
     </div>

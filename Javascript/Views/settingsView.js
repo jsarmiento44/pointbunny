@@ -221,49 +221,26 @@ class SettingsView {
     if (success) setTimeout(() => { el.textContent = ''; el.className = 'settings-save-status'; }, 3000);
   }
 
-  // ── OTP verification steps ────────────────────────────────────────────────────
+  // ── OTP verification modal ────────────────────────────────────────────────────
 
-  showBusinessOTPStep(email) {
-    const hint = document.getElementById('businessOtpHint');
+  showOTPModal(email) {
+    const hint = document.getElementById('settingsOTPHint');
     if (hint) hint.textContent = `A 6-digit code was sent to ${email}.`;
-    document.getElementById('businessOtpError').textContent = '';
-    document.getElementById('businessOtpInput').value = '';
-    document.getElementById('businessSaveRow').classList.add('hidden');
-    document.getElementById('businessOtpStep').classList.remove('hidden');
-    setTimeout(() => document.getElementById('businessOtpInput')?.focus(), 50);
+    document.getElementById('settingsOTPError').textContent = '';
+    document.getElementById('settingsOTPInput').value = '';
+    document.getElementById('settingsOTPVerifyBtn').disabled = false;
+    document.getElementById('settingsOTPVerifyBtn').textContent = 'Verify & Save';
+    document.getElementById('settingsOTPModal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('settingsOTPInput')?.focus(), 100);
   }
 
-  hideBusinessOTPStep() {
-    document.getElementById('businessOtpStep').classList.add('hidden');
-    document.getElementById('businessSaveRow').classList.remove('hidden');
+  hideOTPModal() {
+    document.getElementById('settingsOTPModal').classList.add('hidden');
   }
 
-  showBusinessOTPError(msg) {
-    const el = document.getElementById('businessOtpError');
-    if (el) el.textContent = msg;
-    const btn = document.getElementById('businessOtpVerifyBtn');
-    if (btn) { btn.disabled = false; btn.textContent = 'Verify & Save'; }
-  }
-
-  showProfileOTPStep(email) {
-    const hint = document.getElementById('profileOtpHint');
-    if (hint) hint.textContent = `A 6-digit code was sent to ${email}.`;
-    document.getElementById('profileOtpError').textContent = '';
-    document.getElementById('profileOtpInput').value = '';
-    document.getElementById('profileSaveRow').classList.add('hidden');
-    document.getElementById('profileOtpStep').classList.remove('hidden');
-    setTimeout(() => document.getElementById('profileOtpInput')?.focus(), 50);
-  }
-
-  hideProfileOTPStep() {
-    document.getElementById('profileOtpStep').classList.add('hidden');
-    document.getElementById('profileSaveRow').classList.remove('hidden');
-  }
-
-  showProfileOTPError(msg) {
-    const el = document.getElementById('profileOtpError');
-    if (el) el.textContent = msg;
-    const btn = document.getElementById('profileOtpVerifyBtn');
+  showOTPModalError(msg) {
+    document.getElementById('settingsOTPError').textContent = msg;
+    const btn = document.getElementById('settingsOTPVerifyBtn');
     if (btn) { btn.disabled = false; btn.textContent = 'Verify & Save'; }
   }
 
@@ -277,34 +254,21 @@ class SettingsView {
     });
   }
 
-  _addHandlerVerifyBusinessOTP(handler) {
-    document.getElementById('businessOtpVerifyBtn')?.addEventListener('click', () => {
-      const token = document.getElementById('businessOtpInput')?.value.trim();
+  _addHandlerVerifyOTP(handler) {
+    document.getElementById('settingsOTPVerifyBtn')?.addEventListener('click', () => {
+      const token = document.getElementById('settingsOTPInput')?.value.trim();
       if (!token || !/^\d{6}$/.test(token)) {
-        document.getElementById('businessOtpError').textContent = 'Please enter the 6-digit code.';
+        document.getElementById('settingsOTPError').textContent = 'Please enter the 6-digit code.';
         return;
       }
+      const btn = document.getElementById('settingsOTPVerifyBtn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Verifying…'; }
       handler(token);
     });
   }
 
-  _addHandlerCancelBusinessOTP(handler) {
-    document.getElementById('businessOtpCancelBtn')?.addEventListener('click', () => handler());
-  }
-
-  _addHandlerVerifyProfileOTP(handler) {
-    document.getElementById('profileOtpVerifyBtn')?.addEventListener('click', () => {
-      const token = document.getElementById('profileOtpInput')?.value.trim();
-      if (!token || !/^\d{6}$/.test(token)) {
-        document.getElementById('profileOtpError').textContent = 'Please enter the 6-digit code.';
-        return;
-      }
-      handler(token);
-    });
-  }
-
-  _addHandlerCancelProfileOTP(handler) {
-    document.getElementById('profileOtpCancelBtn')?.addEventListener('click', () => handler());
+  _addHandlerCancelOTP(handler) {
+    document.getElementById('settingsOTPCancelBtn')?.addEventListener('click', () => handler());
   }
 
   // ── Open / Close ─────────────────────────────────────────────────────────────
@@ -324,10 +288,7 @@ class SettingsView {
   }
 
   _close() {
-    document.getElementById('businessOtpStep')?.classList.add('hidden');
-    document.getElementById('businessSaveRow')?.classList.remove('hidden');
-    document.getElementById('profileOtpStep')?.classList.add('hidden');
-    document.getElementById('profileSaveRow')?.classList.remove('hidden');
+    this.hideOTPModal();
     const inner = this._modal.querySelector(".modal-container");
     if (inner) inner.classList.add("modal-exiting");
     setTimeout(() => {
