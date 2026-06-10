@@ -1220,12 +1220,13 @@ export const setStaffPin = async function (staffId, pin) {
 };
 
 export const removeStaff = async function (id) {
-  const { error } = await supabase
+  const { error, count } = await supabase
     .from('staff')
-    .delete()
+    .delete({ count: 'exact' })
     .eq('id', id)
     .eq('business_id', state.businessId);
   if (error) throw error;
+  if (count === 0) throw new Error('Could not delete staff member. Please try again.');
   const idx = state.staff.findIndex((s) => s.id === id);
   if (idx !== -1) state.staff.splice(idx, 1);
 };
