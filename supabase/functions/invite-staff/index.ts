@@ -112,13 +112,34 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Claim the pending staff row now using service role so the invited user can find it
-  // by user_id on first login. Without this, RLS blocks them from reading a row where
-  // user_id IS NULL, causing loadBusinessContext to fall through to _initBusiness.
-  if (inviteData?.user?.id) {
+  // Claim the pending staff row so the invited user can find it by user_id on first login.
+  // inviteData.user.id is not always populated, so fall back to a direct REST lookup by email.
+  let authUserId: string | null = inviteData?.user?.id ?? null;
+
+  if (!authUserId) {
+    try {
+      const url = new URL(`${Deno.env.get("SUPABASE_URL")}/auth/v1/admin/users`);
+      url.searchParams.set("email", email);
+      const res = await fetch(url.toString(), {
+        headers: {
+          apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`,
+        },
+      });
+      if (res.ok) {
+        const body = await res.json();
+        const matched = (body?.users ?? []).find(
+          (u: { email: string }) => u.email === email
+        );
+        authUserId = matched?.id ?? null;
+      }
+    } catch (_) {}
+  }
+
+  if (authUserId) {
     await supabaseAdmin
       .from("staff")
-      .update({ user_id: inviteData.user.id })
+      .update({ user_id: authUserId })
       .eq("email", email)
       .eq("business_id", businessId)
       .is("user_id", null);
