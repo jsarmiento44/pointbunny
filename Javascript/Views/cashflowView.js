@@ -26,7 +26,7 @@ const fmtServing = (sale) => {
     const m = Math.floor(mins);
     const s = Math.round((mins - m) * 60);
     const dur = m > 0 ? `${m}m ${s}s` : `${s}s`;
-    return ` · <span class="cf-timeout-tag">⏱️ ${dur} — timed out</span>`;
+    return ` · <span class="cf-timeout-tag">⏱️ ${dur} (timed out)</span>`;
   }
   // Normal orders: only show if prepared_at is set and within sanity range
   if (!sale.prepared_at) return "";
@@ -46,7 +46,7 @@ const _servingLine = (sale) => {
     const m = Math.floor(mins);
     const s = Math.round((mins - m) * 60);
     const dur = m > 0 ? `${m}m ${s}s` : `${s}s`;
-    return `<p class="sr-serving sr-serving--timeout">⏱️ ${dur} — timed out</p>`;
+    return `<p class="sr-serving sr-serving--timeout">⏱️ ${dur} (timed out)</p>`;
   }
   if (!sale.prepared_at) return '';
   const mins = (new Date(sale.prepared_at) - new Date(sale.sale_date)) / 60000;
@@ -285,7 +285,7 @@ class CashflowView extends View {
       el.className = 'cf-heavy-notice';
       el.innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Loading a full year of data — this may take a few seconds…`;
+        Loading a full year of data. This may take a few seconds…`;
       this._parentElement.querySelector('.cashflow-period-bar')
         ?.insertAdjacentElement('afterend', el);
     } else if (!on && existing) {

@@ -1186,7 +1186,7 @@ export const updateStaffRole = async function (staffId, roleId) {
     .eq('id', staffId)
     .eq('business_id', state.businessId);
   if (error) throw error;
-  if (count === 0) throw new Error('Permission denied — check staff RLS update policy.');
+  if (count === 0) throw new Error('Permission denied. Check staff RLS update policy.');
   const role = state.roles.find(r => r.id === roleId);
   const s = state.staff.find(s => s.id === staffId);
   if (s && role) { s.roleId = roleId; s.role = role.name; }
@@ -1199,7 +1199,7 @@ export const setStaffPin = async function (staffId, pin) {
     .eq('id', staffId)
     .eq('business_id', state.businessId);
   if (error) throw error;
-  if (count === 0) throw new Error('Permission denied — check staff RLS update policy.');
+  if (count === 0) throw new Error('Permission denied. Check staff RLS update policy.');
   const s = state.staff.find(s => s.id === staffId);
   if (s) { s.pin = pin || null; s.hasPin = !!pin; }
 };

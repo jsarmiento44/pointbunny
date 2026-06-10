@@ -430,7 +430,7 @@ const _finaliseSale = async function (sale, note = null) {
   }).select('id').single();
   if (insertError) {
     if (insertError.code === '22003' || insertError.message?.includes('numeric field overflow')) {
-      throw new Error("That number doesn't look right — check the payment amount and try again.");
+      throw new Error("That number doesn't look right. Check the payment amount and try again.");
     }
     throw insertError;
   }
@@ -488,7 +488,7 @@ const controlConcludeTransaction = async function () {
     sale.ticketNumber = _generateTicketNumber();
 
     if (!model.state.settings.printingEnabled) {
-      await _finaliseSale(sale, 'Transaction saved — no receipt was printed. You can enable printing in Settings.');
+      await _finaliseSale(sale, 'Transaction saved. No receipt was printed. You can enable printing in Settings.');
       return;
     }
 
@@ -577,7 +577,7 @@ const controlOpenTicket = async function (ticketId) {
 const controlMarkTicketSolved = async function (ticketId) {
   if (!ticketId) return;
   const confirmed = confirm(
-    'Mark this ticket as solved?\n\nOnce solved it cannot be reopened — if the issue comes back you\'ll need to submit a new ticket.'
+    'Mark this ticket as solved?\n\nOnce solved it cannot be reopened. If the issue comes back you\'ll need to submit a new ticket.'
   );
   if (!confirmed) return;
   try {
@@ -1065,7 +1065,7 @@ const controlSwitchCashier = async function () {
     if (!chosen.hasPin) {
       model.state.currentCashier = chosen;
       _updateCashierDisplay();
-      showToast(`Switched to ${displayName} — set a PIN in Staff settings`, 'success');
+      showToast(`Switched to ${displayName}. Set a PIN in Staff settings.`, 'success');
       el.remove();
       return;
     }
@@ -1379,7 +1379,7 @@ const controlAcceptInvite = async function ({ password, pin }) {
           model.state.currentCashier.hasPin = true;
         }
       } catch {
-        showToast('Account set up! PIN could not be saved — set it in the Staff panel.', 'error');
+        showToast('Account set up! PIN could not be saved. Set it in the Staff panel.', 'error');
       }
     }
 
@@ -2825,8 +2825,8 @@ const _getAvgUnitSuffix = function (period) {
 
 const _getAvgTooltip = function (period, divisor) {
   const d = parseFloat(divisor.toFixed(1));
-  if (period === 'today')  return `Divided by hours elapsed today — not always 24 (currently ${d} hrs)`;
-  if (period === 'week')   return `Divided by days elapsed this week — not always 7 (currently ${d} days)`;
+  if (period === 'today')  return `Divided by hours elapsed today (not always 24, currently ${d} hrs)`;
+  if (period === 'week')   return `Divided by days elapsed this week (not always 7, currently ${d} days)`;
   if (period === 'month')  return `Divided by weeks elapsed this month (currently ${d} wks)`;
   if (period === 'year')   return `Divided by months elapsed this year (currently ${d} months)`;
   return `Divided by days in this range (${d} days)`;
@@ -2990,7 +2990,7 @@ const controlExportReportsPDF = function () {
 
     const cmpHtml = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/>
-<title>Pointbunny Comparison — ${esc(labelA)} vs ${esc(labelB)}</title>
+<title>Pointbunny Comparison: ${esc(labelA)} vs ${esc(labelB)}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -3126,7 +3126,7 @@ ${cmpChart ? `<div class="section-heading">Gross Income Over Time</div>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Pointbunny Report — ${esc(periodLabel)}</title>
+<title>Pointbunny Report: ${esc(periodLabel)}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}

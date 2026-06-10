@@ -128,11 +128,11 @@
                   <div class="settings-field-row">
                     <div class="settings-field">
                       <label for="settingsProfileFirstName">First name</label>
-                      <input type="text" id="settingsProfileFirstName" placeholder="—" autocomplete="given-name" readonly />
+                      <input type="text" id="settingsProfileFirstName" placeholder="" autocomplete="given-name" readonly />
                     </div>
                     <div class="settings-field">
                       <label for="settingsProfileLastName">Last name</label>
-                      <input type="text" id="settingsProfileLastName" placeholder="—" autocomplete="family-name" readonly />
+                      <input type="text" id="settingsProfileLastName" placeholder="" autocomplete="family-name" readonly />
                     </div>
                   </div>
                   <div class="settings-save-row hidden" id="profileSaveRow">
@@ -158,39 +158,39 @@
 
                   <div class="settings-field">
                     <label for="settingsBusinessName">Business name</label>
-                    <input type="text" id="settingsBusinessName" placeholder="—" autocomplete="organization" readonly />
+                    <input type="text" id="settingsBusinessName" placeholder="" autocomplete="organization" readonly />
                   </div>
                   <div class="settings-field">
                     <label for="settingsBusinessAddress">Street address</label>
-                    <input type="text" id="settingsBusinessAddress" placeholder="—" autocomplete="street-address" readonly />
+                    <input type="text" id="settingsBusinessAddress" placeholder="" autocomplete="street-address" readonly />
                   </div>
                   <div class="settings-field-row">
                     <div class="settings-field">
                       <label for="settingsBusinessCity">City</label>
-                      <input type="text" id="settingsBusinessCity" placeholder="—" autocomplete="address-level2" readonly />
+                      <input type="text" id="settingsBusinessCity" placeholder="" autocomplete="address-level2" readonly />
                     </div>
                     <div class="settings-field settings-field--narrow">
                       <label for="settingsBusinessState">State</label>
-                      <input type="text" id="settingsBusinessState" placeholder="—" autocomplete="address-level1" maxlength="30" readonly />
+                      <input type="text" id="settingsBusinessState" placeholder="" autocomplete="address-level1" maxlength="30" readonly />
                     </div>
                     <div class="settings-field settings-field--narrow">
                       <label for="settingsBusinessZip">ZIP</label>
-                      <input type="text" id="settingsBusinessZip" placeholder="—" autocomplete="postal-code" maxlength="10" readonly />
+                      <input type="text" id="settingsBusinessZip" placeholder="" autocomplete="postal-code" maxlength="10" readonly />
                     </div>
                   </div>
                   <div class="settings-field">
                     <label for="settingsBusinessEmail">Contact email</label>
-                    <input type="email" id="settingsBusinessEmail" placeholder="—" autocomplete="email" readonly />
+                    <input type="email" id="settingsBusinessEmail" placeholder="" autocomplete="email" readonly />
                   </div>
                   <div class="settings-field">
                     <label for="settingsBusinessPhoneNumber">Phone number</label>
-                    <input type="tel" id="settingsBusinessPhoneNumber" placeholder="—" autocomplete="tel" readonly />
+                    <input type="tel" id="settingsBusinessPhoneNumber" placeholder="" autocomplete="tel" readonly />
                   </div>
 
                   <div class="settings-field hidden" id="settingsTimezoneField">
                     <label for="settingsTimezone">Timezone</label>
                     <select id="settingsTimezone" class="settings-select" disabled></select>
-                    <p class="settings-section-hint" style="margin-top:6px">Used for all date &amp; time calculations — reports, cashflow, and daily totals.</p>
+                    <p class="settings-section-hint" style="margin-top:6px">Used for all date and time calculations: reports, cashflow, and daily totals.</p>
                   </div>
 
                   <div class="settings-save-row hidden" id="businessSaveRow">
@@ -200,7 +200,7 @@
                   </div>
                 </div>
 
-                <div class="settings-section" style="margin-top:16px">
+                <div class="settings-section">
                   <div class="settings-section-header">
                     <div>
                       <h3 class="settings-section-title">Time Clock Device</h3>
@@ -211,7 +211,7 @@
                     <li>Click <strong>Generate Code</strong> to create a 6-character activation code.</li>
                     <li>On the device you want to use, open <strong>timeclock.html</strong> (same URL as this app, different page).</li>
                     <li>Tap <strong>Activate Device</strong> on that page and enter the code. The device is now registered.</li>
-                    <li>Staff sign in with their <em>own</em> accounts — not the owner account — to clock in and out.</li>
+                    <li>Staff sign in with their <em>own</em> accounts, not the owner account, to clock in and out.</li>
                   </ol>
                   <div class="settings-toggle-row" style="margin-top:12px">
                     <div>
@@ -355,9 +355,9 @@
                   <p class="settings-section-hint" style="margin-bottom: 10px">Screen size for the queue window.</p>
                   <div class="display-size-row">
                     <select class="display-size-select" id="kdsWindowSizeSelect">
-                      <option value="1024x768">Tablet — 1024×768</option>
-                      <option value="1280x720">HD — 1280×720</option>
-                      <option value="1920x1080" selected>Full HD — 1920×1080</option>
+                      <option value="1024x768">Tablet (1024×768)</option>
+                      <option value="1280x720">HD (1280×720)</option>
+                      <option value="1920x1080" selected>Full HD (1920×1080)</option>
                       <option value="custom">Custom…</option>
                     </select>
                     <div class="display-custom-inputs hidden" id="kdsCustomSize">
@@ -373,9 +373,9 @@
                   <p class="settings-section-hint" style="margin-bottom: 10px">Screen size for the customer-facing window.</p>
                   <div class="display-size-row">
                     <select class="display-size-select" id="cfdWindowSizeSelect">
-                      <option value="1024x768">Tablet — 1024×768</option>
-                      <option value="1280x720">HD — 1280×720</option>
-                      <option value="1920x1080" selected>Full HD — 1920×1080</option>
+                      <option value="1024x768">Tablet (1024×768)</option>
+                      <option value="1280x720">HD (1280×720)</option>
+                      <option value="1920x1080" selected>Full HD (1920×1080)</option>
                       <option value="custom">Custom…</option>
                     </select>
                     <div class="display-custom-inputs hidden" id="cfdCustomSize">
@@ -488,7 +488,7 @@
                       <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
                     </svg>
                     <span class="file-upload-zone-main">Click to upload</span>
-                    <span class="file-upload-name">PNG or JPG — optional</span>
+                    <span class="file-upload-name">PNG or JPG (optional)</span>
                   </div>
                 </label>
 
@@ -753,7 +753,7 @@
             </article>
 
             <article class="home-shortcut-card home-shortcut-card--soon" tabindex="-1" aria-disabled="true">
-              <button class="home-shortcut-btn" disabled aria-label="Inventory — coming soon">
+              <button class="home-shortcut-btn" disabled aria-label="Inventory (coming soon)">
                 <span class="home-shortcut-icon" aria-hidden="true">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
@@ -1650,7 +1650,7 @@
 <div class="rp-kpi" data-metric="avgOrder" style="--metric-color: #f59e0b" role="button" tabindex="0" aria-pressed="false">
               <div class="rp-kpi-label-row">
                 <span class="rp-kpi-label">Avg. Order</span>
-                <button class="rp-info-btn" data-tip="Total period revenue ÷ total orders. Each order counts equally — not an average of daily averages, so it may differ from what you read off the chart." aria-label="Info" tabindex="-1">i</button>
+                <button class="rp-info-btn" data-tip="Total period revenue ÷ total orders. Each order counts equally, not an average of daily averages, so it may differ from what you read off the chart." aria-label="Info" tabindex="-1">i</button>
               </div>
               <span class="rp-kpi-val" id="reportsAvgOrder">$0.00</span>
               <span class="rp-kpi-cmp" id="reportsAvgCmp"></span>
@@ -1783,7 +1783,7 @@
                   <h3>Category Mix</h3>
                   <div class="rp-card-head-right">
                     <span class="rp-phase-badge" id="rpCategoryBadge">Loading…</span>
-                    <button class="rp-info-btn" data-tip="Revenue split by menu category — shows which categories drive the most sales." aria-label="Info" tabindex="-1">i</button>
+                    <button class="rp-info-btn" data-tip="Revenue split by menu category, showing which categories drive the most sales." aria-label="Info" tabindex="-1">i</button>
                   </div>
                 </div>
                 <div class="rp-ph rp-ph--donut" id="rpCategoryPh">
@@ -2390,10 +2390,10 @@
                 <option value="food_beverage">Food &amp; Beverage (Restaurant, Café, Food Stall)</option>
                 <option value="beauty_wellness">Beauty &amp; Wellness (Salon, Spa, Barbershop)</option>
                 <option value="health_medical">Health &amp; Medical (Clinic, Pharmacy)</option>
-                <option value="retail_fashion">Retail — Fashion &amp; Apparel</option>
-                <option value="retail_electronics">Retail — Electronics &amp; Gadgets</option>
-                <option value="retail_grocery">Retail — Grocery &amp; Convenience</option>
-                <option value="retail_home">Retail — Home &amp; Furniture</option>
+                <option value="retail_fashion">Retail: Fashion &amp; Apparel</option>
+                <option value="retail_electronics">Retail: Electronics &amp; Gadgets</option>
+                <option value="retail_grocery">Retail: Grocery &amp; Convenience</option>
+                <option value="retail_home">Retail: Home &amp; Furniture</option>
                 <option value="professional_services">Professional Services (Accounting, Legal)</option>
                 <option value="automotive">Automotive (Repair, Detailing)</option>
                 <option value="education">Education &amp; Training</option>
@@ -2421,7 +2421,7 @@
             <h2 class="ob-step-title">What's your business address?</h2>
             <div class="ob-callout">
               <span>📌</span>
-              <p>Even fully remote or online businesses must have a registered physical address. This appears on every receipt you issue and is required for tax compliance — it's what makes your receipts official.</p>
+              <p>Even fully remote or online businesses must have a registered physical address. This appears on every receipt you issue and is required for tax compliance, as it's what makes your receipts official.</p>
             </div>
             <div class="auth-field">
               <label for="onboardingStreet">Street Address</label>
@@ -2521,7 +2521,7 @@
             <textarea id="ticketMessage" rows="5" placeholder="Tell us more about your issue..."></textarea>
           </div>
           <div class="edit-field">
-            <label>Attachment <span class="support-field-hint">(optional — 1 image, max 5 MB)</span></label>
+            <label>Attachment <span class="support-field-hint">(optional, 1 image, max 5 MB)</span></label>
             <label class="ticket-upload-btn" for="ticketFiles">
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               Choose image

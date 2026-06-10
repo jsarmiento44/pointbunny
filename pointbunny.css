@@ -5951,6 +5951,9 @@ kbd {
   font-size: 0.83rem;
   color: var(--muted);
   margin: 0;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
 }
 
 .settings-steps-list {

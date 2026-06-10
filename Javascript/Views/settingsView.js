@@ -68,7 +68,7 @@ function _buildTzOptions(selectedTz) {
       }).format(now).replace(' ', 'T');
       const offsetMs = now.getTime() - new Date(dtStr + 'Z').getTime();
 
-      return { tz, label: `${city} — ${abbr} (${offset})`, offsetMs, selected: tz === selectedTz };
+      return { tz, label: `${city} (${abbr}, ${offset})`, offsetMs, selected: tz === selectedTz };
     })
     .sort((a, b) => a.offsetMs - b.offsetMs);
 }

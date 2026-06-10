@@ -330,7 +330,7 @@ class StaffView {
             Open Time Clock
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
           </div>
-          <div class="payroll-tc-desc">Staff use this page to clock in and out. Opens in a new tab — works on any tablet or shared device.</div>
+          <div class="payroll-tc-desc">Staff use this page to clock in and out. Opens in a new tab, works on any tablet or shared device.</div>
         </div>
       </div>
       <details class="payroll-info-card">
@@ -340,10 +340,10 @@ class StaffView {
           <svg class="payroll-info-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </summary>
         <ol class="payroll-info-steps">
-          <li><strong>Open Time Clock</strong> — Click the <em>Time Clock</em> button above to open the clock-in page in a new tab. This is the page staff use to clock in and out.</li>
-          <li><strong>Activate a device</strong> — On first use, the page asks for an activation code. Go to <strong>Settings → Business → Time Clock Device</strong>, click <em>Generate Code</em>, then enter that code on the device.</li>
-          <li><strong>Staff sign in</strong> — Each staff member logs in with their own account (not the POS owner account). They can clock in, take breaks, and clock out.</li>
-          <li><strong>Shifts appear here</strong> — Every clock-in/out is recorded as a shift. Use the period picker to browse history. Admins can also manually add or edit shifts with <em>+ Add Shift</em>.</li>
+          <li><strong>Open Time Clock:</strong> Click the <em>Time Clock</em> button above to open the clock-in page in a new tab. This is the page staff use to clock in and out.</li>
+          <li><strong>Activate a device:</strong> On first use, the page asks for an activation code. Go to <strong>Settings → Business → Time Clock Device</strong>, click <em>Generate Code</em>, then enter that code on the device.</li>
+          <li><strong>Staff sign in:</strong> Each staff member logs in with their own account (not the POS owner account). They can clock in, take breaks, and clock out.</li>
+          <li><strong>Shifts appear here:</strong> Every clock-in/out is recorded as a shift. Use the period picker to browse history. Admins can also manually add or edit shifts with <em>+ Add Shift</em>.</li>
         </ol>
       </details>
       <div class="payroll-period-bar">
@@ -542,7 +542,7 @@ class StaffView {
 
     function _roleDescription(name) {
       const map = {
-        Admin:   'Full access — manage staff, menu, sales, and settings.',
+        Admin:   'Full access: manage staff, menu, sales, and settings.',
         Manager: 'Manage menu and sales. Cannot change staff or settings.',
         Cashier: 'Process sales only.',
       };
