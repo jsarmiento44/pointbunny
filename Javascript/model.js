@@ -1171,12 +1171,17 @@ export const inviteStaff = async function ({ firstName, lastName, email, roleId 
     .select('id, first_name, last_name, email, is_active, joined_at, user_id, pin, roles(id, name)')
     .single();
   if (error) throw error;
-  state.staff.push(dbToStaff(data));
 
   const { error: fnError } = await supabase.functions.invoke('invite-staff', {
     body: { email: normalizedEmail, firstName, lastName, businessId: state.businessId },
   });
-  return { emailSent: !fnError, emailError: fnError?.message ?? null };
+
+  if (fnError) {
+    await supabase.from('staff').delete().eq('id', data.id);
+    throw new Error(`Invite email failed: ${fnError.message}. No staff member was added.`);
+  }
+
+  state.staff.push(dbToStaff(data));
 };
 
 export const updateStaffRole = async function (staffId, roleId) {

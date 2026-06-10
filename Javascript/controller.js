@@ -2095,16 +2095,10 @@ const controlInviteStaff = async function (data) {
   }
 
   try {
-    const { emailSent, emailError } = await model.inviteStaff(data);
+    await model.inviteStaff(data);
     StaffView.closeForm();
     StaffView.render(model.state.staff, _staffCanManage());
-    if (emailSent) {
-      showToast('Invite sent!', 'success');
-    } else if (emailError?.includes('confirmed Pointbunny account')) {
-      showToast(emailError, 'info');
-    } else {
-      showToast(`Staff added, but invite email failed: ${emailError}. Share the app link manually.`, 'error');
-    }
+    showToast('Invite sent!', 'success');
   } catch (err) {
     showToast(err.message ?? err);
   }
