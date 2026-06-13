@@ -15,6 +15,34 @@ that the admin panel needs to know about. Add new entries at the top as features
 
 ---
 
+## [2026-06-13] Tighten `sales` UPDATE Policy with `is_active` (SQL required)
+
+Closes follow-up #2 from the 2026-06-10 staff sales policy review. The `sales` UPDATE policy ("App can record serve time on sales") - which authorizes marking an order done (serve time) and voiding a sale - checked only that the caller was the owner or **any** staff of the business, with no `is_active` check. A deactivated staff session could therefore still mark orders done or void sales in the window between deactivation and the realtime kick-out (or if the realtime channel failed). The login lockout and live kick-out are session-level; this makes the database itself refuse the write, matching the `is_active` guard already on the `sales` INSERT/SELECT policies.
+
+### SQL that was run (Supabase SQL editor, 2026-06-13)
+
+```sql
+alter policy "App can record serve time on sales"
+on public.sales
+using (
+  (auth.uid() = user_id)
+  or (auth.uid() in (
+    select staff.user_id from public.staff
+    where staff.business_id = sales.user_id
+      and staff.user_id is not null
+      and staff.is_active
+  ))
+);
+```
+
+`ALTER POLICY` (not drop + recreate) was used so there is no window where the policy is absent on the live table. The owner clause (`auth.uid() = user_id`) is unchanged; active cashiers/managers are unaffected; only deactivated sessions are refused. `with_check` remains null (serve-time/void updates don't move a row to another business).
+
+### Admin panel impact
+
+None - the panel writes/reads `sales` via the service role key, which bypasses RLS. Listed for migration history completeness.
+
+---
+
 ## [2026-06-13] Single-Business Membership + Invite Claim Fix (SQL required)
 
 Fixes a bug where a staff member invited by more than one business (or removed and re-invited) got permanently stuck on "Staff account setup incomplete" and could never accept. Root cause: the client-side invite-claim looked up the pending `staff` row by email with `.maybeSingle()`, which errors when more than one pending row matches the email, so no row was ever claimed. We also formalized the rule that **a person belongs to one business at a time**.
@@ -110,7 +138,7 @@ using (lower(email) = lower(auth.email()));
 
 `lower()` on both sides guards against any older staff row stored with mixed-case email. All other staff access paths are covered by the policies that remain: `owner manage staff` (owner), `staff read staff` (active staff of the same business via `get_my_business_id()`), and `self read own row` (`user_id = auth.uid()` - also what lets a deactivated staff member read their own row for the deactivation message and the realtime kick-out event).
 
-This closes follow-up #1 from the staff sales policy review entry below. Follow-up #2 (add `is_active` to the serve-time UPDATE policy on `sales`) is still open.
+This closes follow-up #1 from the staff sales policy review entry below. Follow-up #2 (add `is_active` to the serve-time UPDATE policy on `sales`) was closed 2026-06-13 - see the entry at the top of this file.
 
 ### Admin panel impact
 
@@ -211,7 +239,7 @@ None - the panel reads sales via the service role key (and the `admins` SELECT p
    using (email = auth.email());
    ```
    Legitimate access is still covered by the other policies: `owner manage staff` (owner), `staff read staff` (same business via `get_my_business_id()`), `self read own row`.
-2. **"App can record serve time on sales" UPDATE policy has no `is_active` check** - a deactivated staff session could still mark orders done or void sales until kicked. Low severity now that live kick-out exists; tighten by adding `AND staff.is_active` to its subquery when convenient.
+2. ✅ **Fixed 2026-06-13** (see "Tighten `sales` UPDATE Policy with `is_active`" entry at the top) - **"App can record serve time on sales" UPDATE policy had no `is_active` check** - a deactivated staff session could still mark orders done or void sales until kicked. Tightened by adding `and staff.is_active` to its staff subquery via `ALTER POLICY`.
 
 ---
 
