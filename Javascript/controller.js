@@ -1363,7 +1363,17 @@ const controlOnboardingSubmit = async function ({ businessName, businessType, in
 const controlAcceptInvite = async function ({ password, pin }) {
   try {
     AuthView.setInviteLoading(true);
-    await model.updatePassword(password);
+    try {
+      await model.updatePassword(password);
+    } catch (pwErr) {
+      // On a retry after a partial acceptance the password may already be set to this
+      // value, so Supabase rejects it as "same as the old password". That is not a real
+      // failure on an invite - the account only needs its staff row claimed below. Any
+      // other error (weak password, etc.) is still surfaced.
+      if (!/different from the old|should be different|same.*password/i.test(pwErr.message ?? '')) {
+        throw pwErr;
+      }
+    }
 
     const { data: { user } } = await supabase.auth.getUser();
     showLoadingScreen();

@@ -305,13 +305,19 @@ User fills in: new password + mandatory 6-digit PIN
   → authView._addHandlerAcceptInvite
   → controlAcceptInvite({ password, pin })
     → model.updatePassword(password)  [sets their permanent password]
-    → try { model.setStaffPin(pin) } catch { silent — _maybeShowPinSetup() handles it }
-    → initApp(user, { isInviteAcceptance: true })
+        (tolerates "same as old password" — on a retry the password may already be set;
+         the account just still needs its staff row claimed, so we proceed instead of erroring)
+    → initApp(user, { isInviteAcceptance: true })  [claims the staff row — see below]
+    → after claim: try { model.setStaffPin(pin) } catch { silent — _maybeShowPinSetup() handles it }
         → model.loadBusinessContext(user, { isInviteAcceptance: true })
             → staff row lookup by user_id returns null (not yet claimed)
-            → email-based fallback: finds pending staff row where email = user.email AND user_id IS NULL
-            → claims it: UPDATE staff SET user_id = auth.uid(), joined_at = now()
+            → email-based fallback: fetches ALL pending staff rows where
+              email = user.email AND user_id IS NULL AND is_active (ordered by invited_at)
+            → claims the earliest one: UPDATE staff SET user_id = auth.uid(), joined_at = now()
               (RLS policy "Staff can claim their own pending invite" permits this)
+            → auto-clean: DELETEs any other pending rows for the same email
+              (single-membership: first business that invited them wins; RLS policy
+              "staff discard duplicate pending invites" permits this)
             → skips _initBusiness — user.user_metadata.role === 'staff' guard prevents it
     → app launches
     → _maybeShowPinSetup() fires if PIN was not saved during invite form step
@@ -1491,12 +1497,19 @@ User fills form and saves
   → controlInviteStaff({ firstName, lastName, email, roleId })
     → checks for duplicate email in state.staff
     → model.inviteStaff(data)
-        → checks for a soft-deleted row (same email, is_active = false):
-            found → UPDATE is_active = true + name + role_id  [reactivation - no invite email,
-                    they sign in with their existing account] → returns { reactivated: true }
-            none  → supabase.from('staff').insert({ ..., status: 'pending' })
-                    → invokes invite-staff Edge Function (sends email)
-                    → returns { reactivated: false }
+        → looks up an existing row for this email at THIS business (any is_active):
+            active + user_id set → throws "already on your team"
+        → invokes invite-staff Edge Function FIRST (before any DB write):
+            - enforces single-membership: rejects if the email is an active member of ANY
+              business (409 "already on your team" / "must be removed from that team first").
+              This cross-business check runs with the service role.
+            - sends the invite email unless sendInvite is false (reactivating an account
+              that already exists, who re-links by user_id and needs no email)
+            - on rejection, inviteStaff throws the message and writes no row (no orphan)
+        → on success:
+            existing soft-deleted/pending row → UPDATE is_active = true + name + role_id
+                (reactivation) → returns { reactivated: !was_active }
+            no existing row → INSERT pending row → returns { reactivated: false }
         → pushes to state.staff
     → staffView.render(state.staff)
     → staffView.closeForm()
@@ -1612,7 +1625,7 @@ Step 2 — Confirm PIN:
 | `_addHandlerSaveInvite(handler)` | staffView.js | Listens on `#inviteSaveBtn`, validates email format |
 | `staffView._getInviteData()` | staffView.js | Returns `{ firstName, lastName, email, roleId }` from form |
 | `controlInviteStaff(data)` | controller.js | Checks duplicate email, calls model, re-renders; toast differs for reactivation vs fresh invite |
-| `model.inviteStaff(data)` | model.js | Reactivates a soft-deleted row for the same email if one exists; otherwise inserts staff with `status: 'pending'` + sends invite email. Returns `{ reactivated }` |
+| `model.inviteStaff(data)` | model.js | Invokes the `invite-staff` Edge Function first (enforces single-business membership + sends email), then reactivates an existing same-email row or inserts a pending one. Returns `{ reactivated }` |
 | `staffView.closeForm()` | staffView.js | Hides invite form modal |
 | `_addHandlerRemove(handler)` | staffView.js | Listens on `.staff-remove-btn` click |
 | `controlRemoveStaff(id)` | controller.js | Shows confirm dialog, calls model, re-renders |

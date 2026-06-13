@@ -36,7 +36,8 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { email, firstName, lastName, businessId } = await req.json();
+  const { email, firstName, lastName, businessId, sendInvite = true } =
+    await req.json();
   if (!email || !businessId) {
     return new Response(
       JSON.stringify({ error: "Missing required fields: email, businessId" }),
@@ -78,10 +79,46 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Single-membership rule: a person belongs to one business at a time. If this email
+  // is already an active member of any business, block the invite. The owner can't see
+  // staff rows at other businesses (RLS), so this cross-business check must run with the
+  // service role here. An active member = a claimed row (user_id set) that is_active.
+  // Soft-deleted (removed) rows and unclaimed pending invites do not count, so a removed
+  // staff member can be re-invited and someone can hold pending invites before joining.
+  const normalizedEmail = String(email).toLowerCase().trim();
+  const { data: activeMemberships } = await supabaseAdmin
+    .from("staff")
+    .select("business_id")
+    .eq("email", normalizedEmail)
+    .not("user_id", "is", null)
+    .eq("is_active", true);
+
+  if (activeMemberships && activeMemberships.length > 0) {
+    const onThisTeam = activeMemberships.some((r) => r.business_id === businessId);
+    return new Response(
+      JSON.stringify({
+        error: onThisTeam
+          ? "This person is already on your team."
+          : "This email already belongs to another business's team. They must be removed from that team before they can join yours.",
+      }),
+      {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  // A reactivated member who already has an account does not need a fresh invite email.
+  if (!sendInvite) {
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const siteUrl = Deno.env.get("SITE_URL") ?? "https://pointbunny.com";
 
   const { error: inviteError } =
-    await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+    await supabaseAdmin.auth.admin.inviteUserByEmail(normalizedEmail, {
       data: {
         first_name: firstName ?? "",
         last_name: lastName ?? "",
@@ -91,14 +128,17 @@ Deno.serve(async (req) => {
     });
 
   if (inviteError) {
-    const alreadyExists = /already registered|already been invited/i.test(
-      inviteError.message,
-    );
+    // Supabase phrases this several ways ("already been registered", "already
+    // registered", "already been invited", code "email_exists"), so match loosely.
+    const alreadyExists =
+      /already.*(registered|invited)|email[_\s-]?exists/i.test(
+        inviteError.message,
+      );
     if (alreadyExists) {
       return new Response(
         JSON.stringify({
           error:
-            "This email already has a Pointbunny account. Ask them to log in and they will appear on your team.",
+            "This email already has a Pointbunny account, so a new invite can't be sent. If they were on another team, remove them there first; otherwise their existing account needs to be cleared before re-inviting.",
         }),
         {
           status: 409,

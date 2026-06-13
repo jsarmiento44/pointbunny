@@ -15,6 +15,59 @@ that the admin panel needs to know about. Add new entries at the top as features
 
 ---
 
+## [2026-06-13] Single-Business Membership + Invite Claim Fix (SQL required)
+
+Fixes a bug where a staff member invited by more than one business (or removed and re-invited) got permanently stuck on "Staff account setup incomplete" and could never accept. Root cause: the client-side invite-claim looked up the pending `staff` row by email with `.maybeSingle()`, which errors when more than one pending row matches the email, so no row was ever claimed. We also formalized the rule that **a person belongs to one business at a time**.
+
+### What changed in the app
+
+1. **Invite claim now handles multiple pending rows.** On invite acceptance the app fetches all pending rows (`user_id IS NULL`, `is_active = true`) for the email, claims the **earliest invited** one (`invited_at ASC`), and **deletes the rest**. This is the single-membership "first business wins" rule.
+2. **Block at invite time.** The `invite-staff` Edge Function now rejects an invite when the email is already an active member (`user_id` set and `is_active = true`) of **any** business - returning a clear message ("already on your team" if same business, "must be removed from that team first" if another). This cross-business check runs with the service role because the owner cannot read other businesses' staff rows under RLS.
+3. **Edge Function `sendInvite` flag.** Reactivating a previously-joined member (who already has an account) now skips the invite email and just re-links by `user_id`.
+4. **Edge Function "already registered" message fixed.** The regex that detects an existing-auth-account error from `inviteUserByEmail` did not match Supabase's actual wording ("already been registered"), so owners saw the raw DB error. Regex broadened and the message corrected (it no longer falsely promises the person will auto-join on next login).
+
+### SQL that must be run (Supabase SQL editor)
+
+```sql
+-- Lets a signed-in user discard their own leftover pending invites (auto-clean on claim).
+-- Scoped to rows matching their own email that nobody has claimed yet (user_id IS NULL),
+-- so it can never touch an active or claimed staff row.
+create policy "staff discard duplicate pending invites"
+on public.staff
+for delete
+to authenticated
+using (lower(email) = lower(auth.email()) and user_id is null);
+```
+
+### Edge Function deploy required
+
+The `invite-staff` function changed - redeploy it:
+
+```bash
+supabase functions deploy invite-staff
+```
+
+> Until redeployed, the cross-business invite block (#2) is inactive, but the claim fix (#1, client-side) already unblocks stuck staff with no deploy.
+
+### Cleaning up an already-stuck staff member
+
+If a staff member is already stuck with multiple pending rows, pick the business they should join, link their auth id, and remove the rest:
+
+```sql
+update public.staff
+set user_id = '<their auth user id>', joined_at = now()
+where id = '<the chosen pending staff row id>';
+
+delete from public.staff
+where lower(email) = lower('<their email>') and user_id is null;
+```
+
+### Admin panel impact
+
+None - the panel uses the service role key and bypasses RLS. Note for data interpretation: the app now enforces at most one active (`user_id` set, `is_active = true`) staff row per email across all businesses. Leftover pending invites for an email are auto-deleted once that person joins a business.
+
+---
+
 ## [2026-06-10] Staff SELECT Policy Tightened — Cross-Business Read Closed (SQL required)
 
 The `authenticated can read all staff` SELECT policy on `staff` had `qual = true`, letting any logged-in user from any business read every staff row (emails, PINs, hourly rates). It existed so the invite-claim flow could find a pending staff row by email before `user_id` is set. Replaced with an email-scoped policy.

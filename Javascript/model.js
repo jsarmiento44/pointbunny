@@ -155,20 +155,32 @@ export const loadBusinessContext = async function (user, { isInviteAcceptance = 
   // Skipping this for normal sign-in/sign-up prevents a person who owns their own business
   // from being silently enrolled as staff at another business that invited their email.
   if (!staffRow && isInviteAcceptance) {
-    const { data: pendingRow } = await supabase
+    // A person can hold pending invites from more than one business at once. Per the
+    // single-membership rule they join the first business that invited them; any other
+    // pending invites for their email are discarded so they cannot pile up (those
+    // businesses can only re-invite after this person is removed from their team).
+    // Note: we fetch all matches and pick one rather than using .maybeSingle(), which
+    // errors out when more than one pending row matches and leaves the user unclaimed.
+    const { data: pendingRows } = await supabase
       .from('staff')
       .select('id, business_id, first_name, last_name, email, pin, roles(name)')
       .eq('email', user.email)
       .is('user_id', null)
       .eq('is_active', true)
-      .maybeSingle();
+      .order('invited_at', { ascending: true });
 
-    if (pendingRow) {
+    if (pendingRows && pendingRows.length) {
+      const claim = pendingRows[0];
       await supabase
         .from('staff')
         .update({ user_id: user.id, joined_at: new Date().toISOString() })
-        .eq('id', pendingRow.id);
-      staffRow = pendingRow;
+        .eq('id', claim.id);
+
+      const duplicates = pendingRows.slice(1).map((r) => r.id);
+      if (duplicates.length) {
+        await supabase.from('staff').delete().in('id', duplicates);
+      }
+      staffRow = claim;
     }
   }
 
@@ -1204,26 +1216,62 @@ export const loadRoles = async function () {
 export const inviteStaff = async function ({ firstName, lastName, email, roleId }) {
   const normalizedEmail = email.toLowerCase().trim();
 
-  // A previously removed (soft-deleted) staff member is reactivated instead of
-  // inserted again - their auth account and history still exist.
-  const { data: inactiveRow } = await supabase
+  // An existing row for this email at THIS business (one invite per email per business):
+  // a soft-deleted member to reactivate, or a still-pending invite to refresh.
+  const { data: existingRow } = await supabase
     .from('staff')
-    .select('id, user_id')
+    .select('id, user_id, is_active')
     .eq('business_id', state.businessId)
     .eq('email', normalizedEmail)
-    .eq('is_active', false)
     .maybeSingle();
 
-  if (inactiveRow) {
-    const { data: reactivated, error: reError } = await supabase
+  if (existingRow?.is_active && existingRow.user_id) {
+    throw new Error('This person is already on your team.');
+  }
+
+  // A re-invite of someone who already has a working account (previously joined here,
+  // then removed) needs no email - they sign in with their existing credentials and
+  // their staff row is re-linked by user_id. Everyone else gets an invite email.
+  const sendInvite = !(existingRow && existingRow.user_id);
+
+  // The single-membership rule is enforced server-side: the Edge Function uses the
+  // service role, which can see staff rows across every business (RLS hides them from
+  // the owner). It rejects the invite when this email is already an active member of
+  // another business, and sends the invite email when sendInvite is true. We call it
+  // before writing any row so a rejection leaves no orphaned pending row behind.
+  const { error: fnError } = await supabase.functions.invoke('invite-staff', {
+    body: { email: normalizedEmail, firstName, lastName, businessId: state.businessId, sendInvite },
+  });
+
+  if (fnError) {
+    let detail = fnError.message;
+    try {
+      if (fnError.context instanceof Response) {
+        const body = await fnError.context.json();
+        if (body?.error) detail = body.error;
+      }
+    } catch {}
+    // Reactivating an account that already exists: an older Edge Function build (before
+    // the sendInvite flag) always tries inviteUserByEmail and responds "already has a
+    // Pointbunny account". For a re-link that is the expected state, so proceed. The
+    // cross-business membership block carries a different message and still throws.
+    const alreadyRegistered = /already has a Pointbunny account|already (registered|been invited)/i.test(detail);
+    if (!(sendInvite === false && alreadyRegistered)) {
+      throw new Error(detail);
+    }
+  }
+
+  if (existingRow) {
+    const { data: updated, error: upError } = await supabase
       .from('staff')
       .update({ is_active: true, first_name: firstName, last_name: lastName, role_id: roleId })
-      .eq('id', inactiveRow.id)
+      .eq('id', existingRow.id)
       .select('id, first_name, last_name, email, is_active, joined_at, user_id, pin, hourly_rate, roles(id, name)')
       .single();
-    if (reError) throw reError;
-    state.staff.push(dbToStaff(reactivated));
-    return { reactivated: true };
+    if (upError) throw upError;
+    state.staff = state.staff.filter((s) => s.id !== updated.id);
+    state.staff.push(dbToStaff(updated));
+    return { reactivated: !existingRow.is_active };
   }
 
   const { data, error } = await supabase
@@ -1236,25 +1284,9 @@ export const inviteStaff = async function ({ firstName, lastName, email, roleId 
       role_id:     roleId,
       invited_at:  new Date().toISOString(),
     })
-    .select('id, first_name, last_name, email, is_active, joined_at, user_id, pin, roles(id, name)')
+    .select('id, first_name, last_name, email, is_active, joined_at, user_id, pin, hourly_rate, roles(id, name)')
     .single();
   if (error) throw error;
-
-  const { error: fnError } = await supabase.functions.invoke('invite-staff', {
-    body: { email: normalizedEmail, firstName, lastName, businessId: state.businessId },
-  });
-
-  if (fnError) {
-    await supabase.from('staff').delete().eq('id', data.id);
-    let detail = fnError.message;
-    try {
-      if (fnError.context instanceof Response) {
-        const body = await fnError.context.json();
-        if (body?.error) detail = body.error;
-      }
-    } catch {}
-    throw new Error(`Invite failed: ${detail}`);
-  }
 
   state.staff.push(dbToStaff(data));
   return { reactivated: false };
