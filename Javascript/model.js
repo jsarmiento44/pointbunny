@@ -225,7 +225,16 @@ export const loadBusinessContext = async function (user, { isInviteAcceptance = 
 
   if (staffRow) {
     state.businessId   = staffRow.business_id;
-    state.role         = staffRow.roles?.name ?? 'Admin';
+    // Fail SAFE, not loud: if the role join can't be read (e.g. an RLS hiccup on the
+    // roles table) we must not silently escalate a staff member to Admin. The owner
+    // (their auth id == the business id) is the only account that defaults to Admin;
+    // any other unreadable role drops to least-privilege so access is never granted
+    // by accident. A null role name here is also a signal the roles RLS is misbehaving.
+    const _isOwnerAccount = user.id === staffRow.business_id;
+    if (!staffRow.roles?.name) {
+      console.warn('[pointbunny] staff role name could not be read; defaulting role. Check roles RLS / get_my_business_id().');
+    }
+    state.role         = staffRow.roles?.name ?? (_isOwnerAccount ? 'Admin' : 'Cashier');
     state.currentStaff = {
       id:        staffRow.id,
       firstName: staffRow.first_name,

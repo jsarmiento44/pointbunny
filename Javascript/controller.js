@@ -3589,9 +3589,12 @@ const _wireApp = function () {
   DiscountView._addHandlerAdjToggle(controlToggleAdjustment);
 
   // Dashboard stat cards double as Reports shortcuts. The number stays visible to
-  // everyone, but the click-through to Reports is silently inert without view_reports
-  // (the card's clickable affordance is also stripped in _applyPermissionGates).
-  const _openReportsIfAllowed = (section) => { if (model.hasPermission('view_reports')) controlOpenReports(section); };
+  // everyone; clicking through to Reports shows a "no access" message for anyone
+  // without view_reports (controlOpenReports also enforces this as a backstop).
+  const _openReportsIfAllowed = (section) => {
+    if (model.hasPermission('view_reports')) controlOpenReports(section);
+    else showToast("You don't have access to reports.", 'error');
+  };
 
   // Today's Sales stat card → open Reports on Sales section
   const salesStatCard = document.querySelector(".home-sales-stat");

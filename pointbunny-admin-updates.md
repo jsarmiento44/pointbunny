@@ -15,6 +15,38 @@ that the admin panel needs to know about. Add new entries at the top as features
 
 ---
 
+## [2026-06-13] Fix Missing `menu_items` Staff RLS Policies (SQL required)
+
+Discovered while testing the app as a cashier: `menu_items` had **only owner-scoped policies** (`auth.uid() = user_id` for select/insert/update/delete) and no staff-scoped policies. As a result, no staff member (cashier or manager) could read the menu - the catalogue came back empty and cashiers could not take orders. `menu_categories` had its `staff read/insert/delete` policies from the 2026-06-10 migration, but the equivalent `menu_items` policies were never actually present on the table (the 2026-06-10 entry claims they were added; they were not). This adds them, matching the `menu_categories` pattern.
+
+### SQL that must be run (Supabase SQL editor)
+
+```sql
+create policy "staff read menu_items" on public.menu_items
+  for select to authenticated using (user_id = get_my_business_id());
+
+create policy "staff insert menu_items" on public.menu_items
+  for insert to authenticated with check (user_id = get_my_business_id());
+
+create policy "staff update menu_items" on public.menu_items
+  for update to authenticated using (user_id = get_my_business_id());
+
+create policy "staff delete menu_items" on public.menu_items
+  for delete to authenticated using (user_id = get_my_business_id());
+```
+
+Writes are membership-scoped (any active staff of the business passes at the DB layer); the app UI restricts editing to `manage_menu` holders (manager+) via `hasPermission`. This matches the "membership-scoped, not role-scoped" design noted in the 2026-06-10 entry. `get_my_business_id()` is `security definer` and returns the caller's `business_id` only when their staff row is `is_active`, so deactivated staff get nothing.
+
+### Related client fix (no SQL)
+
+`loadBusinessContext` previously did `state.role = staffRow.roles?.name ?? 'Admin'` - if the role could not be read it silently escalated the user to Admin. Changed to fail safe: only the owner account (`auth id == business id`) defaults to Admin; any other unreadable role drops to `Cashier` (least privilege) plus a console warning.
+
+### Admin panel impact
+
+None - the panel uses the service role key and bypasses RLS. Listed for migration history and because the admin panel team's 2026-06-10 record incorrectly shows `menu_items` staff policies as already applied.
+
+---
+
 ## [2026-06-13] Tighten `sales` UPDATE Policy with `is_active` (SQL required)
 
 Closes follow-up #2 from the 2026-06-10 staff sales policy review. The `sales` UPDATE policy ("App can record serve time on sales") - which authorizes marking an order done (serve time) and voiding a sale - checked only that the caller was the owner or **any** staff of the business, with no `is_active` check. A deactivated staff session could therefore still mark orders done or void sales in the window between deactivation and the realtime kick-out (or if the realtime channel failed). The login lockout and live kick-out are session-level; this makes the database itself refuse the write, matching the `is_active` guard already on the `sales` INSERT/SELECT policies.
