@@ -137,19 +137,21 @@ const _initBusiness = async function (user) {
 export const loadBusinessContext = async function (user, { isInviteAcceptance = false } = {}) {
   state.userId = user.id;
 
-  let { data: staffRow } = await supabase
+  // A person's account can be tied to more than one staff row: at most one ACTIVE row
+  // (their current business) plus any number of soft-deleted historical rows from
+  // businesses they were removed from. We pick the active one. .maybeSingle() can't be
+  // used here - it errors when an old deactivated row coexists with a new active row
+  // (which happens after someone is removed from one business and joins another).
+  const { data: ownRows } = await supabase
     .from('staff')
     .select('id, business_id, first_name, last_name, email, pin, is_active, roles(name)')
-    .eq('user_id', user.id)
-    .maybeSingle();
+    .eq('user_id', user.id);
 
-  // Honors removal from the Staff panel (soft delete) and deactivation from the
-  // admin panel - both set is_active = false. Checked on login and session restore.
-  if (staffRow && staffRow.is_active === false) {
-    const err = new Error('Your account has been deactivated. Please contact your business owner.');
-    err.code = 'STAFF_DEACTIVATED';
-    throw err;
-  }
+  let staffRow = (ownRows ?? []).find((r) => r.is_active) ?? null;
+  // True when the account has only deactivated rows: removed from every business they
+  // joined. This is a genuine lockout UNLESS a fresh pending invite is waiting (handled
+  // in the else branch below, which takes precedence so a removed staffer can re-join).
+  const removedFromAll = !staffRow && (ownRows ?? []).length > 0;
 
   // Only claim a pending invite row when the user explicitly came through the invite link.
   // Skipping this for normal sign-in/sign-up prevents a person who owns their own business
@@ -230,6 +232,15 @@ export const loadBusinessContext = async function (user, { isInviteAcceptance = 
         err.code = 'PENDING_INVITE_CONSENT';
         throw err;
       }
+    }
+
+    // No active membership and no pending invite to accept. If the account previously
+    // belonged to a business and was removed/deactivated, that is a genuine lockout - do
+    // not fall through to _initBusiness (which would spawn a ghost business for them).
+    if (removedFromAll) {
+      const err = new Error('Your account has been deactivated. Please contact your business owner.');
+      err.code = 'STAFF_DEACTIVATED';
+      throw err;
     }
 
     if (user.user_metadata?.role === 'staff') {

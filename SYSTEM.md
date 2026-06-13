@@ -1572,14 +1572,21 @@ Both in-app removal and admin panel deactivation set `staff.is_active = false`. 
 
 ```
 initApp → model.loadBusinessContext(user)
-  → staff row found with is_active = false?
-    → throws Error with code 'STAFF_DEACTIVATED'
+  → fetch ALL staff rows for this user_id (not .maybeSingle - an account can have an old
+    deactivated row from a business it left PLUS a new active row from one it joined)
+  → staffRow = the active row, if any
+  → no active row, but ALL rows are deactivated (removedFromAll)?
+    → first check for a pending invite from another business (the consent lookup below).
+      A fresh invite takes PRECEDENCE so a removed staffer can re-join elsewhere.
+    → only if there is no pending invite → throws Error with code 'STAFF_DEACTIVATED'
   → controller catch (controlSignIn / initAuth session restore):
     → supabase.auth.signOut()
     → AuthView.showError('Your account has been deactivated. Please contact your business owner.')
 ```
 
-The pending-invite claim query also filters `is_active = true`, so a deactivated pending row cannot be claimed via an old invite link. Deactivated staff are also blocked from the time clock page (`timeclock.js` login + session restore) and from authorizing manager overrides (`verifyOverrideCredentials`).
+**Why all rows, not `.maybeSingle()`:** once someone is removed from business A (soft delete: their A row stays with `user_id` set, `is_active = false`) and later joins business B (their B row gets `user_id` set, active), the account has two rows keyed to the same `user_id`. `.maybeSingle()` errors on that, and an unconditional "is_active === false" guard on the first row would lock the person out of B and hide any fresh invite. So login now picks the active row and only reports deactivation when there is no active membership AND no pending invite to accept.
+
+The pending-invite claim query also filters `is_active = true`, so a deactivated pending row cannot be claimed via an old invite link. Deactivated staff are also blocked from the time clock page (`timeclock.js` login + session restore - scoped by `business_id`, so per-business) and from authorizing manager overrides (`verifyOverrideCredentials`).
 
 #### Live Kick-Out (active sessions)
 
