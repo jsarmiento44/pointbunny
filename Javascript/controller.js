@@ -62,6 +62,7 @@ const hideLoadingScreen = function () {
 
 //to add edit/delete option
 const controlMenuList = async function () {
+  if (!model.hasPermission('manage_menu')) { showToast("You don't have access to the catalogue.", 'error'); return; }
   try {
     const state = model.state;
     MenuListView.render(state);
@@ -741,7 +742,7 @@ const controlOpenSettings = function () {
     firstName: model.state.currentStaff?.firstName ?? '',
     lastName:  model.state.currentStaff?.lastName  ?? '',
   });
-  if (model.state.role === 'Admin') {
+  if (model.hasPermission('manage_business')) {
     const isOwner = model.state.userId === model.state.businessId;
     SettingsView.syncBusinessInfo({
       name:     model.state.businessName            ?? '',
@@ -1190,9 +1191,14 @@ const initApp = async function (user, { isInviteAcceptance = false } = {}) {
   localStorage.setItem('pointbunny_business_id', model.state.businessId);
   document.body.classList.remove('role-admin', 'role-manager', 'role-cashier');
   document.body.classList.add(`role-${model.state.role.toLowerCase()}`);
+  _applyPermissionGates();
+  if (sessionStorage.getItem('pointbunny_role_changed')) {
+    sessionStorage.removeItem('pointbunny_role_changed');
+    setTimeout(() => showToast(`Your role is now ${model.state.role}.`, 'info'), 600);
+  }
   if (model.state.currentStaff) model.state.currentCashier = model.state.currentStaff;
   _updateCashierDisplay();
-  if (model.state.role === 'Admin') model.loadBusinessProfile().catch(() => {});
+  if (model.hasPermission('manage_business')) model.loadBusinessProfile().catch(() => {});
 
   // All queries are independent after businessId is set — run in parallel
   // instead of 7 sequential round trips (was ~1.4s, now takes as long as the slowest one)
@@ -1219,7 +1225,7 @@ const initApp = async function (user, { isInviteAcceptance = false } = {}) {
     },
   });
   initAnalytics(user.id);
-  model.watchStaffDeactivation(_handleStaffDeactivated);
+  model.watchStaffDeactivation(_handleStaffDeactivated, _handleStaffRoleChanged);
   _loadYesterdayComparison();
   _loadTransactionCounts();
   _loadServingComparison();
@@ -1530,6 +1536,19 @@ const _handleStaffDeactivated = async function () {
   window.location.reload();
 };
 
+// An owner changed this logged-in user's role. We keep them signed in but force a
+// clean reload so initApp re-reads the new role and re-applies permission gating
+// (hot-swapping role in already-rendered UI is error-prone). The flag lets us
+// confirm with a toast after the reload.
+let _roleChangeReloadPending = false;
+const _handleStaffRoleChanged = function () {
+  if (_roleChangeReloadPending) return;
+  _roleChangeReloadPending = true;
+  sessionStorage.setItem('pointbunny_role_changed', '1');
+  showToast('Your access level was updated. Reloading…', 'info');
+  setTimeout(() => window.location.reload(), 1400);
+};
+
 const controlSignOut = async function () {
   const sweepEl = document.createElement('div');
   sweepEl.className = 'app-exit-sweep';
@@ -1615,7 +1634,7 @@ const _cashflowSummary = () => {
   return { gross, expenses, net: gross - expenses };
 };
 
-const _cashflowCanEdit = () => modelState.role === 'Admin' || modelState.role === 'Manager';
+const _cashflowCanEdit = () => model.hasPermission('manage_cashflow');
 
 // ── Cashflow period cache ─────────────────────────────────────────────────────
 // Stores fetched results per period key so switching periods doesn't re-fetch.
@@ -1625,7 +1644,52 @@ const _cashflowCache = new Map();
 const _cfCacheKey = (period, from, to) =>
   period === 'custom' ? `custom:${from}:${to}` : period;
 const _clearCashflowCache = () => _cashflowCache.clear();
-const _staffCanManage  = () => modelState.role === 'Admin';
+const _staffCanManage  = () => model.hasPermission('manage_staff');
+
+// Applies role-based gating to the static DOM after login. Two mechanisms:
+//   [data-perm="key"]         → hidden entirely when the role lacks the capability
+//                               (nav into areas the role can't enter)
+//   [data-perm-disable="key"] → kept visible but disabled + a "no access" title
+//                               (controls inside a panel the role can partly use)
+// This is cosmetic UX only; every open handler re-checks hasPermission and RLS
+// enforces at the database. Re-run after injecting gated markup at runtime.
+const _ROLE_RANK = { Cashier: 1, Manager: 2, Admin: 3 };
+const _applyPermissionGates = function (root = document) {
+  root.querySelectorAll('[data-perm]').forEach((el) => {
+    el.classList.toggle('perm-hidden', !model.hasPermission(el.dataset.perm));
+  });
+  // Legacy tier gate for the few settings/display toggles that don't map to a named
+  // capability (e.g. the customer-display ad image, manager+). Hidden when the
+  // current role ranks below the element's minimum role.
+  root.querySelectorAll('[data-min-role]').forEach((el) => {
+    const need = _ROLE_RANK[el.dataset.minRole.charAt(0).toUpperCase() + el.dataset.minRole.slice(1)] ?? 99;
+    const have = _ROLE_RANK[model.state.role] ?? 0;
+    el.classList.toggle('perm-hidden', have < need);
+  });
+  root.querySelectorAll('[data-perm-disable]').forEach((el) => {
+    const denied = !model.hasPermission(el.dataset.permDisable);
+    el.classList.toggle('perm-disabled', denied);
+    el.setAttribute('aria-disabled', String(denied));
+    if (el.matches('button, input, select, textarea, fieldset')) el.disabled = denied;
+    if (denied && el.dataset.permMsg) el.title = el.dataset.permMsg;
+  });
+  // Elements that stay visible but lose their click-through action without the
+  // capability (e.g. dashboard stat cards that shortcut into Reports). We strip the
+  // interactive affordance so they no longer look clickable; the bound listener is
+  // already a no-op without the permission.
+  root.querySelectorAll('[data-perm-action]').forEach((el) => {
+    const denied = !model.hasPermission(el.dataset.permAction);
+    el.classList.toggle('perm-inert', denied);
+    if (denied) {
+      el.removeAttribute('role');
+      el.removeAttribute('tabindex');
+      el.removeAttribute('title');
+    } else {
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+    }
+  });
+};
 
 let _currentReportsPeriod = { period: 'today' };
 let _currentPrevTotals = null;
@@ -1649,6 +1713,7 @@ const _renderCashflowLists = () => {
 };
 
 const controlOpenCashflow = async function () {
+  if (!model.hasPermission('manage_cashflow')) { showToast("You don't have access to activity.", 'error'); return; }
   CashflowView.open(_cashflowCanEdit());
   CashflowView.renderLoading();
   CashflowView.setLoading(true);
@@ -1786,7 +1851,7 @@ const controlVoidTransaction = function (id) {
     catch (err) { showToast(err.message ?? err); }
   };
 
-  if (_cashflowCanEdit()) {
+  if (model.hasPermission('void_sale')) {
     CashflowView.showConfirmModal({
       message: 'Void this transaction? It will be removed from reports and the active queue. This cannot be undone.',
       confirmLabel: 'Void',
@@ -1923,6 +1988,7 @@ const controlDeleteExpense = async function (id) {
 // ── Discounts ─────────────────────────────────────────────────────────────────
 
 const controlOpenDiscounts = function () {
+  if (!model.hasPermission('manage_adjustments')) { showToast("You don't have access to adjustments.", 'error'); return; }
   DiscountView.open();
   DiscountView.render(model.state.discountCodes);
   DiscountView.renderAdjustments(model.state.settings.adjustments);
@@ -1998,6 +2064,7 @@ const controlRemovePromoCode = function () {
 // ── Staff ─────────────────────────────────────────────────────────────────────
 
 const controlOpenStaff = async function () {
+  if (!model.hasPermission('manage_staff')) { showToast("You don't have access to staff.", 'error'); return; }
   try {
     StaffView.open(_staffCanManage());
     await Promise.all([model.loadStaff(), model.loadRoles()]);
@@ -2222,7 +2289,7 @@ const controlFetchTimesheets = async function (type, value) {
     _tsType  = type;
     _tsValue = resolvedValue;
     await model.fetchShifts(startISO, endISO);
-    const canEdit = model.state.role === 'Admin' || model.state.userId === model.state.businessId;
+    const canEdit = model.hasPermission('manage_pay');
     StaffView.renderTimesheets(model.state.shifts, model.state.staff, canEdit, { type, value: resolvedValue, label });
   } catch (err) {
     showToast(err.message ?? 'Failed to load timesheets');
@@ -2230,8 +2297,7 @@ const controlFetchTimesheets = async function (type, value) {
 };
 
 const controlSaveShift = async function (data) {
-  const canEdit = model.state.role === 'Admin' || model.state.userId === model.state.businessId;
-  if (!canEdit) { showToast('Only admins can edit shifts.', 'error'); return; }
+  if (!model.hasPermission('manage_pay')) { showToast('Only admins can edit shifts.', 'error'); return; }
   try {
     if (data.id) {
       await model.updateShift(data);
@@ -2246,8 +2312,7 @@ const controlSaveShift = async function (data) {
 };
 
 const controlSaveHourlyRate = async function (staffId, rate) {
-  const canEdit = model.state.role === 'Admin' || model.state.userId === model.state.businessId;
-  if (!canEdit) { showToast('Only admins can edit pay rates.', 'error'); return; }
+  if (!model.hasPermission('manage_pay')) { showToast('Only admins can edit pay rates.', 'error'); return; }
   try {
     const parsed = rate === '' ? null : parseFloat(rate);
     if (parsed !== null && (isNaN(parsed) || parsed < 0)) { showToast('Enter a valid hourly rate.', 'error'); return; }
@@ -3348,6 +3413,7 @@ const _renderReportsData = async function (period, startISO, endISO, label, prev
 };
 
 const controlOpenReports = async function (section = "overview") {
+  if (!model.hasPermission('view_reports')) { showToast("You don't have access to reports.", 'error'); return; }
   ReportsView.open();
   ReportsView.preloadChart(); // eagerly start compiling the chart.js chunk while data fetches
   ReportsView.renderLoading();
@@ -3522,25 +3588,30 @@ const _wireApp = function () {
   DiscountView._addHandlerAdjDelete(controlDeleteAdjustment);
   DiscountView._addHandlerAdjToggle(controlToggleAdjustment);
 
+  // Dashboard stat cards double as Reports shortcuts. The number stays visible to
+  // everyone, but the click-through to Reports is silently inert without view_reports
+  // (the card's clickable affordance is also stripped in _applyPermissionGates).
+  const _openReportsIfAllowed = (section) => { if (model.hasPermission('view_reports')) controlOpenReports(section); };
+
   // Today's Sales stat card → open Reports on Sales section
   const salesStatCard = document.querySelector(".home-sales-stat");
   if (salesStatCard) {
-    salesStatCard.addEventListener("click", () => controlOpenReports("sales"));
-    salesStatCard.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); controlOpenReports("sales"); } });
+    salesStatCard.addEventListener("click", () => _openReportsIfAllowed("sales"));
+    salesStatCard.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); _openReportsIfAllowed("sales"); } });
   }
 
   // Transactions stat card → open Reports on Traffic section
   const transactionsCard = document.querySelector("#transactionsCard");
   if (transactionsCard) {
-    transactionsCard.addEventListener("click", () => controlOpenReports("traffic"));
-    transactionsCard.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); controlOpenReports("traffic"); } });
+    transactionsCard.addEventListener("click", () => _openReportsIfAllowed("traffic"));
+    transactionsCard.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); _openReportsIfAllowed("traffic"); } });
   }
 
   // Avg. Serving stat → open Reports on Kitchen section
   const servingStatEl = document.querySelector(".home-dash-stat--serving");
   if (servingStatEl) {
-    servingStatEl.addEventListener("click", () => controlOpenReports("kitchen"));
-    servingStatEl.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); controlOpenReports("kitchen"); } });
+    servingStatEl.addEventListener("click", () => _openReportsIfAllowed("kitchen"));
+    servingStatEl.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); _openReportsIfAllowed("kitchen"); } });
   }
 
   // Reports

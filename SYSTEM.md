@@ -22,6 +22,7 @@
    - [5.9 Cashflow & Reporting](#59-cashflow--reporting)
    - [5.10 Discount Code Management](#510-discount-code-management)
    - [5.11 Staff Management](#511-staff-management)
+   - [5.11b Role-Based Access Control (Permissions)](#511b-role-based-access-control-permissions)
    - [5.12 Cashier Switcher](#512-cashier-switcher)
    - [5.13 Kitchen Display System (KDS)](#513-kitchen-display-system-kds)
    - [5.14 Customer Facing Display (CFD)](#514-customer-facing-display-cfd)
@@ -1676,6 +1677,38 @@ Step 2 — Confirm PIN:
 | `_maybeShowPinSetup()` | controller.js | Full-screen mandatory PIN creation overlay for staff with no PIN; skips if owner or PIN already set |
 | `_addHandlerClose(handler)` | staffView.js | Listens on `.staff-back` click and backdrop click |
 | `controlCloseStaff()` | controller.js | Animates panel close |
+
+---
+
+### 5.11b Role-Based Access Control (Permissions)
+
+Gating is driven by a single capability map in `model.js`, not scattered `role === 'Admin'` checks. This is also the foundation for the planned custom-roles feature (`roles.permissions` JSONB): the same capability keys become owner-selectable per role.
+
+**Source of truth (`model.js`):**
+- `ALL_PERMISSIONS` - the full capability key list
+- `ROLE_PERMISSIONS` - `{ Cashier: [...], Manager: [...], Admin: [...all] }`
+- `hasPermission(key)` - true if `state.role` grants `key`; unknown roles fall back to the Cashier (least-privileged) set
+
+**Capability → role matrix:**
+
+| Capability | Cashier | Manager | Admin |
+|---|---|---|---|
+| `take_orders`, `view_catalogue` | ✅ | ✅ | ✅ |
+| `manage_menu`, `manage_adjustments`, `manage_discounts`, `view_reports`, `manage_cashflow`, `void_sale` | ❌ | ✅ | ✅ |
+| `manage_pay`, `manage_staff`, `manage_business` | ❌ | ❌ | ✅ |
+
+> `view_catalogue` is exercised through the New Order item picker; the standalone Catalogue shortcut is menu *management* and maps to `manage_menu`.
+
+**Two-layer enforcement (UI gating is cosmetic; RLS + runtime checks are the real guard):**
+
+1. **UI gating** - `_applyPermissionGates()` (controller.js) runs in `initApp()` after the role is known, and walks the static DOM:
+   - `[data-perm="key"]` → adds `.perm-hidden` (display:none) when the role lacks `key`. Used on nav into forbidden areas (Catalogue, Adjustments, Staff, Reports card, Activity/Cashflow, Business settings).
+   - `[data-perm-disable="key"]` → adds `.perm-disabled` + sets `disabled`/`aria-disabled` and an optional `data-perm-msg` title. For controls inside a panel a role can partly use.
+   - `[data-perm-action="key"]` → adds `.perm-inert` and strips `role`/`tabindex`/`title` so the element stays visible but no longer looks clickable. Used on the home dashboard stat cards, which display today's numbers to everyone but only shortcut into Reports for `view_reports` holders.
+   - `[data-min-role="manager|admin"]` → legacy tier fallback (role-rank compare) for the few display/settings toggles that don't map to a named capability (e.g. the customer-display ad image).
+2. **Runtime backstops** - every panel opener re-checks `hasPermission` and bails with a toast: `controlMenuList` (`manage_menu`), `controlOpenCashflow` (`manage_cashflow`), `controlOpenDiscounts` (`manage_adjustments`), `controlOpenStaff` (`manage_staff`), `controlOpenReports` (`view_reports`). Void uses `void_sale`; shift/pay edits use `manage_pay`.
+
+**Live role propagation:** an owner changing a logged-in user's role takes effect immediately, not just on next login. `watchStaffDeactivation(onDeactivated, onRoleChanged)` (model.js) subscribes to the user's own `staff` row; the session stores its loaded `role_id` on `state.currentStaff.roleId`, and when a realtime UPDATE arrives with a different `role_id` (and `is_active` is still true), `_handleStaffRoleChanged` (controller.js) shows a toast and does a clean `window.location.reload()` - keeping the session, so `initApp` re-reads the new role and re-runs `_applyPermissionGates()`. A `pointbunny_role_changed` sessionStorage flag drives a confirmation toast after the reload. Deactivation still takes precedence (sign-out, not reload).
 
 ---
 

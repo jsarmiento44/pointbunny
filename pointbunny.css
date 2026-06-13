@@ -8063,11 +8063,23 @@ body[data-theme="dark"] .receipt-manual-overlay {
 }
 
 /* ── Role-based permissions ────────────────────────────────────────────────── */
+/* Applied by _applyPermissionGates() in controller.js after login, driven off
+   model.hasPermission(). UI gating is cosmetic only - RLS + runtime checks are
+   the real enforcement. */
 
-body.role-cashier [data-min-role="manager"],
-body.role-cashier [data-min-role="admin"],
-body.role-manager [data-min-role="admin"] {
-  display: none !important;
+.perm-hidden { display: none !important; }
+
+.perm-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.perm-inert {
+  cursor: default !important;
+}
+.perm-inert:hover {
+  border-color: var(--color-border) !important;
+  background: var(--color-surface) !important;
 }
 
 /* ── Staff panel ───────────────────────────────────────────────────────────── */

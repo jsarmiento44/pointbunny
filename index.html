@@ -100,7 +100,7 @@
             <nav class="settings-nav">
               <h3 class="settings-nav-title">Settings</h3>
               <button class="settings-nav-btn" data-settings-tab="profile">My Profile</button>
-              <button class="settings-nav-btn" data-settings-tab="business" data-min-role="admin">Business</button>
+              <button class="settings-nav-btn" data-settings-tab="business" data-perm="manage_business">Business</button>
               <button class="settings-nav-btn" data-settings-tab="pos">POS</button>
               <button class="settings-nav-btn" data-settings-tab="kds">Order Queue Timers</button>
               <button class="settings-nav-btn" data-settings-tab="displays">Displays</button>
@@ -144,7 +144,7 @@
               </div>
 
               <!-- Business tab -->
-              <div class="settings-tab hidden" id="settingsTabBusiness" data-min-role="admin">
+              <div class="settings-tab hidden" id="settingsTabBusiness" data-perm="manage_business">
                 <h3 class="settings-tab-title">Business</h3>
 
                 <div class="settings-section" id="businessSection">
@@ -230,7 +230,7 @@
               <div class="settings-tab hidden" id="settingsTabPos">
                 <h3 class="settings-tab-title">POS</h3>
 
-                <section class="settings-section" data-min-role="manager">
+                <section class="settings-section" data-perm="manage_adjustments">
                   <div class="settings-section-header">
                     <div>
                       <h3 class="settings-section-title">Receipt Adjustments</h3>
@@ -656,7 +656,7 @@
                 <span class="home-action-link">Change cashier →</span>
               </div>
             </div>
-            <div class="home-activity-card" data-action="cash-flow" role="button" tabindex="0" aria-label="View activity">
+            <div class="home-activity-card" data-action="cash-flow" data-perm="manage_cashflow" role="button" tabindex="0" aria-label="View activity">
               <span class="home-action-icon" aria-hidden="true">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="36" height="36">
                   <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
@@ -676,7 +676,7 @@
           <!-- Shortcuts grid (3 columns) -->
           <div class="home-shortcuts-grid">
 
-            <article class="home-shortcut-card" tabindex="0" data-min-role="manager">
+            <article class="home-shortcut-card" tabindex="0" data-perm="manage_menu">
               <button class="home-shortcut-btn" data-action="menu-list" aria-label="Open menu list" id="menu-list">
                 <span class="home-shortcut-icon" aria-hidden="true">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -691,7 +691,7 @@
               </button>
             </article>
 
-            <article class="home-shortcut-card" tabindex="0" data-min-role="manager">
+            <article class="home-shortcut-card" tabindex="0" data-perm="manage_adjustments">
               <button class="home-shortcut-btn" data-action="discounts" aria-label="Manage receipt adjustments">
                 <span class="home-shortcut-icon" aria-hidden="true">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -707,7 +707,7 @@
               </button>
             </article>
 
-            <article class="home-shortcut-card" tabindex="0" data-min-role="admin">
+            <article class="home-shortcut-card" tabindex="0" data-perm="manage_staff">
               <button class="home-shortcut-btn" data-action="staff" aria-label="Manage staff">
                 <span class="home-shortcut-icon" aria-hidden="true">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -722,7 +722,7 @@
               </button>
             </article>
 
-            <article class="home-shortcut-card" tabindex="0" data-min-role="manager">
+            <article class="home-shortcut-card" tabindex="0" data-perm="view_reports">
               <button class="home-shortcut-btn" data-action="summary" aria-label="View reports">
                 <span class="home-shortcut-icon" aria-hidden="true">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -776,7 +776,7 @@
           <!-- Quick dashboard card: Sales + Transactions + Avg Serving -->
           <div class="home-dash-card">
 
-            <div class="home-dash-stat home-sales-stat" role="button" tabindex="0" title="View sales report">
+            <div class="home-dash-stat home-sales-stat" data-perm-action="view_reports" role="button" tabindex="0" title="View sales report">
               <span class="home-dash-emoji" aria-hidden="true">💰</span>
               <div class="home-dash-body">
                 <div class="home-dash-label">Today's Sales</div>
@@ -787,7 +787,7 @@
 
             <div class="home-dash-divider"></div>
 
-            <div class="home-dash-stat" role="button" tabindex="0" title="View traffic report" id="transactionsCard">
+            <div class="home-dash-stat" data-perm-action="view_reports" role="button" tabindex="0" title="View traffic report" id="transactionsCard">
               <span class="home-dash-emoji" aria-hidden="true">🧾</span>
               <div class="home-dash-body">
                 <div class="home-dash-label">Transactions</div>
@@ -798,7 +798,7 @@
 
             <div class="home-dash-divider"></div>
 
-            <div class="home-dash-stat home-dash-stat--serving" role="button" tabindex="0" title="View kitchen report">
+            <div class="home-dash-stat home-dash-stat--serving" data-perm-action="view_reports" role="button" tabindex="0" title="View kitchen report">
               <span class="home-dash-emoji" aria-hidden="true">⏱️</span>
               <div class="home-dash-body">
                 <div class="home-dash-label">Avg. Serving</div>

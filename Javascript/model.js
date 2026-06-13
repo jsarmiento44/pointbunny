@@ -62,6 +62,43 @@ export const state = {
   businessAddressCountry:  null,
 };
 
+// ── Role permissions ──────────────────────────────────────────────────────────
+// Single source of truth for what each built-in role can do. These capability
+// keys are also the defaults to reuse when business owners can build custom roles
+// (the planned roles.permissions JSONB feature) - same keys, owner-selectable.
+// Gating is driven off hasPermission(key), not scattered role-name checks. UI
+// hiding/disabling is cosmetic only; RLS + runtime checks remain the real guard.
+export const ALL_PERMISSIONS = [
+  'take_orders',        // create a new order / checkout
+  'view_catalogue',     // browse the menu
+  'manage_menu',        // add/edit menu items & categories
+  'manage_adjustments', // fees / promos
+  'manage_discounts',   // discount codes
+  'view_reports',       // reports / analytics
+  'manage_cashflow',    // cashflow & expenses
+  'void_sale',          // void / refund a sale
+  'manage_pay',         // edit shifts / pay rates
+  'manage_staff',       // staff & roles
+  'manage_business',    // business settings
+];
+
+export const ROLE_PERMISSIONS = {
+  Cashier: ['take_orders', 'view_catalogue'],
+  Manager: [
+    'take_orders', 'view_catalogue', 'manage_menu', 'manage_adjustments',
+    'manage_discounts', 'view_reports', 'manage_cashflow', 'void_sale',
+  ],
+  Admin: [...ALL_PERMISSIONS],
+};
+
+// Returns true if the logged-in user's role grants the capability. Unknown roles
+// fall back to the least-privileged set (Cashier) so a misconfigured role can
+// never silently gain access.
+export const hasPermission = function (key) {
+  const perms = ROLE_PERMISSIONS[state.role] ?? ROLE_PERMISSIONS.Cashier;
+  return perms.includes(key);
+};
+
 // ── Business context (runs on every login) ────────────────────────────────────
 
 const _initBusiness = async function (user) {
@@ -144,7 +181,7 @@ export const loadBusinessContext = async function (user, { isInviteAcceptance = 
   // (which happens after someone is removed from one business and joins another).
   const { data: ownRows } = await supabase
     .from('staff')
-    .select('id, business_id, first_name, last_name, email, pin, is_active, roles(name)')
+    .select('id, business_id, first_name, last_name, email, pin, is_active, role_id, roles(name)')
     .eq('user_id', user.id);
 
   let staffRow = (ownRows ?? []).find((r) => r.is_active) ?? null;
@@ -165,7 +202,7 @@ export const loadBusinessContext = async function (user, { isInviteAcceptance = 
     // errors out when more than one pending row matches and leaves the user unclaimed.
     const { data: pendingRows } = await supabase
       .from('staff')
-      .select('id, business_id, first_name, last_name, email, pin, roles(name)')
+      .select('id, business_id, first_name, last_name, email, pin, role_id, roles(name)')
       .eq('email', user.email)
       .is('user_id', null)
       .eq('is_active', true)
@@ -195,6 +232,7 @@ export const loadBusinessContext = async function (user, { isInviteAcceptance = 
       lastName:  staffRow.last_name,
       email:     staffRow.email,
       role:      state.role,
+      roleId:    staffRow.role_id ?? null,
       hasPin:    !!staffRow.pin,
     };
   } else {
@@ -1208,7 +1246,7 @@ function parseVariants(raw) {
 // staff table to be in the supabase_realtime publication.
 let _staffWatchChannel = null;
 
-export const watchStaffDeactivation = function (onDeactivated) {
+export const watchStaffDeactivation = function (onDeactivated, onRoleChanged) {
   if (!state.currentStaff?.id || _staffWatchChannel) return;
   _staffWatchChannel = supabase
     .channel(`staff-active-${state.currentStaff.id}`)
@@ -1218,7 +1256,17 @@ export const watchStaffDeactivation = function (onDeactivated) {
       table: 'staff',
       filter: `id=eq.${state.currentStaff.id}`,
     }, (payload) => {
-      if (payload.new?.is_active === false) onDeactivated();
+      // Deactivation takes precedence - a kicked-out user is signed out, not reloaded.
+      if (payload.new?.is_active === false) { onDeactivated(); return; }
+      // An owner changing this user's role pushes the new role_id here. Compare against
+      // the role_id this session loaded with; if it differs, the session is stale.
+      if (onRoleChanged
+          && payload.new?.role_id
+          && state.currentStaff?.roleId
+          && payload.new.role_id !== state.currentStaff.roleId) {
+        state.currentStaff.roleId = payload.new.role_id; // guard against a double-fire
+        onRoleChanged();
+      }
     })
     .subscribe();
 };
