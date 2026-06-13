@@ -15,27 +15,54 @@ that the admin panel needs to know about. Add new entries at the top as features
 
 ---
 
-## [2026-06-13] Fix Missing `menu_items` Staff RLS Policies (SQL required)
+## [2026-06-13] Repair Missing Staff RLS Policies on 5 Tables (SQL required)
 
-Discovered while testing the app as a cashier: `menu_items` had **only owner-scoped policies** (`auth.uid() = user_id` for select/insert/update/delete) and no staff-scoped policies. As a result, no staff member (cashier or manager) could read the menu - the catalogue came back empty and cashiers could not take orders. `menu_categories` had its `staff read/insert/delete` policies from the 2026-06-10 migration, but the equivalent `menu_items` policies were never actually present on the table (the 2026-06-10 entry claims they were added; they were not). This adds them, matching the `menu_categories` pattern.
+The 2026-06-10 "Staff Data Access" migration only partially applied: a `pg_policies` audit (run 2026-06-13 while testing as a cashier) shows that **only `menu_categories` and `sales` actually received their staff-scoped policies**. The staff policies the 2026-06-10 entry claims for `menu_items`, `adjustments`, `discount_codes`, `expenses`, and `businesses` are **not on those tables** - they have owner-only policies (plus, for `adjustments`/`discount_codes`, the legacy `authenticated can read all` qual=`true` policy). Symptoms for any non-owner staff member:
+
+- `menu_items`: empty catalogue, cashiers can't take orders (no staff read at all).
+- `adjustments`: reads only work via the legacy read-all (breaks once Tier 1 drops it); managers can't add/edit fees.
+- `discount_codes`: reads only via legacy read-all; **cashiers can't redeem a promo** (the usage-count UPDATE has no staff policy).
+- `expenses`: staff can't read or add expenses at all (no read-all either).
+- `businesses`: staff can't read their own business row -> blank receipt header (no name/address).
+
+This migration adds the missing policies, mirroring the pattern already on `menu_categories`/`sales`. Writes are membership-scoped (any `is_active` staff of the business passes at the DB layer); the app UI gates who can actually edit via `hasPermission` (e.g. `manage_menu` = manager+). `get_my_business_id()` is `security definer` and returns the caller's `business_id` only when their staff row is `is_active`.
 
 ### SQL that must be run (Supabase SQL editor)
 
 ```sql
-create policy "staff read menu_items" on public.menu_items
-  for select to authenticated using (user_id = get_my_business_id());
+-- menu_items
+create policy "staff read menu_items"   on public.menu_items   for select to authenticated using (user_id = get_my_business_id());
+create policy "staff insert menu_items" on public.menu_items   for insert to authenticated with check (user_id = get_my_business_id());
+create policy "staff update menu_items" on public.menu_items   for update to authenticated using (user_id = get_my_business_id());
+create policy "staff delete menu_items" on public.menu_items   for delete to authenticated using (user_id = get_my_business_id());
 
-create policy "staff insert menu_items" on public.menu_items
-  for insert to authenticated with check (user_id = get_my_business_id());
+-- adjustments
+create policy "staff read adjustments"   on public.adjustments for select to authenticated using (user_id = get_my_business_id());
+create policy "staff insert adjustments" on public.adjustments for insert to authenticated with check (user_id = get_my_business_id());
+create policy "staff update adjustments" on public.adjustments for update to authenticated using (user_id = get_my_business_id());
+create policy "staff delete adjustments" on public.adjustments for delete to authenticated using (user_id = get_my_business_id());
 
-create policy "staff update menu_items" on public.menu_items
-  for update to authenticated using (user_id = get_my_business_id());
+-- discount_codes
+create policy "staff read discount_codes"   on public.discount_codes for select to authenticated using (user_id = get_my_business_id());
+create policy "staff insert discount_codes" on public.discount_codes for insert to authenticated with check (user_id = get_my_business_id());
+create policy "staff update discount_codes" on public.discount_codes for update to authenticated using (user_id = get_my_business_id());
+create policy "staff delete discount_codes" on public.discount_codes for delete to authenticated using (user_id = get_my_business_id());
 
-create policy "staff delete menu_items" on public.menu_items
-  for delete to authenticated using (user_id = get_my_business_id());
+-- expenses
+create policy "staff read expenses"   on public.expenses for select to authenticated using (user_id = get_my_business_id());
+create policy "staff insert expenses" on public.expenses for insert to authenticated with check (user_id = get_my_business_id());
+create policy "staff update expenses" on public.expenses for update to authenticated using (user_id = get_my_business_id());
+create policy "staff delete expenses" on public.expenses for delete to authenticated using (user_id = get_my_business_id());
+
+-- businesses (read own row - needed for the receipt header)
+create policy "staff read business" on public.businesses for select to authenticated using (id = get_my_business_id());
 ```
 
-Writes are membership-scoped (any active staff of the business passes at the DB layer); the app UI restricts editing to `manage_menu` holders (manager+) via `hasPermission`. This matches the "membership-scoped, not role-scoped" design noted in the 2026-06-10 entry. `get_my_business_id()` is `security definer` and returns the caller's `business_id` only when their staff row is `is_active`, so deactivated staff get nothing.
+If any single statement errors with "policy already exists", skip just that one and continue - the audit showed none of these present, but it is safe to re-run the rest.
+
+### Note on Tier 1 (legacy read-all drops)
+
+Adding `staff read adjustments` and `staff read discount_codes` here makes the legacy `authenticated can read all adjustments` / `... discount_codes` policies redundant, so the queued Tier 1 cleanup (drop the qual=`true` read-all policies on `adjustments`, `discount_codes`, `menu_items`, `employees`) can proceed safely afterward. `menu_items` never had a read-all, so its staff read is now its only staff SELECT path - it must be applied before any cashier testing.
 
 ### Related client fix (no SQL)
 
@@ -43,7 +70,7 @@ Writes are membership-scoped (any active staff of the business passes at the DB 
 
 ### Admin panel impact
 
-None - the panel uses the service role key and bypasses RLS. Listed for migration history and because the admin panel team's 2026-06-10 record incorrectly shows `menu_items` staff policies as already applied.
+None - the panel uses the service role key and bypasses RLS. **Important for the admin team's records:** the 2026-06-10 "Staff Data Access" entry is inaccurate - those staff policies were not actually applied to `menu_items`, `adjustments`, `discount_codes`, `expenses`, or `businesses`. This entry is the real applied state.
 
 ---
 
