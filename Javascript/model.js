@@ -1224,6 +1224,7 @@ const dbToStaff = (row) => ({
   role:      row.roles?.name ?? 'Staff',
   roleId:    row.roles?.id ?? null,
   isSelf:    row.user_id === state.userId,
+  isOwner:   !!row.user_id && row.user_id === state.businessId,
   hasPin:    !!row.pin,
   pin:       row.pin ?? null,
 });
@@ -1388,6 +1389,13 @@ export const setStaffPin = async function (staffId, pin) {
 
 export const removeStaff = async function (id) {
   const member = state.staff.find((s) => s.id === id);
+
+  // The business owner can never be removed - not by an Admin-role staff member, not by
+  // anyone. Their row anchors the business (user_id === business_id). This guard is the
+  // authoritative backstop even though the view hides the Remove button on the owner row.
+  if (member?.isOwner) {
+    throw new Error('The business owner cannot be removed.');
+  }
 
   if (member?.isPending) {
     // Pending invites have no history - hard delete so the email can be re-invited cleanly.

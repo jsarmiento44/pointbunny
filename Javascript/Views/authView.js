@@ -280,11 +280,12 @@ class AuthView {
       .map((inv) => {
         const biz = inv.businessName ? this._escape(inv.businessName) : 'A business';
         const role = this._escape(inv.role ?? 'Staff');
+        const who = inv.firstName ? this._escape(inv.firstName) : 'you';
         return `
           <div class="join-team-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;border:1px solid var(--muted);border-radius:14px;margin-bottom:10px;">
             <div style="line-height:1.35;">
               <div style="font-weight:600;font-size:0.95rem;">${biz}</div>
-              <div style="font-size:0.78rem;color:var(--muted);">invited you as ${role}</div>
+              <div style="font-size:0.78rem;color:var(--muted);">invited ${who} as ${role}</div>
             </div>
             <button type="button" class="btn primary join-team-accept" data-staff-id="${inv.staffId}" style="flex:0 0 auto;padding:8px 16px;">Accept</button>
           </div>`;

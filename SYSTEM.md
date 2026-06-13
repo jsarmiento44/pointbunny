@@ -347,7 +347,9 @@ That person signs in normally (controlSignIn / session restore)
     → finds pending staff row(s) by email (user_id IS NULL, is_active)
     → sets state.pendingInvites and throws PENDING_INVITE_CONSENT (does NOT auto-claim)
   → controller catches the code → AuthView.showJoinTeam(pendingInvites)
-     (consent panel listing each inviting business + Accept; "Not now" signs out)
+     (consent panel listing each inviting business + the name on the invite -
+      "invited <firstName> as <role>", falling back to "invited you" if no name -
+      + Accept; "Not now" signs out)
   → Accept → controlAcceptPendingInvite(staffId)
       → model.claimPendingInvite: UPDATE staff SET user_id, joined_at; DELETE other pending rows
       → initApp(user) re-runs, now finds the staff row → app launches
@@ -1545,17 +1547,22 @@ User fills form and saves
 #### Remove Staff (soft delete)
 
 ```
-User clicks "Remove" (hidden for own record via isSelf)
+User clicks "Remove" (hidden for own record via isSelf; also hidden on the owner
+  row via isOwner, so an Admin-role staff member can't remove the business owner)
   → staffView._addHandlerRemove
   → controlRemoveStaff(id)
     → shows confirm dialog
     → model.removeStaff(id)
+        → owner row (user_id === business_id)? → throws "The business owner cannot
+          be removed." [authoritative backstop even if the button is bypassed]
         → pending invite (no user_id)? → hard DELETE  [no history to keep]
         → joined staff? → UPDATE is_active = false  [soft delete - shifts, sales
           attribution, and payroll history survive; matches admin panel behavior]
         → splices from state.staff either way
     → staffView.render(state.staff)
 ```
+
+The owner is identified by `staff.user_id === businessId` (their row anchors the business, created by `_initBusiness`). `dbToStaff` exposes this as `isOwner`. The Remove button is hidden for that row and `removeStaff` throws if called with the owner's id - so the owner is unremovable by any staff member, including Admins.
 
 `model.loadStaff` filters on `is_active = true`, so soft-deleted staff disappear from the staff list and cashier picker. Timesheets still show their names because shifts store `staffName` denormalized.
 
@@ -1655,7 +1662,7 @@ Step 2 — Confirm PIN:
 | `staffView.closeForm()` | staffView.js | Hides invite form modal |
 | `_addHandlerRemove(handler)` | staffView.js | Listens on `.staff-remove-btn` click |
 | `controlRemoveStaff(id)` | controller.js | Shows confirm dialog, calls model, re-renders |
-| `model.removeStaff(id)` | model.js | Pending invite: hard delete. Joined staff: soft delete (`is_active = false`). Splices `state.staff` |
+| `model.removeStaff(id)` | model.js | Throws if `isOwner` (owner is unremovable). Pending invite: hard delete. Joined staff: soft delete (`is_active = false`). Splices `state.staff` |
 | `_addHandlerSetPin(handler)` | staffView.js | Listens on `.staff-pin-btn`; shows inline 6-digit PIN modal, validates `^\d{6}$`, calls handler |
 | `controlSetStaffPin(staffId, pin)` | controller.js | Calls `model.setStaffPin`, re-renders staff list, shows success toast |
 | `model.setStaffPin(staffId, pin)` | model.js | Updates `staff.pin` in DB; updates `hasPin` on the matching `state.staff` entry |
