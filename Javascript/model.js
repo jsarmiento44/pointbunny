@@ -196,6 +196,42 @@ export const loadBusinessContext = async function (user, { isInviteAcceptance = 
       hasPin:    !!staffRow.pin,
     };
   } else {
+    // An existing account (signed up on their own, or joined a business then left) can't
+    // be re-invited by email - Supabase won't send an invite to an email that already has
+    // an account. So on a normal login, if a business has a pending invite for this email,
+    // offer it behind a consent step instead of dead-ending. We never silently enroll:
+    // the user must accept. Owners creating their own business (role 'owner') skip this.
+    if (!isInviteAcceptance && user.user_metadata?.role !== 'owner') {
+      const { data: invites } = await supabase
+        .from('staff')
+        .select('id, business_id, first_name, last_name, roles(name)')
+        .eq('email', user.email)
+        .is('user_id', null)
+        .eq('is_active', true)
+        .order('invited_at', { ascending: true });
+
+      if (invites && invites.length) {
+        // Business name is best-effort: RLS may hide the businesses row from a non-member,
+        // in which case the consent prompt falls back to a generic label.
+        const ids = [...new Set(invites.map((i) => i.business_id))];
+        const { data: bizRows } = await supabase
+          .from('businesses')
+          .select('id, name')
+          .in('id', ids);
+        const nameById = Object.fromEntries((bizRows ?? []).map((b) => [b.id, b.name]));
+        state.pendingInvites = invites.map((i) => ({
+          staffId:      i.id,
+          businessId:   i.business_id,
+          businessName: nameById[i.business_id] ?? null,
+          firstName:    i.first_name,
+          role:         i.roles?.name ?? 'Staff',
+        }));
+        const err = new Error('PENDING_INVITE_CONSENT');
+        err.code = 'PENDING_INVITE_CONSENT';
+        throw err;
+      }
+    }
+
     if (user.user_metadata?.role === 'staff') {
       throw new Error('Staff account setup incomplete. Please contact your manager or try accepting your invite link again.');
     }
@@ -1239,7 +1275,7 @@ export const inviteStaff = async function ({ firstName, lastName, email, roleId 
   // the owner). It rejects the invite when this email is already an active member of
   // another business, and sends the invite email when sendInvite is true. We call it
   // before writing any row so a rejection leaves no orphaned pending row behind.
-  const { error: fnError } = await supabase.functions.invoke('invite-staff', {
+  const { data: fnData, error: fnError } = await supabase.functions.invoke('invite-staff', {
     body: { email: normalizedEmail, firstName, lastName, businessId: state.businessId, sendInvite },
   });
 
@@ -1261,6 +1297,11 @@ export const inviteStaff = async function ({ firstName, lastName, email, roleId 
     }
   }
 
+  // The Edge Function reports existingAccount when the email already has a Pointbunny
+  // account: no invite email was sent, so the person joins by accepting the pending row
+  // on their next login (consent step in loadBusinessContext) rather than via a link.
+  const existingAccount = !!fnData?.existingAccount;
+
   if (existingRow) {
     const { data: updated, error: upError } = await supabase
       .from('staff')
@@ -1271,7 +1312,7 @@ export const inviteStaff = async function ({ firstName, lastName, email, roleId 
     if (upError) throw upError;
     state.staff = state.staff.filter((s) => s.id !== updated.id);
     state.staff.push(dbToStaff(updated));
-    return { reactivated: !existingRow.is_active };
+    return { reactivated: !existingRow.is_active, existingAccount };
   }
 
   const { data, error } = await supabase
@@ -1289,7 +1330,35 @@ export const inviteStaff = async function ({ firstName, lastName, email, roleId 
   if (error) throw error;
 
   state.staff.push(dbToStaff(data));
-  return { reactivated: false };
+  return { reactivated: false, existingAccount };
+};
+
+// Accepts one of the pending invites surfaced by loadBusinessContext (PENDING_INVITE_CONSENT).
+// Claims the chosen row by linking the caller's user_id, then discards the rest so the
+// single-membership rule holds. Returns the auth user so the caller can re-run initApp.
+export const claimPendingInvite = async function (staffId) {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { error: claimError } = await supabase
+    .from('staff')
+    .update({ user_id: user.id, joined_at: new Date().toISOString() })
+    .eq('id', staffId)
+    .is('user_id', null);
+  if (claimError) throw claimError;
+
+  const others = (state.pendingInvites ?? [])
+    .filter((p) => p.staffId !== staffId)
+    .map((p) => p.staffId);
+  if (others.length) {
+    await supabase.from('staff').delete().in('id', others);
+  }
+
+  state.pendingInvites = null;
+  return user;
+};
+
+export const dismissPendingInvites = function () {
+  state.pendingInvites = null;
 };
 
 export const updateStaffRole = async function (staffId, roleId) {

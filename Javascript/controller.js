@@ -1405,6 +1405,36 @@ const controlAcceptInvite = async function ({ password, pin }) {
   }
 };
 
+// The signed-in account has a pending invite (surfaced by loadBusinessContext) and chose
+// to accept it. Claim the row, then launch the app as that business's staff member.
+const controlAcceptPendingInvite = async function (staffId) {
+  try {
+    AuthView.setJoinLoading(true);
+    const user = await model.claimPendingInvite(staffId);
+    showLoadingScreen();
+    AuthView.hide();
+    await initApp(user);
+    hideLoadingScreen();
+    _wireApp();
+    _maybeShowPinSetup();
+    if (model.state.needsOnboarding) OnboardingView.show();
+  } catch (err) {
+    console.error('accept pending invite failed:', err);
+    hideLoadingScreen();
+    AuthView.setJoinLoading(false);
+    AuthView.show();
+    AuthView.showJoinError(err.message ?? 'Could not join the team. Please try again.');
+  }
+};
+
+// Declining leaves the pending invite in place (the owner can still see it and the person
+// can accept later); we just sign out and return to the login screen.
+const controlDeclinePendingInvite = async function () {
+  model.dismissPendingInvites();
+  await supabase.auth.signOut();
+  window.location.reload();
+};
+
 const _isInAppBrowser = () => {
   const ua = navigator.userAgent || '';
   if (/FBAN|FBAV|Instagram|Twitter|Line|MicroMessenger|Snapchat|TikTok/.test(ua)) return true;
@@ -1443,6 +1473,12 @@ const controlSignIn = async function (email, password) {
   try {
     await initApp(data.user);
   } catch (err) {
+    if (err.code === 'PENDING_INVITE_CONSENT') {
+      hideLoadingScreen();
+      AuthView.show();
+      AuthView.showJoinTeam(model.state.pendingInvites);
+      return;
+    }
     console.error('initApp failed:', err);
     hideLoadingScreen();
     await supabase.auth.signOut();
@@ -2130,13 +2166,15 @@ const controlInviteStaff = async function (data) {
   }
 
   try {
-    const { reactivated } = await model.inviteStaff(data);
+    const { reactivated, existingAccount } = await model.inviteStaff(data);
     StaffView.closeForm();
     StaffView.render(model.state.staff, _staffCanManage());
     showToast(
       reactivated
         ? 'Staff member reactivated. They can sign in with their existing account.'
-        : 'Invite sent!',
+        : existingAccount
+          ? 'This email already has a Pointbunny account. They will be asked to join your team the next time they sign in.'
+          : 'Invite sent!',
       'success'
     );
   } catch (err) {
@@ -3545,6 +3583,8 @@ const initAuth = async function () {
   AuthView._addHandlerForgotPassword(controlForgotPassword);
   AuthView._addHandlerResetPassword(controlResetPassword);
   AuthView._addHandlerAcceptInvite(controlAcceptInvite);
+  AuthView._addHandlerAcceptJoin(controlAcceptPendingInvite);
+  AuthView._addHandlerDeclineJoin(controlDeclinePendingInvite);
   AuthView._addHandlerGoogleSignIn(controlGoogleSignIn);
   OnboardingView._addHandlerSubmit(controlOnboardingSubmit);
   OnboardingView._addHandlerExit(async () => {
@@ -3592,6 +3632,12 @@ const initAuth = async function () {
     try {
       await initApp(session.user);
     } catch (err) {
+      if (err.code === 'PENDING_INVITE_CONSENT') {
+        hideLoadingScreen();
+        AuthView.show();
+        AuthView.showJoinTeam(model.state.pendingInvites);
+        return;
+      }
       console.error('initApp failed:', err);
       hideLoadingScreen();
       await supabase.auth.signOut();

@@ -135,13 +135,15 @@ Deno.serve(async (req) => {
         inviteError.message,
       );
     if (alreadyExists) {
+      // The membership check above already cleared this email of any active membership,
+      // so the account simply exists without belonging to a team. We can't email an
+      // invite link to an existing account, so report existingAccount and let the app
+      // keep the pending staff row. The person joins by accepting it on their next login
+      // (the consent step in loadBusinessContext), not via an email link.
       return new Response(
-        JSON.stringify({
-          error:
-            "This email already has a Pointbunny account, so a new invite can't be sent. If they were on another team, remove them there first; otherwise their existing account needs to be cleared before re-inviting.",
-        }),
+        JSON.stringify({ success: true, existingAccount: true }),
         {
-          status: 409,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );

@@ -2175,6 +2175,15 @@
             <button type="submit" id="resetBtn" class="btn primary auth-submit">Set New Password</button>
           </form>
 
+          <!-- Join team consent (shown when an existing account has a pending invite) -->
+          <div id="joinTeamForm" class="auth-form hidden">
+            <p style="font-size:1.05rem;font-weight:700;margin:4px 0 6px;">You've been invited</p>
+            <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px;line-height:1.45;">Accept to join the team. You can only belong to one business at a time.</p>
+            <div id="joinTeamList"></div>
+            <p id="joinTeamError" class="auth-error"></p>
+            <button type="button" id="joinTeamDeclineBtn" class="btn auth-submit" style="background:transparent;border:1px solid var(--muted);margin-top:6px;">Not now (sign out)</button>
+          </div>
+
           <!-- Sign-up form -->
           <form id="signUpForm" class="auth-form hidden" novalidate>
             <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;line-height:1.45;">For business owners setting up a new account. Staff join via their invitation link.</p>

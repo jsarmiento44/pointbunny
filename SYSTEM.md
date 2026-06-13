@@ -327,7 +327,33 @@ User fills in: new password + mandatory 6-digit PIN
 
 **Key rule:** Invited staff ALWAYS skip `_initBusiness`. `loadBusinessContext` finds their pending row by email (when `isInviteAcceptance: true`); if found, it claims it. The `role === 'staff'` metadata guard is a safety net: if the email lookup also fails, `_initBusiness` is blocked and an error is thrown instead.
 
-**Edge Function role:** `invite-staff` only sends the invite email via `inviteUserByEmail`. It no longer claims `user_id` — the claim happens entirely in `loadBusinessContext` on the client using the RLS UPDATE policy.
+**Edge Function role:** `invite-staff` sends the invite email via `inviteUserByEmail` (when `sendInvite` is true) and enforces the single-business-membership rule with the service role (rejecting an email that is already an active member of any business). It no longer claims `user_id` — the claim happens in `loadBusinessContext` on the client via the RLS UPDATE policy.
+
+#### Inviting an email that already has an account — consent on login
+
+`inviteUserByEmail` cannot send an invite link to an email that already has a Pointbunny account (someone who signed up on their own, or joined a business then was removed). For that case the invite-link path above never happens. Instead:
+
+```
+Owner invites the email
+  → invite-staff Edge Function: single-membership check passes (not active anywhere)
+    → inviteUserByEmail errors "already registered"
+    → Edge Function returns { existingAccount: true } (NOT an error)
+  → inviteStaff keeps/creates the pending staff row
+  → owner sees: "This email already has a Pointbunny account. They will be asked to
+                 join your team the next time they sign in."
+
+That person signs in normally (controlSignIn / session restore)
+  → loadBusinessContext: no staff row by user_id, role !== 'owner', not invite-link path
+    → finds pending staff row(s) by email (user_id IS NULL, is_active)
+    → sets state.pendingInvites and throws PENDING_INVITE_CONSENT (does NOT auto-claim)
+  → controller catches the code → AuthView.showJoinTeam(pendingInvites)
+     (consent panel listing each inviting business + Accept; "Not now" signs out)
+  → Accept → controlAcceptPendingInvite(staffId)
+      → model.claimPendingInvite: UPDATE staff SET user_id, joined_at; DELETE other pending rows
+      → initApp(user) re-runs, now finds the staff row → app launches
+```
+
+This preserves the no-silent-enrollment property: an existing account is only enrolled after the user explicitly accepts. Owners (role `owner`) skip the consent lookup so a first-time owner who was coincidentally invited elsewhere still gets their own business via `_initBusiness`. The consent prompt shows the business name only if RLS lets the not-yet-member read it (optional "invitee can read inviting business" policy); otherwise it shows a generic label.
 
 #### `_initBusiness(user)` — First-Login Business Setup
 

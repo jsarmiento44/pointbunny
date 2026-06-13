@@ -18,6 +18,10 @@ class AuthView {
   _forgotBtn     = document.getElementById('forgotBtn');
   _resetBtn      = document.getElementById('resetBtn');
   _inviteBtn     = document.getElementById('inviteBtn');
+  _joinTeamForm    = document.getElementById('joinTeamForm');
+  _joinTeamList    = document.getElementById('joinTeamList');
+  _joinTeamErrorEl = document.getElementById('joinTeamError');
+  _joinDeclineBtn  = document.getElementById('joinTeamDeclineBtn');
   _onSignUp      = false;
 
   constructor() {
@@ -259,6 +263,63 @@ class AuthView {
       if (pwErr)                             { this._resetErrorEl.textContent = pwErr; return; }
       if (password !== confirm)              { this._resetErrorEl.textContent = 'Passwords do not match.'; return; }
       handler(password);
+    });
+  }
+
+  // ── Join team (pending invite consent) ────────────────────────────────────
+
+  showJoinTeam(invites) {
+    this._loginForm.classList.add('hidden');
+    this._signUpForm.classList.add('hidden');
+    this._forgotForm.classList.add('hidden');
+    this._resetForm.classList.add('hidden');
+    this._inviteForm.classList.add('hidden');
+    this._joinTeamErrorEl.textContent = '';
+
+    this._joinTeamList.innerHTML = (invites ?? [])
+      .map((inv) => {
+        const biz = inv.businessName ? this._escape(inv.businessName) : 'A business';
+        const role = this._escape(inv.role ?? 'Staff');
+        return `
+          <div class="join-team-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;border:1px solid var(--muted);border-radius:14px;margin-bottom:10px;">
+            <div style="line-height:1.35;">
+              <div style="font-weight:600;font-size:0.95rem;">${biz}</div>
+              <div style="font-size:0.78rem;color:var(--muted);">invited you as ${role}</div>
+            </div>
+            <button type="button" class="btn primary join-team-accept" data-staff-id="${inv.staffId}" style="flex:0 0 auto;padding:8px 16px;">Accept</button>
+          </div>`;
+      })
+      .join('');
+
+    this._joinTeamForm.classList.remove('hidden');
+  }
+
+  showJoinError(msg) { this._joinTeamErrorEl.textContent = msg; }
+
+  setJoinLoading(bool) {
+    this._joinTeamList.querySelectorAll('.join-team-accept').forEach((b) => { b.disabled = bool; });
+    this._joinDeclineBtn.disabled = bool;
+  }
+
+  _escape(str) {
+    const d = document.createElement('div');
+    d.textContent = String(str);
+    return d.innerHTML;
+  }
+
+  _addHandlerAcceptJoin(handler) {
+    this._joinTeamList.addEventListener('click', (e) => {
+      const btn = e.target.closest('.join-team-accept');
+      if (!btn) return;
+      this._joinTeamErrorEl.textContent = '';
+      handler(btn.dataset.staffId);
+    });
+  }
+
+  _addHandlerDeclineJoin(handler) {
+    this._joinDeclineBtn.addEventListener('click', () => {
+      this._joinTeamErrorEl.textContent = '';
+      handler();
     });
   }
 

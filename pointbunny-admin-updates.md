@@ -24,7 +24,31 @@ Fixes a bug where a staff member invited by more than one business (or removed a
 1. **Invite claim now handles multiple pending rows.** On invite acceptance the app fetches all pending rows (`user_id IS NULL`, `is_active = true`) for the email, claims the **earliest invited** one (`invited_at ASC`), and **deletes the rest**. This is the single-membership "first business wins" rule.
 2. **Block at invite time.** The `invite-staff` Edge Function now rejects an invite when the email is already an active member (`user_id` set and `is_active = true`) of **any** business - returning a clear message ("already on your team" if same business, "must be removed from that team first" if another). This cross-business check runs with the service role because the owner cannot read other businesses' staff rows under RLS.
 3. **Edge Function `sendInvite` flag.** Reactivating a previously-joined member (who already has an account) now skips the invite email and just re-links by `user_id`.
-4. **Edge Function "already registered" message fixed.** The regex that detects an existing-auth-account error from `inviteUserByEmail` did not match Supabase's actual wording ("already been registered"), so owners saw the raw DB error. Regex broadened and the message corrected (it no longer falsely promises the person will auto-join on next login).
+4. **Existing accounts can now join a team (consent on login).** Previously an email that already had a Pointbunny account (signed up on their own, or joined a business then got removed) could not be re-invited at all - `inviteUserByEmail` refuses an existing account, so the owner hit a dead-end error. Now: the Edge Function detects this case (after the single-membership check clears them) and returns `{ existingAccount: true }` instead of an error, so the app keeps the pending `staff` row. On that person's **next normal login**, `loadBusinessContext` finds the pending row and the app shows a **consent prompt** ("X invited you - Accept / Not now"). On accept it claims the row (links `user_id`) and discards any other pending invites; declining leaves the invite for later. This removes the need to manually delete orphaned `auth.users` rows.
+
+### Optional SQL (recommended) - show the business name in the consent prompt
+
+The invited person is not yet a member, so RLS hides the inviting business's row and the prompt falls back to a generic "A business invited you". This scoped policy lets them read just the name of a business that has a live pending invite for their email:
+
+```sql
+create policy "invitee can read inviting business"
+on public.businesses
+for select
+to authenticated
+using (
+  exists (
+    select 1 from public.staff s
+    where s.business_id = businesses.id
+      and lower(s.email) = lower(auth.email())
+      and s.user_id is null
+      and s.is_active
+  )
+);
+```
+
+Without it the flow still works; the prompt just won't name the business.
+
+> **This feature requires the Edge Function redeploy** (`supabase functions deploy invite-staff`). Without it the old function returns a 409 error for existing accounts and no pending row is created, so there is nothing to accept.
 
 ### SQL that must be run (Supabase SQL editor)
 
